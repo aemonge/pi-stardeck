@@ -1,0 +1,5 @@
+schema: ramona-plan
+created: 2026-10-13
+skip_specs: true
+goal: packages/header lives as packages/pi-stardeck with every reference, gate,
+  and manifest consistent — a pure rename with zero behavior change.
