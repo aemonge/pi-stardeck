@@ -155,3 +155,15 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       re-run the tape on the host; original response, canonical outcome, and
       UTC recorded here.
   - Subject: `feat(demo): professional install recording`.
+
+## Archived 2026-10-13
+
+Archived under Human direction (option B) after the openspec CLI 1.14.1 schema
+evolution left this ramona-plan change permanently blocked (same `idea:`
+parent-link drop as the other plan-era change). All completed work stands:
+identity, gates, tape, publish, and the 0.1.1 release it enabled.
+
+Open item and its home: the deferred VHS re-render of
+`docs/assets/pi-vimux-starship.gif` (`[-]` above) and its Human review (`[ ]`)
+move to the active `refresh-demo-recording` idea change, which carries the
+probe-tape history and the resume command. Not silently dropped.

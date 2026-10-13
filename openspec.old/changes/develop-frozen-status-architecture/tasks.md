@@ -316,3 +316,16 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 - **Final Task-boundary commit (after canonical VALID):**
   `feat(stages): declared stage truth with emission duty`.
   - Evidence: pending.
+
+## Archived 2026-10-13
+
+Archived under Human direction (option B) after the openspec CLI 1.14.1 schema
+evolution left this ramona-plan change permanently blocked (the `idea:`
+parent-link key is no longer recognized; the new pipeline wants local
+`1-idea.md` → plan → execution → tasks artifacts). All completed work stands.
+
+Open item and its home: the `pi-fancy-footer:widget`/`ready` and
+`galactica-status:header`/`prompt-row` channel retirement `[ ]` step stays
+recorded above; it belongs to the future four-package consolidation slice
+under the `share-pi-vimux-starship` umbrella, exactly as the honest deferral
+noted. Not silently dropped.
