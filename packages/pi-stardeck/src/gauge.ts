@@ -94,10 +94,21 @@ export const HEADER_SELECTION_SOURCES = [
   'legacy',
 ] as const;
 
+export type HeaderSelectionGoalDetail = {
+  status: string;
+  elapsedSeconds?: number;
+  tasksDone?: number;
+  tasksActive?: number;
+  tasksTotal?: number;
+  tokensUsed?: number;
+  tokenBudget?: number;
+};
+
 export type HeaderSelection = {
   source: (typeof HEADER_SELECTION_SOURCES)[number];
   titles: string[];
   color: HeaderColor;
+  goal?: HeaderSelectionGoalDetail;
 };
 
 export const HEADER_SUGGESTIONS = [
@@ -111,6 +122,7 @@ export const HEADER_SUGGESTIONS = [
 export type HeaderSuggestion = (typeof HEADER_SUGGESTIONS)[number];
 
 export type HeaderSnapshot = {
+  openGoals?: number;
   activity?: HeaderActivity | null;
   selection?: HeaderSelection | null;
   suggestion?: HeaderSuggestion | null;
@@ -159,6 +171,7 @@ export type PiStatusSnapshot = {
   errors: number;
   warnings: number;
   nativeStatusCount: number;
+  nativeStatuses?: ReadonlyArray<{ key: string; text: string }>;
 };
 
 export type VimMode = 'insert' | 'normal' | 'visual' | 'visual-line' | 'ex';
@@ -876,10 +889,25 @@ export function parsePiStatusSnapshot(raw: unknown): PiStatusSnapshot | null {
   ) {
     return null;
   }
+  const nativeStatuses: Array<{ key: string; text: string }> = [];
+  if (Array.isArray(message.nativeStatuses)) {
+    for (const entry of message.nativeStatuses.slice(0, 8)) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+      const candidate = entry as Record<string, unknown>;
+      if (typeof candidate.key !== 'string' || typeof candidate.text !== 'string') {
+        continue;
+      }
+      nativeStatuses.push({
+        key: candidate.key.slice(0, 24),
+        text: candidate.text.slice(0, 160),
+      });
+    }
+  }
   return {
     errors: Number(message.errors),
     warnings: Number(message.warnings),
     nativeStatusCount: Number(message.nativeStatusCount),
+    ...(nativeStatuses.length > 0 ? { nativeStatuses } : {}),
   };
 }
 
@@ -912,10 +940,47 @@ function parseHeaderSelection(value: unknown): HeaderSelection | null {
     return normalized ? [normalized] : [];
   });
   if (titles.length !== candidate.titles.length) return null;
+
+  let goal: HeaderSelectionGoalDetail | undefined;
+  if (
+    candidate.source === 'goal' &&
+    candidate.goal &&
+    typeof candidate.goal === 'object' &&
+    !Array.isArray(candidate.goal)
+  ) {
+    const raw = candidate.goal as Record<string, unknown>;
+    const boundedNumber = (input: unknown): number | undefined =>
+      typeof input === 'number' &&
+      Number.isFinite(input) &&
+      input >= 0 &&
+      input <= 9_999_999_999
+        ? input
+        : undefined;
+    if (typeof raw.status === 'string' && raw.status.length <= 24) {
+      const detail: HeaderSelectionGoalDetail = { status: raw.status };
+      const elapsed = boundedNumber(raw.elapsedSeconds);
+      if (elapsed !== undefined) detail.elapsedSeconds = elapsed;
+      for (const [key, value] of [
+        ['tasksDone', raw.tasksDone],
+        ['tasksActive', raw.tasksActive],
+        ['tasksTotal', raw.tasksTotal],
+        ['tokenBudget', raw.tokenBudget],
+      ] as const) {
+        const parsed = boundedNumber(value);
+        if (parsed !== undefined && parsed <= 9_999) {
+          detail[key] = parsed;
+        }
+      }
+      const tokensUsed = boundedNumber(raw.tokensUsed);
+      if (tokensUsed !== undefined) detail.tokensUsed = tokensUsed;
+      goal = detail;
+    }
+  }
   return {
     source: candidate.source as HeaderSelection['source'],
     titles,
     color: candidate.color,
+    ...(goal !== undefined ? { goal } : {}),
   };
 }
 
@@ -988,6 +1053,13 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const message = raw as Record<string, unknown>;
   if (message.protocol !== 1) return null;
+  const openGoals =
+    typeof message.openGoals === 'number' &&
+    Number.isInteger(message.openGoals) &&
+    message.openGoals >= 0 &&
+    message.openGoals <= 99
+      ? message.openGoals
+      : 0;
 
   const standaloneActivity = parseHeaderActivity(message.activity) ?? null;
   let work: HeaderWork | null = null;
@@ -1098,6 +1170,7 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
   );
 
   return {
+    openGoals,
     activity: standaloneActivity,
     selection: hasExplicitSelection
       ? parseHeaderSelection(message.selection)

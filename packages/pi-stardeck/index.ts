@@ -543,11 +543,7 @@ export default function galacticaContextHeader(
     activeCwd = ctx.cwd;
     void refreshGit();
 
-    const renderDeck = (
-      width: number,
-      theme: Theme,
-      modeRail?: ContextHeaderModeRail,
-    ): string[] => {
+    const renderDeck = (width: number, theme: Theme): string[] => {
       if (width <= 0) return [];
       const usage = ctx.getContextUsage();
       const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow;
@@ -585,7 +581,6 @@ export default function galacticaContextHeader(
         },
         width,
         theme,
-        modeRail,
       );
     };
 

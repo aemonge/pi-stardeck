@@ -91,7 +91,7 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 test('renders the approved rich wide header without side borders or spacer rows', () => {
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  assert.equal(lines.length, 6);
+  assert.equal(lines.length, 5);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
   assert.ok(titleRow.includes("000:07'00"));
@@ -106,7 +106,10 @@ test('renders the approved rich wide header without side borders or spacer rows'
   assert.doesNotMatch(lines[4] ?? '', /requesting validation or redirection ⟩  task/u);
   assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
   assert.match(lines[3] ?? '', /^\u001b\[2m/u);
-  assert.match(plain(lines[0] ?? ''), /^\[.\] . ~\/galactica ⟩/u);
+  assert.match(
+    plain(lines[0] ?? ''),
+    /^\[.\] \[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}  \u{203A} [\u{E000}-\u{F8FF}] ~\/galactica ⟩/u,
+  );
   assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
   assert.ok(statusRow.includes('GPT-5.6 Sol'));
   assert.ok(statusRow.trimEnd().endsWith('63%'));
@@ -119,11 +122,9 @@ test('renders the approved rich wide header without side borders or spacer rows'
     /48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
   );
   assert.equal(lines.join('\n').includes('32K/128K'), false);
-  assert.match(lines[5] ?? '', /^─ /u);
-  assert.match(lines[5] ?? '', /‹ 󰠭 ─$/u);
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│') && !line.endsWith('│')));
-  assert.equal(lines.join('').split('󰠭').length - 1, 2);
+  assert.equal(lines.join('').split('󰠭').length - 1, 1);
   assert.equal(lines.join('').includes('󰒋 LSP'), false);
 });
 
@@ -175,41 +176,137 @@ test('drops the footer count; diagnostics stay on the top rule', () => {
   assert.doesNotMatch(empty[1] ?? '', /·0/u);
 });
 
-test('hides the bottom rail while inserting', () => {
+test('unfocused open goals ride the title row as an inline hint', () => {
   const state = fixture();
-  state.mode = 'insert';
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    openGoals: 1,
+  };
 
-  const hidden = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.equal(hidden.length, 5);
-  assert.doesNotMatch(hidden.join('\n'), /‹ 󰠭/u);
-
-  const suppliedHidden = renderHeaderDeck(state, 160, plainTheme as never, {
-    plain: '󰏫',
-    styled: '󰏫',
-  });
-  assert.equal(suppliedHidden.length, 5);
-  assert.doesNotMatch(suppliedHidden.join('\n'), /‹ 󰠭/u);
-
-  state.mode = 'normal';
-  const visible = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.equal(visible.length, 6);
-  assert.match(visible.at(-1) ?? '', /‹ 󰠭 ─$/u);
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const titleRow = lines.find((line) => line.includes("000:07'00")) ?? '';
+  assert.match(titleRow, /000:07'00 ⟩ \(1 open goal · \/goal-focus\)/u);
+  assert.equal(
+    lines.some((line) => /^◆ /u.test(line)),
+    false,
+  );
 });
 
-test('places a supplied live styled mode icon on the bottom separator', () => {
-  const renderWithModeRail = renderHeaderDeck as unknown as (
-    state: HeaderDeckState,
-    width: number,
-    theme: typeof plainTheme,
-    modeRail: { plain: string; styled: string },
-  ) => string[];
-  const modeRail = { plain: 'VIS', styled: '\u001b[35mVIS\u001b[0m' };
+test('goal selection owns the title row with badge and tree rows', () => {
+  const state = fixture();
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    selection: {
+      source: 'goal',
+      titles: ['Ship the chrome-only cockpit'],
+      color: 'accent',
+      goal: {
+        status: 'paused',
+        elapsedSeconds: 195,
+        tasksDone: 1,
+        tasksActive: 1,
+        tasksTotal: 3,
+        tokensUsed: 363_500,
+        tokenBudget: 600_000,
+      },
+    },
+  };
 
-  const lines = renderWithModeRail(fixture(), 80, plainTheme, modeRail);
-  const bottom = lines.at(-1) ?? '';
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const titleRow =
+    lines.find((line) => line.includes('Ship the chrome-only cockpit')) ?? '';
+  assert.match(titleRow, /Ship the chrome-only cockpit.*● paused · 3m 15s/u);
+  assert.ok(lines.some((line) => /├ tasks 1\/3 done · 1 active/u.test(line)));
+  assert.ok(lines.some((line) => /└ usage 363\.5k tokens · budget 61%/u.test(line)));
 
-  assert.match(plain(bottom), /^─ VIS ─+ ‹ 󰠭 ─$/u);
-  assert.equal(bottom.includes(modeRail.styled), true);
+  const narrow = renderHeaderDeck(state, 50, plainTheme as never).map(plain);
+  assert.equal(
+    narrow.some((line) => line.includes('tasks 1/3')),
+    false,
+  );
+  const narrowTitle = narrow.find((line) => line.includes('Ship the chrome')) ?? '';
+  assert.match(narrowTitle, /● paused/u);
+});
+
+test('extension statuses ride the telemetry tail as icons', () => {
+  const state = fixture();
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 2,
+    nativeStatuses: [
+      { key: 'engram', text: '\u{1F9E0} pi-vimux-starship · ready' },
+      { key: 'graphify', text: 'graphify active · report available' },
+    ],
+  };
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const telemetry = lines[0] ?? '';
+  assert.match(
+    telemetry,
+    /^\[.\] \[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}  \u{203A} [\u{E000}-\u{F8FF}] ~/u,
+  );
+  assert.ok(telemetry.indexOf('~/') > telemetry.indexOf('\u{F08BE}'));
+  assert.equal(telemetry.includes('engram'), false);
+  assert.equal(telemetry.includes('graphify'), false);
+  assert.equal(
+    lines.some((line) => /^┈+ /u.test(line) && line.includes('engram')),
+    false,
+    'footnote row is gone',
+  );
+});
+
+test('companion icon colors encode health severity', () => {
+  const seen: Array<{ color: string; text: string }> = [];
+  const spyTheme = {
+    fg: (semantic: string, text: string) => {
+      seen.push({ color: semantic, text });
+      return text;
+    },
+    bold: (text: string) => text,
+  } as never;
+  const state = fixture();
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 2,
+    nativeStatuses: [
+      { key: 'engram', text: 'ready' },
+      { key: 'graphify', text: 'graphify active · update recommended' },
+    ],
+  };
+
+  renderHeaderDeck(state, 120, spyTheme);
+  const brain = seen.find((entry) => entry.text === '[\u{21BB} \u{25A4}]');
+  const graph = seen.find((entry) => entry.text === '\u{232C}');
+  const shield = seen.find((entry) => entry.text === '\u{26E8}');
+  assert.equal(brain?.color, 'accent');
+  assert.equal(graph?.color, 'warning');
+  assert.equal(shield?.color, 'muted');
+});
+
+test('known companion icons are always present', () => {
+  const bare = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
+  assert.match(bare[0] ?? '', /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}/u);
+});
+
+test('extension status icons drop on narrow frames and filter the goal key', () => {
+  const state = fixture();
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 2,
+    nativeStatuses: [
+      { key: 'engram', text: 'ready' },
+      { key: 'goal', text: 'unfocused [1 open] - /goal-focus' },
+    ],
+  };
+  const narrow = renderHeaderDeck(state, 60, plainTheme as never).map(plain);
+  assert.match(narrow[0] ?? '', /\u{232C}/u);
+  assert.equal(
+    narrow.some((line) => line.includes('/goal-focus')),
+    false,
+  );
 });
 
 test('drops the status command before severity counts at narrow widths', () => {
@@ -557,9 +654,8 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
 
   assert.ok(colors.some((entry) => entry.startsWith('thinkingHigh:─')));
   assert.ok(colors.includes('thinkingHigh:⟩'));
-  assert.ok(colors.includes('borderAccent:󰆾'));
   assert.equal(colors.filter((entry) => entry.startsWith('text:┈')).length, 1);
-  assert.equal(colors.filter((entry) => entry === 'customMessageLabel:󰠭').length, 2);
+  assert.equal(colors.filter((entry) => entry === 'customMessageLabel:󰠭').length, 1);
   assert.equal(
     colors.some((entry) => entry.startsWith('thinkingMax:')),
     false,
@@ -652,7 +748,7 @@ test('preserves width and essential deck structure through responsive collapse',
       lines.some((line) => plain(line).includes("󰠭 000:07'00")),
       String(width),
     );
-    assert.equal(lines.join('').split('󰠭').length - 1, 2, String(width));
+    assert.equal(lines.join('').split('󰠭').length - 1, 1, String(width));
     if (width >= 79) {
       assert.match(lines.join('\n'), /000:07'00/u, String(width));
       assert.match(lines.join('\n'), /󰾆 38%/u, String(width));

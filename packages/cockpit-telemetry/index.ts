@@ -5,7 +5,7 @@ import { createSnapshotSink } from './src/sink.ts';
 export const GALACTICA_HEADER_CHANNEL = 'galactica-status:header';
 
 export default function cockpitTelemetry(pi: ExtensionAPI): void {
-  // Mirrors the header deck's activity clock (packages/header/index.ts):
+  // Mirrors the header deck's activity clock (packages/pi-stardeck/index.ts):
   // same Pi events, same marks and clears, so the stamped
   // `activityElapsedMs` ticks in lockstep with the deck's timer tile.
   let agentBusy = false;

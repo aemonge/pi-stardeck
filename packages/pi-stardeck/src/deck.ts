@@ -2,6 +2,7 @@ import type { Theme } from '@earendil-works/pi-coding-agent';
 import { truncateToWidth, visibleWidth } from '@earendil-works/pi-tui';
 
 import type { LspCapability, McpCapability } from './capabilities.ts';
+import type { HeaderSelection } from './gauge.ts';
 import type {
   FooterTelemetrySnapshot,
   GitStatusSummary,
@@ -88,27 +89,6 @@ function fitWithoutDanglingSeparator(line: string, width: number): string {
     if (separator !== '›' && separator !== '⟩') return fitted;
     fitted = trimTrailingFormatting(fitted.slice(0, fitted.lastIndexOf(separator)));
   }
-}
-
-const MODE_ICONS: Record<VimMode, string> = {
-  insert: '󰏫',
-  normal: '󰆾',
-  visual: '󰒅',
-  'visual-line': '󰒅',
-  ex: '󰆍',
-};
-
-const MODE_COLORS: Record<VimMode, string> = {
-  insert: 'borderMuted',
-  normal: 'borderAccent',
-  visual: 'customMessageLabel',
-  'visual-line': 'customMessageLabel',
-  ex: 'warning',
-};
-
-function fallbackModeRail(state: HeaderDeckState, theme: Theme): HeaderDeckModeRail {
-  const plain = MODE_ICONS[state.mode];
-  return { plain, styled: color(theme, MODE_COLORS[state.mode], plain) };
 }
 
 export function formatDeckElapsed(elapsedMs: number | null): string {
@@ -217,11 +197,16 @@ function elevatedSelectionLines(
   if (!selection || titles.length === 0) {
     return []; // frozen contract: no selection means no slot
   }
+  const openGoals = selection.source !== 'goal' ? (state.header?.openGoals ?? 0) : 0;
+  const goalHint =
+    openGoals > 0
+      ? `(${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus) `
+      : '';
   const contentWidth = Math.max(1, width - visibleWidth(prefix));
   const selectionColor = ['accent', 'success'].includes(selection.color)
     ? 'accent'
     : selection.color;
-  return wrapFocus(titles.join(' › '), contentWidth, 2).map(
+  return wrapFocus(`${goalHint}${titles.join(' › ')}`, contentWidth, 2).map(
     (line, index) =>
       `${index === 0 ? prefix : indent}${color(theme, selectionColor, line)}`,
   );
@@ -409,9 +394,16 @@ function suggestionLine(
   return color(theme, semanticColor, `${SUGGESTION_LABELS[suggestion]}`);
 }
 
-function projectLeft(state: HeaderDeckState, theme: Theme): string {
+function projectLeft(state: HeaderDeckState, theme: Theme, statusIcons = ''): string {
   const devbox = state.devbox ? `${color(theme, 'success', '[󰆧]', true)} ` : '';
-  return `${devbox}${color(theme, 'success', ` ${safeText(state.cwd)}`)}`;
+  if (statusIcons === '') {
+    return `${devbox}${color(theme, 'success', ` ${safeText(state.cwd)}`)}`;
+  }
+  return `${devbox}${statusIcons}  ${minorSeparator(theme, 'dim')} ${color(
+    theme,
+    'success',
+    ` ${safeText(state.cwd)}`,
+  )}`;
 }
 
 function gitRight(state: HeaderDeckState, theme: Theme): string {
@@ -481,14 +473,72 @@ function compactTelemetryLeft(
   theme: Theme,
   width: number,
 ): string {
-  // Relocation phase (Human-directed): repository identity joins the project
-  // at the telemetry head; narrow frames drop the project before Git facts.
-  const projectSegment = width >= 100 ? projectLeft(state, theme) : '';
+  // Human contract: companion symbols are always visible at any width —
+  // only their color changes (on / warn / off). They ride inside the project
+  // segment when it fits and lead standalone on narrow frames.
+  const statusIcons = extensionStatusCodes(state, theme);
+  const projectSegment = width >= 100 ? projectLeft(state, theme, statusIcons) : '';
+  const leadSegment = projectSegment !== '' ? '' : statusIcons;
   const gitSegment =
     width >= 79 ? truncateToWidth(gitRight(state, theme), 52, '…') : '';
-  return [projectSegment, gitSegment]
+  return [projectSegment, leadSegment, gitSegment]
     .filter((segment) => segment !== '')
     .join(` ${semanticSeparator(theme)} `);
+}
+
+const KNOWN_COMPANION_ICONS: ReadonlyArray<{
+  keys: readonly string[];
+  icons: readonly string[];
+}> = [
+  { keys: ['engram'], icons: ['\u{21BB}', '\u{25A4}'] },
+  { keys: ['graphify'], icons: ['\u{232C}'] },
+  { keys: ['appa', 'openappa'], icons: ['\u{26E8}'] },
+];
+
+const COMPANION_WARNING_PATTERN =
+  /(warn|error|stale|unreachable|down|fail|update recommended|needs attention|unhealthy)/iu;
+
+function companionIconColor(text: string | undefined, active: boolean): string {
+  // Color is the only state signal: symbols never hide.
+  // On = accent, warn/error = warning, off = muted (visible gray).
+  if (!active) return 'muted';
+  return text !== undefined && COMPANION_WARNING_PATTERN.test(text)
+    ? 'warning'
+    : 'accent';
+}
+
+function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
+  const texts = new Map<string, string>();
+  for (const item of state.piStatus?.nativeStatuses ?? []) {
+    if (item.key === 'goal' || texts.has(item.key)) continue;
+    texts.set(item.key, item.text);
+  }
+  const parts: Array<{ bare: boolean; text: string }> = [];
+  for (const companion of KNOWN_COMPANION_ICONS) {
+    const published = companion.keys
+      .map((key) => texts.get(key))
+      .find((text) => text !== undefined);
+    for (const key of companion.keys) texts.delete(key);
+    const joined = companion.icons.join(' ');
+    const chip = companion.icons.length > 1 ? `[${joined}]` : joined;
+    parts.push({
+      bare: companion.icons.length === 1,
+      text: color(
+        theme,
+        companionIconColor(published, published !== undefined),
+        chip,
+        true,
+      ),
+    });
+  }
+  let out = '';
+  let previousBare = false;
+  for (const part of parts) {
+    out +=
+      out === '' ? part.text : `${previousBare && part.bare ? '  ' : ' '}${part.text}`;
+    previousBare = part.bare;
+  }
+  return out;
 }
 
 function compactTelemetryRight(
@@ -602,11 +652,69 @@ function topRailPrefix(
   return `${color(theme, lineColor, '─ ')}${loud(theme, severity, `${icon} ${total}`)} `;
 }
 
+function formatGoalElapsed(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  const totalMinutes = Math.floor(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}m ${Math.floor(seconds % 60)}s`;
+  return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+}
+
+function formatTokens(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}k`;
+  return `${Math.floor(tokens)}`;
+}
+
+const GOAL_STATUS_COLORS: Record<string, string> = {
+  active: 'accent',
+  complete: 'success',
+  paused: 'warning',
+  blocked: 'error',
+  usage_limited: 'warning',
+  budget_limited: 'warning',
+  queued: 'dim',
+};
+
+function goalBadgeTile(
+  goal: NonNullable<HeaderSelection['goal']>,
+  theme: Theme,
+): string {
+  const semantic = GOAL_STATUS_COLORS[goal.status] ?? 'text';
+  const elapsed =
+    goal.elapsedSeconds !== undefined
+      ? ` · ${formatGoalElapsed(goal.elapsedSeconds)}`
+      : '';
+  return `${color(theme, semantic, `● ${goal.status}`)}${color(theme, 'dim', elapsed)}`;
+}
+
+function goalTreeLines(
+  goal: NonNullable<HeaderSelection['goal']>,
+  width: number,
+  theme: Theme,
+): string[] {
+  if (width < 56) return [];
+  const rows: string[] = [];
+  if (goal.tasksTotal !== undefined && goal.tasksDone !== undefined) {
+    const active =
+      goal.tasksActive !== undefined && goal.tasksActive > 0
+        ? ` · ${goal.tasksActive} active`
+        : '';
+    rows.push(`  ├ tasks ${goal.tasksDone}/${goal.tasksTotal} done${active}`);
+  }
+  if (goal.tokensUsed !== undefined) {
+    const budget =
+      goal.tokenBudget !== undefined && goal.tokenBudget > 0
+        ? ` · budget ${Math.min(999, Math.round((goal.tokensUsed / goal.tokenBudget) * 100))}%`
+        : '';
+    rows.push(`  └ usage ${formatTokens(goal.tokensUsed)} tokens${budget}`);
+  }
+  return rows.map((line) => color(theme, 'dim', line));
+}
+
 export function renderHeaderDeck(
   state: HeaderDeckState,
   width: number,
   theme: Theme,
-  suppliedModeRail?: HeaderDeckModeRail,
 ): string[] {
   const boundedWidth = Math.max(0, Math.floor(width));
   if (boundedWidth === 0) return [];
@@ -618,24 +726,6 @@ export function renderHeaderDeck(
     lineColor,
     '─'.repeat(Math.max(0, boundedWidth - visibleWidth(topPrefix))),
   )}`;
-  const modeRail = suppliedModeRail ?? fallbackModeRail(state, theme);
-  const inserting = suppliedModeRail
-    ? suppliedModeRail.plain === MODE_ICONS.insert
-    : state.mode === 'insert';
-  const bottomPrefix = `${color(theme, lineColor, '─ ')}${modeRail.styled}${color(theme, lineColor, ' ')}`;
-  // Relocation phase: the footer count is deleted — diagnostics live on the
-  // top rule; the bottom rail keeps only the mode icon and the anchor echo.
-  const bottomSuffix = `${color(theme, lineColor, ' ')}${color(theme, lineColor, '‹ ')}${color(theme, 'customMessageLabel', '󰠭')}${color(theme, lineColor, ' ─')}`;
-  const bottom = `${bottomPrefix}${color(
-    theme,
-    lineColor,
-    '─'.repeat(
-      Math.max(
-        0,
-        boundedWidth - visibleWidth(bottomPrefix) - visibleWidth(bottomSuffix),
-      ),
-    ),
-  )}${bottomSuffix}`;
   const divider = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   const current = lifecycle(state);
   const activityText = activityLabel(state);
@@ -660,7 +750,16 @@ export function renderHeaderDeck(
   // the right end; runs ride the lifecycle row; the project context heads
   // the telemetry row.
   // Narrow frames: the progress slot yields before the selection anchor does.
-  const titleRight = boundedWidth >= 40 ? progressTile(state, theme) : '';
+  const goalDetail =
+    state.header?.selection?.source === 'goal'
+      ? state.header.selection.goal
+      : undefined;
+  const titleRight =
+    boundedWidth >= 40
+      ? goalDetail
+        ? goalBadgeTile(goalDetail, theme)
+        : progressTile(state, theme)
+      : '';
   const focusLines = elevatedSelectionLines(state, boundedWidth, theme);
   // Relocation phase: without a selection the bare clock keeps the band alive.
   const titleBase = focusLines.length > 0 ? focusLines : [timerTile(state, theme)];
@@ -698,8 +797,8 @@ export function renderHeaderDeck(
     ...titleRows,
     divider,
     status,
+    ...(goalDetail ? goalTreeLines(goalDetail, boundedWidth, theme) : []),
     ...spanTreeRows(state, boundedWidth, theme),
-    ...(inserting ? [] : [bottom]),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }
