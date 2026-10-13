@@ -12,3 +12,4 @@ openspec/
 **/LOCAL-CHANGES.md
 .tmp/
 graphify-out/
+openspec.old/
