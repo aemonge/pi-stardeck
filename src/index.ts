@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-import galacticaContextHeader from '../packages/header/index.js';
+import galacticaContextHeader from '../packages/pi-stardeck/index.js';
 import galacticaStatus from '../packages/status/index.js';
 import cockpitTelemetry from '../packages/cockpit-telemetry/index.js';
 import fancyFooter from '../packages/pi-fancy-footer-full-palette/src/index.js';

@@ -102,7 +102,7 @@ function defaultPidAlive(pid) {
   }
 }
 
-// Mirrors the header deck's path form (packages/header/src/gauge.ts):
+// Mirrors the header deck's path form (packages/pi-stardeck/src/gauge.ts):
 // `~` for home, `~/rest` under it, raw elsewhere — never a bare basename.
 function formatProjectPath(cwd, home = process.env.HOME ?? '') {
   if (!home) return cwd;
@@ -128,7 +128,7 @@ export async function pruneDeadSnapshots(stateDir, { pidAlive } = {}) {
   return removed;
 }
 
-// Mirrors the header deck's timer face (packages/header/src/deck.ts):
+// Mirrors the header deck's timer face (packages/pi-stardeck/src/deck.ts):
 // mmm:ss'cc capped at 999:59'99.
 function formatDeckClock(ms) {
   const maximum = (999 * 60 + 59) * 1_000 + 999;

@@ -19,7 +19,7 @@ export const REQUIRED_FILES = [
   'licenses/pi-fancy-footer-LICENSE',
   'licenses/pi-vim-LICENSE',
   'package.json',
-  'packages/header/index.ts',
+  'packages/pi-stardeck/index.ts',
   'packages/status/index.ts',
   'packages/cockpit-telemetry/index.ts',
   'packages/pi-fancy-footer-full-palette/src/index.ts',

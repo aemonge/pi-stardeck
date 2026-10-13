@@ -43,7 +43,7 @@ Nearest focused commands remain available:
 
 ```bash
 npm run test:status
-npm run test:header
+npm run test:stardeck
 npm run test:footer
 npm run test:vim
 npm run test:components
