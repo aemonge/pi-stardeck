@@ -57,8 +57,12 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         `packages/status/src/title-state.ts`,
         `packages/status/test/title-state.test.ts`,
         `baseline/source.sha256`, `openspec/changes/eight-section-deck/tasks.md`
-- [ ] 1.5 Checkpoint: state publishes; the deck renders pixel-identical
-      to v0.2.1 (Human confirms via debug line).
+- [x] 1.5 Checkpoint: state publishes; the deck renders pixel-identical
+      to v0.2.1 (Human confirms via debug line). outcome: VALID · at:
+      2026-10-14 · Human confirmed the deck unchanged across two live
+      sessions (host `/tmp` idle + devbox repo session); legacy tiles
+      (`task 00/00`, `stps 00/00`, `00 › 00`) all present, no Step-1
+      leakage; publisher live underneath via `/galactica-status-debug`
 
 ## 2. Four-line deck render
 
