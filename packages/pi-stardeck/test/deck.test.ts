@@ -1289,3 +1289,109 @@ test('closes the deck on line 4 with a solid rule above and nothing beneath', ()
   // No separator beneath the last band.
   assert.ok((lines.at(-1) ?? '').includes('GPT-5.6 Sol'));
 });
+
+// --- Step 2.4: the two accepted mockups as lockstep fixtures ----------------
+//
+// Ground truth: plan.md Task 2. The mockups transcribe the deck's non-PUA
+// glyphs verbatim; nerd-font icons (branch marker, git dirt entries) do not
+// survive plain-text transcription, so `main › +2` is read as the dirty git
+// entries with two modified files, and the stale `packages/header` target is
+// the pre-rename spelling of `packages/pi-stardeck`.
+
+function mockupDeckState(): HeaderDeckState {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.cwd = '~/projects/pi-vimux-starship';
+  state.devbox = false;
+  state.branch = 'main';
+  state.gitAvailable = true;
+  return state;
+}
+
+test('renders the accepted idle mockup at wide widths', () => {
+  const state = mockupDeckState();
+  state.git = { staged: 0, modified: 0, untracked: 0, conflicts: 0 };
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    title: parseDeckTitleState(IDLE_TITLE),
+    turn: { tokens: 0, elapsedMs: 0 },
+  };
+
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  assert.equal(lines.length, 7);
+  // Line 1: path/git left, companion chips right.
+  assert.match(
+    lines[0] ?? '',
+    /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
+  );
+  assert.match(lines[1] ?? '', /^\u2500+$/u);
+  // Line 2: clock + Subject left, the dim no-work hint right.
+  assert.match(
+    lines[2] ?? '',
+    /^\u{F082D} 000:00'00 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
+  );
+  assert.match(lines[3] ?? '', /^\u2508+$/u);
+  // Line 3: awaiting Human left, the zeroed turn meter right.
+  assert.match(lines[4] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
+  assert.match(lines[5] ?? '', /^\u2500+$/u);
+  // Line 4 closes the deck: engine, quota, machine, global cost left.
+  assert.match(lines[6] ?? '', /^\u{F06A9} /u);
+});
+
+test('renders the accepted mid-work mockup at wide widths', () => {
+  const state = mockupDeckState();
+  state.git = { staged: 0, modified: 2, untracked: 0, conflicts: 0 };
+  state.elapsedMs = 4_120;
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    title: parseDeckTitleState({
+      ...IDLE_TITLE,
+      work: { change: 'eight-section-deck', task: '2.1', done: 1, total: 4 },
+      activity: {
+        class: 'editing',
+        target: 'packages/pi-stardeck/src/deck.ts',
+        span: 't87',
+        parent: null,
+      },
+    }),
+    turn: { tokens: 4_200, elapsedMs: 38_000 },
+  };
+
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  assert.equal(lines.length, 7);
+  // Line 1: `main › +2` in the mockup is the dirty-entry transcription —
+  // two modified files ride the git segment.
+  assert.match(
+    lines[0] ?? '',
+    /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
+  );
+  // Line 2: Work owns the right end with `change · done/total`.
+  assert.match(
+    lines[2] ?? '',
+    /^\u{F082D} 000:04'12 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck \u00b7 1\/4$/u,
+  );
+  // Line 3: observed activity left, this-turn cost right.
+  assert.match(
+    lines[4] ?? '',
+    /^ editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
+  );
+  // Separators and line 4 hold the accepted band pattern.
+  assert.match(lines[1] ?? '', /^\u2500+$/u);
+  assert.match(lines[3] ?? '', /^\u2508+$/u);
+  assert.match(lines[5] ?? '', /^\u2500+$/u);
+  assert.match(lines[6] ?? '', /^\u{F06A9} /u);
+});
+
+test('renders both mockups identically at 100 and 120 columns', () => {
+  const state = mockupDeckState();
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    title: parseDeckTitleState(IDLE_TITLE),
+    turn: { tokens: 0, elapsedMs: 0 },
+  };
+  for (const width of [100, 120]) {
+    const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
+    assert.ok((lines[0] ?? '').includes('~/projects/pi-vimux-starship'), String(width));
+    assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
+    assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
+  }
+});

@@ -66,13 +66,26 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 
 ## 2. Four-line deck render
 
-- [ ] 2.1 Parse the title state in `packages/header` and compose line 2:
+- [x] 2.1 Parse the title state in `packages/header` and compose line 2:
       `󰠭 clock ⟩ Subject` left, `Work — change · n/m` or dim
       `— no change owns the moment` right; goal rows stay conditional
       beneath.
       - Expected idle: `󰠭 000:00'00 ⟩ <Subject>    — no change owns the moment`
       - Expected mid-work: `... ⟨ <Subject>    eight-section-deck · 1/4`
-- [ ] 2.2 Compose line 3: Activity left (`editing <target>`,
+      - Receipt: start: 2026-10-14T10:42:00Z · elapsed: ~48m · check:
+        `npm run test:stardeck` green (126/126; 8 parser + 8 title-band
+        cases, lockstep updates for the counter tiles leaving line 2),
+        `npm run test:status` green (186/186), `npm run typecheck` green,
+        `check-baseline` PASS with refreshed manifest (119 files;
+        `imported-source.sha256` untouched), prettier green · commit
+        `86635f5` · paths: `packages/pi-stardeck/src/title-state.ts`,
+        `packages/pi-stardeck/src/gauge.ts`,
+        `packages/pi-stardeck/src/deck.ts`,
+        `packages/pi-stardeck/test/title-state.test.ts`,
+        `packages/pi-stardeck/test/deck.test.ts`,
+        `packages/pi-stardeck/test/surface.test.ts`,
+        `baseline/source.sha256`
+- [x] 2.2 Compose line 3: Activity left (`editing <target>`,
       `awaiting Human` idle), this-turn cost right; remove the `task/stps`
       and `00 › 00` counter tiles; spans rows remain conditional below.
       - Expected idle: `awaiting Human` + `— · 0 tok`.
@@ -80,12 +93,38 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         `this turn 4.2k · 0:38`.
       - Expected absence: no `task 00/00`, `stps 00/00`, or `00 › 00` in
         any state.
-- [ ] 2.3 Relocate companion chips from the telemetry head to line 1
+      - Receipt: start: 2026-10-14T11:32:00Z · elapsed: ~14m · check:
+        `npm run test:stardeck` green (132/132; 6 line-3 cases, lifecycle/
+        suggestion/runs lockstep rewrites, transitional engine row),
+        `npm run test:status` green (186/186), `npm run typecheck` green,
+        eslint clean, `check-baseline` PASS with refreshed manifest ·
+        commit `a5d9817` · paths: `packages/pi-stardeck/src/deck.ts`,
+        `packages/pi-stardeck/test/deck.test.ts`,
+        `baseline/source.sha256`
+- [x] 2.3 Relocate companion chips from the telemetry head to line 1
       right; move engine/quota/machine/global-cost to line 4 left.
       - Expected (100+ cols): `~/<path> ⟩ main › clean` left, bold
         `[↻ ▤] ⌬  ⛨` right; narrow frames keep chips, path yields first.
+      - Receipt: start: 2026-10-14T11:50:00Z · elapsed: ~35m · check:
+        `npm run test:stardeck` green (138/138; 6 relocation/line-4 cases,
+        chips-right and line-4 lockstep), `npm run test:status` green
+        (186/186), `npm run typecheck` green, eslint clean,
+        `check-baseline` PASS with refreshed manifest · commit `9356cbe` ·
+        paths: `packages/pi-stardeck/src/deck.ts`,
+        `packages/pi-stardeck/test/deck.test.ts`,
+        `baseline/source.sha256`
 - [ ] 2.4 Lockstep deck tests for both accepted mockups; checkpoint:
       Human confirms live sessions match.
+      - Test portion complete: both mockups reproduce as fixtures at
+        100+ columns (idle: clean git + dim work hint + `— · 0 tok`;
+        mid-work: dirty git + `eight-section-deck · 1/4` + `this turn
+        4.2k · 0:38`; stale `packages/header` target read as the
+        pre-rename `packages/pi-stardeck` spelling). Full gate green:
+        `npm run test:stardeck` 141/141, `npm run test:status` 186/186,
+        `npm run test:components` green, `npm run typecheck` green,
+        `check-baseline` PASS (imported manifest untouched), prettier
+        green, `check:openspec` PASS, `check:composition` PASS.
+        Checkpoint stays open for the Human.
 
 ## 3. Notices and waiver
 

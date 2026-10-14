@@ -45,7 +45,7 @@ b0b480d5188d03f467c372b2dcf5712095cca21820ec2e089e6c378f9e13cf6d  packages/pi-st
 37afc2004716e60630768da80e6cbb46f7238d9acf05734b9260aa85d6e37460  packages/pi-stardeck/src/title.ts
 bf6ecc8639ecc4b63da4eaa6eb4e7fcff60367c6a61a03f7aeba0e598f3fc9ff  packages/pi-stardeck/test/activity-age.test.ts
 8a1d054ae8821033135e25b78ad5c4d4b431885b51467fd0227fd87d256f4d2c  packages/pi-stardeck/test/capabilities.test.ts
-c0e0c535923d683c6e070e4daad4f481eb3e8c1bda867269311b8cf6474dce89  packages/pi-stardeck/test/deck.test.ts
+28ac460a2b9f38246afa861479c589c9f62517289735776a40dc6988cd5958a3  packages/pi-stardeck/test/deck.test.ts
 f17874a630a3d680a1ef5dd9d98407f04979311c720f5357947197d519f8732b  packages/pi-stardeck/test/fixtures/fancy-footer.json
 ec5715df7de98b272fc3b188f6d5750ebc6c808078cba34de841de396c01befd  packages/pi-stardeck/test/gauge.test.ts
 bcf25f6df314714bcd4828b2c3b5a020c0b38bf250744209acf2adafe41f95dd  packages/pi-stardeck/test/git-refresh.test.ts
