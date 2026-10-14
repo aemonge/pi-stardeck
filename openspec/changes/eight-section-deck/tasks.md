@@ -165,15 +165,58 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 
 ## 3. Notices and waiver
 
-- [ ] 3.1 Aggregate notices into line 4 right: companion warning texts,
+- [x] 3.1 Aggregate notices into line 4 right: companion warning texts,
       open-goal hint, diagnostics counts — ranked, ` · `-joined, empty
       when clean.
       - Expected mixed: `⚠ 1 open goal · /goal-focus · appa unreachable · 2 diagnostics`
-- [ ] 3.2 Honor `waiver` suppression of the exact matching notice text;
+      - Receipt: start: 2026-10-14T15:36:53Z · elapsed: ~9m · check:
+        `npm run test:stardeck` green (145/145; 3 open-goal lockstep
+        rewrites, 3 line-4 placement rewrites, 4 new notice cases),
+        `npm run test:status` green (186/186; bounded-diagnostics test
+        extended — publisher gained the minimal `count` field on the
+        header diagnostics: errors+blockers+warnings), `npm run
+        test:components` green, `npm run typecheck` green,
+        `check-baseline --write` PASS (119 files;
+        `imported-source.sha256` untouched), prettier + eslint green on
+        touched files, `check:openspec` PASS (4 changes) · commit
+        `2e61b32` · paths: `packages/pi-stardeck/src/deck.ts`,
+        `packages/pi-stardeck/src/gauge.ts`,
+        `packages/status/src/publisher.ts`, `packages/status/index.ts`,
+        `packages/pi-stardeck/test/deck.test.ts`,
+        `packages/pi-stardeck/test/gauge.test.ts`,
+        `packages/status/test/publisher.test.ts`, `baseline/source.sha256`
+      - Placement default (Human-deferred, arbitrate at 3.3): non-empty
+        notices own line 4's right end; the machine group yields wholesale
+        on the existing fit ladder; engine group stays flush left.
+        Alternative documented in plan.md: machine group compacts instead
+        of yielding.
+      - Blocked/approval restored from the Step-2 lifecycle-tile deletion
+        as notice texts at the top of the companion group: `⛔ blocked`,
+        `approval required` (publisher field wording); blocked keeps the
+        error severity, other notices render at warning.
+- [x] 3.2 Honor `waiver` suppression of the exact matching notice text;
       absence restores it.
       - Expected: waiver on graphify-stale removes only that text.
+      - Receipt: start: 2026-10-14T15:43:37Z · elapsed: ~21m · check:
+        `npm run test:stardeck` green (149/149; 4 waiver cases — exact
+        suppression beside live notices, restore on null waiver, inert
+        waiver for absent text, goal-hint suppression by exact text),
+        `npm run test:status` green (186/186), `npm run test:components`
+        green, `npm run typecheck` green, `check-baseline` PASS with
+        refreshed manifest (119 files; `imported-source.sha256`
+        untouched), prettier green on touched files, `check:openspec` PASS,
+        `npm run check` green (tarball 83 entries ≤ 88) · paths:
+        `packages/pi-stardeck/src/deck.ts`,
+        `packages/pi-stardeck/test/deck.test.ts`, `baseline/source.sha256`,
+        `openspec/changes/eight-section-deck/tasks.md`,
+        `openspec/changes/eight-section-deck/plan.md` (docs ride this
+        commit)
 - [ ] 3.3 Human validation: idle and mid-work sessions match the accepted
       layout; notices appear and clear with their sources.
+      - Open question for this review: notice-slot placement when line 4 is
+        crowded — implemented default (notices own the right end, machine
+        group yields wholesale) vs. the alternative (machine group compacts
+        instead of yielding); see plan.md Task 3.
 
 ## 4. Gate and release 0.3.0
 
@@ -183,3 +226,6 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 - [ ] 4.2 Hand the release to Human: `just publish 0.3.0`, push, swap the
       personal install with the explicit version pin; `pi list` confirms
       `npm:@aemonge-dev/pi-vimux-starship@0.3.0`.
+      - Note: 0.3.0 published early per Human decision 2026-10-14 (rename
+        + four-line deck, commits through 9124f03); notices/waiver target
+        the next release — re-cut this step's version before handoff.

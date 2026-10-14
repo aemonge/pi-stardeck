@@ -494,7 +494,10 @@ export function collectDeckNotices(state: HeaderDeckState): string[] {
   if (diagnostics !== undefined && diagnostics > 0) {
     notices.push(`${diagnostics} diagnostic${diagnostics === 1 ? '' : 's'}`);
   }
-  return notices;
+  // Task 3.2: a set waiver suppresses exactly its matching notice text
+  // (suppression-only pending Human review); absence restores the notice.
+  const waiver = header?.title?.waiver ?? null;
+  return waiver ? notices.filter((notice) => notice !== waiver.notice) : notices;
 }
 
 function noticeTile(state: HeaderDeckState, theme: Theme): string {

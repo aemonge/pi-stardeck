@@ -153,6 +153,23 @@ After this Task, with the deck intentionally unchanged:
 - Waiver: `{"id":"graphify-stale","notice":"graphify · update recommended"}`
   suppresses that exact text; absence of the waiver restores it.
 - Header suite grows ≈ 6 cases (each source, ranking, waiver on/off).
+- Task-3 placement default (Human-deferred from 2.4, pending the 3.3
+  review): when notices are non-empty they own line 4's right end and the
+  machine group (quota flame, machine readings, global cost) yields
+  wholesale, riding the same fit ladder as the existing narrow-frame
+  yield — the right group renders only when it fits beside the engine
+  group, which stays flush left. Implemented as the default because it
+  keeps the slot whole and legible at one glance.
+  - Open 3.3 question: the alternative — the machine group compacts
+    (drops segments) instead of yielding wholesale, so telemetry and
+    notices share line 4 — trades glanceability for telemetry
+    persistence; arbitrate at the mockup review.
+- Task-3 amendment (2026-10-14): the blocked/approval signals lost with
+  the Step-2 lifecycle-tile deletion are restored as notice texts at the
+  top of the companion group (`⛔ blocked`, `approval required`, the
+  publisher field wording), and the publisher's header diagnostics gained
+  a minimal `count` field (errors+blockers+warnings) to feed the
+  `N diagnostics` notice.
 - **Final validation evidence:** idle + mid-work sessions match the accepted
   layout; warnings appear and clear with their sources.
 
@@ -165,6 +182,9 @@ After this Task, with the deck intentionally unchanged:
 - Release handed to Human: `just publish 0.3.0` → `git push --follow-tags`
   → swap with the explicit version pin; `pi list` shows
   `npm:@aemonge-dev/pi-vimux-starship@0.3.0`.
+  - Note: 0.3.0 published early per Human decision 2026-10-14 (rename +
+    deck); notices/waiver target the next release — re-cut this step's
+    version before handoff.
 
 ## Scope
 

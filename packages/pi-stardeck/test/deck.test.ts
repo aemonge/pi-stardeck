@@ -1608,3 +1608,100 @@ test('keeps the notice slot empty and silent when clean', () => {
   // Healthy companion texts never surface as notices.
   assert.equal(lines.join('\n').includes('report available'), false);
 });
+
+// --- Step 3.2: waiver suppression -------------------------------------------
+
+function waiverFixture(
+  waiver: { id: string; notice: string } | null,
+  overrides: {
+    openGoals?: number;
+    nativeStatuses?: Array<{ key: string; text: string }>;
+  } = {},
+): HeaderDeckState {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    ...(overrides.openGoals !== undefined ? { openGoals: overrides.openGoals } : {}),
+    title: parseDeckTitleState({ ...IDLE_TITLE, waiver }),
+  };
+  if (overrides.nativeStatuses) {
+    state.piStatus = {
+      errors: 0,
+      warnings: 0,
+      nativeStatusCount: overrides.nativeStatuses.length,
+      nativeStatuses: overrides.nativeStatuses,
+    };
+  }
+  return state;
+}
+
+test('waiver suppresses exactly its matching notice text', () => {
+  const noticeText = 'graphify · update recommended';
+  const state = waiverFixture(
+    { id: 'graphify-stale', notice: noticeText },
+    {
+      openGoals: 1,
+      nativeStatuses: [
+        { key: 'graphify', text: noticeText },
+        { key: 'appa', text: 'appa unreachable' },
+      ],
+    },
+  );
+
+  const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  // Exactly the waived text leaves the slot; the other notices remain.
+  assert.ok(line4.trimEnd().endsWith('⚠ 1 open goal · /goal-focus · appa unreachable'));
+  assert.equal(line4.includes(noticeText), false);
+});
+
+test('removing the waiver restores exactly its notice', () => {
+  const noticeText = 'graphify · update recommended';
+  const waived = waiverFixture(
+    { id: 'graphify-stale', notice: noticeText },
+    { nativeStatuses: [{ key: 'graphify', text: noticeText }] },
+  );
+  const restored = waiverFixture(null, {
+    nativeStatuses: [{ key: 'graphify', text: noticeText }],
+  });
+
+  const waivedLine = renderHeaderDeck(waived, 140, plainTheme as never)
+    .map(plain)
+    .find((line) => line.includes('GPT-5.6 Sol'));
+  assert.equal(waivedLine?.includes('⚠'), false, 'waived sole notice empties the slot');
+  // Suppression-only semantics: a null waiver restores the notice while
+  // the machine group loses the right end again.
+  const restoredLines = renderHeaderDeck(restored, 140, plainTheme as never).map(plain);
+  const restoredLine = restoredLines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.ok(restoredLine.trimEnd().endsWith(`⚠ ${noticeText}`));
+  assert.equal(restoredLine.includes('$5.16'), false);
+});
+
+test('a waiver matching no live notice text is inert', () => {
+  const state = waiverFixture(
+    { id: 'stale-waiver', notice: 'engram down' },
+    { nativeStatuses: [{ key: 'graphify', text: 'graphify · update recommended' }] },
+  );
+
+  const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  // Exact-text matching: a waiver for a notice that is not live suppresses
+  // nothing — the live companion warning still renders.
+  assert.ok(line4.trimEnd().endsWith('⚠ graphify · update recommended'));
+});
+
+test('a waiver can suppress the open-goal hint by its exact text', () => {
+  const state = waiverFixture(
+    { id: 'open-goal-hint', notice: '1 open goal · /goal-focus' },
+    { openGoals: 1 },
+  );
+
+  const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.equal(lines.join('\n').includes('/goal-focus'), false);
+  assert.equal(line4.includes('⚠'), false, 'sole notice waived empties the slot');
+  assert.ok(
+    line4.trimEnd().endsWith('$5.16'),
+    'machine group returns to the right end',
+  );
+});
