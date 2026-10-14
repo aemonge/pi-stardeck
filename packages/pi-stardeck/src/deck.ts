@@ -7,13 +7,11 @@ import type {
   FooterTelemetrySnapshot,
   GitStatusSummary,
   HeaderActivity,
-  HeaderSuggestion,
   HeaderSnapshot,
   PiStatusSnapshot,
   VimMode,
 } from './gauge.ts';
 import type { ResourceTelemetry } from './process-resources.ts';
-import type { DeckTitleState } from './title-state.ts';
 import { formatDeckCountdown } from './gauge.ts';
 import { formatDeckWorkLabel } from './title-state.ts';
 
@@ -138,25 +136,6 @@ function formatCost(value: number): string {
       ? 2
       : Math.min(6, Math.max(3, Math.ceil(-Math.log10(normalized)) + 1));
   return `$${normalized.toFixed(decimals).replace(/\.?0+$/u, '')}`;
-}
-
-function lifecycle(state: HeaderDeckState): { label: string; active: boolean } | null {
-  // Frozen contract: the renderer never fabricates a stage.
-  const raw = state.header?.work?.lifecycle;
-  if (!raw) return null;
-  const aliases: Record<string, string> = {
-    active: 'working',
-    implementation: 'working',
-    verification: 'assuring',
-    'awaiting validation': 'waiting',
-    'awaiting input': 'waiting',
-  };
-  const label = safeText(aliases[raw.toLowerCase()] ?? raw, 24);
-  if (!label) return null;
-  return {
-    label,
-    active: !['waiting', 'listening'].includes(label.toLowerCase()),
-  };
 }
 
 function wrapFocus(text: string, width: number, maximumLines: number): string[] {
@@ -294,21 +273,6 @@ function timerTile(state: HeaderDeckState, theme: Theme): string {
     : color(theme, 'dim', formatDeckElapsed(idle ?? 0));
 }
 
-function runsTile(state: HeaderDeckState, theme: Theme): string {
-  const children = state.header?.counters.activeRuns?.children ?? 0;
-  const subagents = state.header?.counters.activeRuns?.subagents ?? 0;
-  const runsLive = children > 0 || subagents > 0 || state.elapsedMs != null;
-  // Gray-out amendment: numeric zeros keep the fixed cells; color alone
-  // carries the disabled meaning, mirroring the idle clock.
-  const cell = (value: number, icon: string) =>
-    color(
-      theme,
-      runsLive && value > 0 ? 'accent' : 'dim',
-      `${icon} ${String(value).padStart(2, '0')}`,
-    );
-  return `${cell(children, '')} ${minorSeparator(theme, 'dim')} ${cell(subagents, '')}`;
-}
-
 function spanElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1_000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -363,51 +327,49 @@ function activityLabel(state: HeaderDeckState): string {
   return activity ? ACTIVITY_LABELS[activity.kind] : '';
 }
 
-const SUGGESTION_LABELS: Record<HeaderSuggestion, string> = {
-  'requesting-validation': 'requesting validation or redirection',
-  'awaiting-continuation': 'awaiting continuation',
-  'requesting-redirection': 'requesting redirection',
-  'awaiting-resume': 'awaiting resume or redirect',
-  'requesting-input': 'requesting input',
-};
-
-const PLACEHOLDER_TITLES = new Set(['no focused task', 'no focus']);
-
-function whatLine(state: HeaderDeckState): string {
-  const work = state.header?.work;
-  const title = (work?.titles ?? []).find(
-    (candidate) => candidate && !PLACEHOLDER_TITLES.has(candidate),
-  );
-  const pathLabel = safeText(work?.activityPath?.at(-1)?.label ?? '');
-  const base = safeText(title ?? '') || pathLabel;
-  // Frozen contract: one home per fact — step counts never ride this line.
-  return base;
+/** `editing deck.ts` / `reading schema.yaml` / `subagent: scout`. */
+function titleActivityLabel(activity: { class: string; target: string }): string {
+  return activity.class === 'subagent'
+    ? `subagent: ${activity.target}`
+    : `${activity.class} ${activity.target}`;
 }
 
-function suggestionLine(
-  state: HeaderDeckState,
-  theme: Theme,
-  recovering: boolean,
-): string {
-  const suggestion = state.header?.suggestion;
-  if (!suggestion) {
-    const what = lifecycle(state)?.active ? whatLine(state) : '';
-    // No-echo contract: a what the selection band already shows stays silent.
-    const selectionTitles = new Set(
-      (state.header?.selection?.titles ?? []).map((title) => safeText(title)),
-    );
-    if (!what || selectionTitles.has(what)) return '';
-    return color(theme, 'accent', what); // frozen contract: silence, no dash
+function activityTile(state: HeaderDeckState, theme: Theme): string {
+  // Line 3 left: the observed activity owns the slot — `awaiting Human`
+  // when idle, the legacy observed label for pre-title publishers.
+  const title = state.header?.title ?? null;
+  if (title) {
+    return title.activity
+      ? color(theme, 'text', titleActivityLabel(title.activity))
+      : color(theme, 'dim', 'awaiting Human');
   }
-  const semanticColor =
-    suggestion === 'requesting-redirection'
-      ? 'error'
-      : ['requesting-validation', 'requesting-input'].includes(suggestion)
-        ? 'warning'
-        : recovering
-          ? 'accent'
-          : 'success';
-  return color(theme, semanticColor, `${SUGGESTION_LABELS[suggestion]}`);
+  const legacy = activityLabel(state);
+  return legacy ? color(theme, 'text', legacy) : color(theme, 'dim', 'awaiting Human');
+}
+
+function formatTurnElapsed(ms: number): string {
+  // Matches the turn meter's span-idle ceiling: 99m59s999ms → `99:59`.
+  const bounded = Math.min(
+    (99 * 60 + 59) * 1_000 + 999,
+    Math.max(0, Math.floor(Number.isFinite(ms) ? ms : 0)),
+  );
+  const totalSeconds = Math.floor(bounded / 1_000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+function turnCostTile(state: HeaderDeckState, theme: Theme): string {
+  // Line 3 right: the per-turn cost meter. Idle renders the accepted
+  // `— · 0 tok`; pre-title publishers (no meter) stay silent.
+  const turn = state.header?.turn ?? null;
+  if (!turn) return '';
+  if (turn.tokens <= 0 && turn.elapsedMs <= 0) {
+    return color(theme, 'dim', '— · 0 tok');
+  }
+  return color(
+    theme,
+    'accent',
+    `this turn ${formatTokens(turn.tokens)} · ${formatTurnElapsed(turn.elapsedMs)}`,
+  );
 }
 
 function projectLeft(state: HeaderDeckState, theme: Theme, statusIcons = ''): string {
@@ -454,34 +416,6 @@ function gitRight(state: HeaderDeckState, theme: Theme): string {
 
 function globalLeft(state: HeaderDeckState, theme: Theme): string {
   return `${color(theme, 'accent', `󰚩 ${safeText(state.model, 80)}`)} ${minorSeparator(theme)} ${color(theme, state.thinking ? 'thinkingHigh' : 'dim', safeText(state.thinking || 'off', 16))}`;
-}
-
-function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
-  const ctxColor =
-    state.contextPercent !== undefined && state.contextPercent >= 85
-      ? 'warning'
-      : state.contextPercent === undefined
-        ? 'dim'
-        : 'accent';
-  const segments: string[] = [];
-  if (state.contextPercent !== undefined) {
-    segments.push(
-      color(theme, 'accent', `󰾆 ${formatDeckPercent(state.contextPercent)}`),
-    );
-  }
-  if (state.compactionCount > 0) {
-    segments.push(color(theme, ctxColor, `󰎞 ${state.compactionCount}`));
-  }
-  const quota = simpleQuotaTile(state, theme);
-  if (quota) segments.push(quota);
-  // Relocation phase: model facts ride the lifecycle row's right side.
-  return segments.length === 0
-    ? globalLeft(state, theme)
-    : [
-        globalLeft(state, theme),
-        semanticSeparator(theme),
-        segments.join(` ${minorSeparator(theme, ctxColor)} `),
-      ].join(' ');
 }
 
 function compactTelemetryLeft(
@@ -584,6 +518,33 @@ function compactTelemetryRight(
   const cost = costTile(state, theme);
   if (cost) resourceSegments.push(cost);
   return resourceSegments.join(` ${semanticSeparator(theme)} `);
+}
+
+function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
+  const ctxColor =
+    state.contextPercent !== undefined && state.contextPercent >= 85
+      ? 'warning'
+      : state.contextPercent === undefined
+        ? 'dim'
+        : 'accent';
+  const segments: string[] = [];
+  if (state.contextPercent !== undefined) {
+    segments.push(
+      color(theme, 'accent', `󰾆 ${formatDeckPercent(state.contextPercent)}`),
+    );
+  }
+  if (state.compactionCount > 0) {
+    segments.push(color(theme, ctxColor, `󰎞 ${state.compactionCount}`));
+  }
+  const quota = simpleQuotaTile(state, theme);
+  if (quota) segments.push(quota);
+  return segments.length === 0
+    ? globalLeft(state, theme)
+    : [
+        globalLeft(state, theme),
+        semanticSeparator(theme),
+        segments.join(` ${minorSeparator(theme, ctxColor)} `),
+      ].join(' ');
 }
 
 function simpleQuotaTile(state: HeaderDeckState, theme: Theme): string {
@@ -743,25 +704,6 @@ export function renderHeaderDeck(
     '─'.repeat(Math.max(0, boundedWidth - visibleWidth(topPrefix))),
   )}`;
   const divider = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
-  const current = lifecycle(state);
-  const activityText = activityLabel(state);
-  const recovering =
-    state.header?.work?.activity?.kind === 'recovery' ||
-    activityText.toLowerCase() === 'recovering';
-  const lifecycleColor = state.header?.blocked
-    ? 'error'
-    : state.header?.approvalRequired
-      ? 'warning'
-      : current?.active
-        ? (state.header?.work?.color ?? 'accent')
-        : 'dim';
-  const lifecycleSegment = current
-    ? color(theme, lifecycleColor, current.label, true)
-    : '';
-  const activitySegment = activityText
-    ? color(theme, recovering ? 'accent' : 'text', activityText)
-    : '';
-  const suggestionSegment = suggestionLine(state, theme, recovering);
   // Line 2 (four-line deck): the clock and Subject lead with Work on the
   // right end; goal progress rows keep their home beneath this line.
   // Narrow frames: the Work slot yields before the clock anchor does.
@@ -782,23 +724,22 @@ export function renderHeaderDeck(
   ];
   const goalRows = goalDetail ? goalTreeLines(goalDetail, boundedWidth, theme) : [];
 
-  // Relocation phase: runs ride the lifecycle row after leaving the title
-  // metrics; the project context now heads the telemetry row.
-  // Narrow frames: runs yield before the stage does.
-  const runsSegment = boundedWidth >= 60 ? runsTile(state, theme) : '';
-  const lifecycleGroup = [lifecycleSegment, activitySegment]
-    .filter((segment) => segment !== '')
-    .join(` ${minorSeparator(theme)} `);
-  const statusLeft = [runsSegment, lifecycleGroup, suggestionSegment]
-    .filter((segment) => segment !== '')
-    .join(` ${semanticSeparator(theme)} `);
-  // Relocation phase: model facts share the lifecycle row's right side.
-  const statusRight = modelGroupLeft(state, theme);
-  const status = alignedSingleRow(statusLeft, statusRight, boundedWidth);
+  // Line 3 (four-line deck): Activity left with the per-turn cost right —
+  // the superseded lifecycle/suggestion/runs tiles are gone; Work,
+  // Activity, and the spans rows are their replacements. The spans rows
+  // keep their home directly beneath this line.
+  const activityRow = alignedSingleRow(
+    ` ${activityTile(state, theme)}`,
+    turnCostTile(state, theme),
+    boundedWidth,
+  );
+  // Step 2.2 transitional: the engine group keeps a row of its own until
+  // Step 2.3 re-homes it on line 4 left (engine, quota, machine, cost).
+  const engineRow = alignedSingleRow('', modelGroupLeft(state, theme), boundedWidth);
 
   // Band adjacency (Human-directed): telemetry crowns the deck, the title
-  // band reads beneath it with the goal rows in its keep, and the status
-  // row anchors the base by the rail.
+  // band reads beneath it with the goal rows in its keep, and the activity
+  // row anchors the base by the rail with the spans rows beneath it.
   const rows = [
     ...alignedRows(
       compactTelemetryLeft(state, theme, boundedWidth),
@@ -809,8 +750,9 @@ export function renderHeaderDeck(
     ...titleRows,
     ...goalRows,
     divider,
-    status,
+    activityRow,
     ...spanTreeRows(state, boundedWidth, theme),
+    engineRow,
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }

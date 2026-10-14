@@ -92,32 +92,35 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 test('renders the approved rich wide header without side borders or spacer rows', () => {
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  assert.equal(lines.length, 5);
+  // Step 2.2 transitional: six rows — the engine group keeps its own row
+  // until Step 2.3 re-homes it on line 4 left.
+  assert.equal(lines.length, 6);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
   assert.ok(titleRow.includes("000:07'00"));
   assert.match(lines[1] ?? '', /^─+$/u);
-  const statusRow = plain(lines[4] ?? '');
-  assert.ok(statusRow.includes('waiting'));
-  assert.ok(statusRow.includes('requesting validation or redirection'));
-  // Counter removal lockstep: Work owns line 2's right end — the task/stps
+  const activityRow = plain(lines[4] ?? '');
+  // Line 3 (four-line deck): idle renders `awaiting Human`; the
+  // lifecycle/suggestion/runs tiles are gone with the status row.
+  assert.ok(activityRow.trimEnd().endsWith('awaiting Human'));
+  assert.doesNotMatch(activityRow, /\bwaiting\b/u);
+  assert.equal(activityRow.includes('requesting validation'), false);
+  // Counter removal lockstep: Work owns line 2's right end — task/stps
   // tiles never render there again (accepted mockups supersede them).
   assert.equal(titleRow.includes('task 0/1'), false);
   assert.equal(titleRow.includes('stps 6/16'), false);
-  assert.equal(statusRow.includes('idle'), false);
-  assert.match(statusRow, /^. 02 › . 01 ⟩ waiting/u);
-  assert.doesNotMatch(lines[4] ?? '', /requesting validation or redirection ⟩  task/u);
   assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
-  assert.match(lines[3] ?? '', /^\u001b\[2m/u);
+  assert.match(lines[3] ?? '', /^\[2m/u);
   assert.match(
     plain(lines[0] ?? ''),
     /^\[.\] \[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}  \u{203A} [\u{E000}-\u{F8FF}] ~\/galactica ⟩/u,
   );
   assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
-  assert.ok(statusRow.includes('GPT-5.6 Sol'));
-  assert.ok(statusRow.trimEnd().endsWith('63%'));
+  const engineRow = plain(lines[5] ?? '');
+  assert.ok(engineRow.includes('GPT-5.6 Sol'));
+  assert.ok(engineRow.trimEnd().endsWith('63%'));
   assert.match(
-    lines[4] ?? '',
+    lines[5] ?? '',
     /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%$/u,
   );
   assert.match(
@@ -347,10 +350,12 @@ test('keeps activity and focus distinct on the title row', () => {
   state.header!.suggestion = 'requesting-validation';
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const statusRow = plain(lines[4] ?? '');
-  assert.ok(statusRow.includes('assuring'));
-  assert.ok(statusRow.includes('verify'));
-  assert.ok(statusRow.includes('requesting validation or redirection'));
+  const activityRow = plain(lines[4] ?? '');
+  // Line 3 (four-line deck): the legacy observed activity owns the slot —
+  // the stage label and suggestion cue are gone (accepted mockups).
+  assert.ok(activityRow.trimEnd().endsWith('verify'));
+  assert.equal(activityRow.includes('assuring'), false);
+  assert.equal(activityRow.includes('requesting validation or redirection'), false);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Plan title › Current task"));
   assert.ok(titleRow.includes("000:07'00"));
@@ -443,24 +448,22 @@ test('bolds only current control and status anchors', () => {
 
   renderHeaderDeck(fixture(), 160, theme as never);
 
-  assert.ok(bolded.includes('waiting'));
   assert.ok(bolded.includes('[󰆧]'));
   assert.ok(bolded.includes('⟩'));
   for (const regular of [
-    "( 2 ›  1 · 000:07'00)",
-    'idle',
-    'requesting validation or redirection',
+    'awaiting Human',
+    "000:07'00",
     'Read-only preflight for the interrupted one-line Review ledger fix',
     'before further OpenSpec validation and implementation',
-    ' ~/galactica',
-    ' feature/review-ledger/preserve-openspec-validation',
+    ' ~/galactica',
+    ' feature/review-ledger/preserve-openspec-validation',
     'GPT-5.6 Sol',
   ]) {
     assert.equal(bolded.includes(regular), false, regular);
   }
 });
 
-test('uses a bold blue lifecycle with neutral activity and green direction', () => {
+test('colors the legacy activity label on line 3 and keeps nothing bold', () => {
   const state = fixture();
   state.header!.work = {
     lifecycle: 'assuring',
@@ -476,40 +479,6 @@ test('uses a bold blue lifecycle with neutral activity and green direction', () 
   state.header!.suggestion = 'requesting-validation';
   state.header!.approvalRequired = false;
   const colors: string[] = [];
-  const theme = {
-    fg: (semanticColor: string, text: string) => {
-      colors.push(`${semanticColor}:${plain(text)}`);
-      return text;
-    },
-    bold: (text: string) => text,
-  };
-
-  renderHeaderDeck(state, 160, theme as never);
-
-  assert.ok(colors.includes('accent:assuring'));
-  assert.ok(colors.includes('text:verify'));
-  assert.ok(colors.includes('warning:requesting validation or redirection'));
-  assert.ok(colors.includes('accent:Plan title › Current task'));
-  assert.equal(colors.includes('accent:verify'), false);
-  assert.equal(colors.includes('accent:requesting validation or redirection'), false);
-});
-
-test('colors recovery activity and direction blue while only lifecycle stays bold', () => {
-  const state = fixture();
-  state.header!.work = {
-    lifecycle: 'working',
-    titles: ['Repair runtime state'],
-    color: 'accent',
-    activity: { kind: 'recovery' },
-  };
-  state.header!.selection = {
-    source: 'session-work',
-    titles: ['Repair runtime state'],
-    color: 'accent',
-  };
-  state.header!.suggestion = 'awaiting-resume';
-  state.header!.approvalRequired = false;
-  const colors: string[] = [];
   const bolded: string[] = [];
   const theme = {
     fg: (semanticColor: string, text: string) => {
@@ -522,18 +491,35 @@ test('colors recovery activity and direction blue while only lifecycle stays bol
     },
   };
 
-  const lines = renderHeaderDeck(state, 160, theme as never);
+  renderHeaderDeck(state, 160, theme as never);
 
-  assert.ok(plain(lines[4] ?? '').includes('working › recovering'));
-  assert.ok(plain(lines[4] ?? '').includes('awaiting resume or redirect'));
-  assert.ok(colors.includes('accent:recovering'));
-  assert.ok(colors.includes('accent:awaiting resume or redirect'));
-  assert.ok(bolded.includes('working'));
-  assert.equal(bolded.includes('recovering'), false);
-  assert.equal(bolded.includes('awaiting resume or redirect'), false);
+  assert.ok(colors.includes('text:verify'));
+  assert.ok(colors.includes('accent:Plan title › Current task'));
+  assert.equal(bolded.includes('verify'), false);
+  assert.equal(bolded.includes('assuring'), false);
 });
 
-test('reports the WHAT with task title and step while active without a cue', () => {
+test('renders every legacy activity class on line 3 without stage narration', () => {
+  const state = fixture();
+  state.header!.selection = null;
+  state.header!.work = {
+    lifecycle: 'working',
+    titles: ['Repair runtime state'],
+    color: 'accent',
+    activity: { kind: 'recovery' },
+  };
+  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  const activityRow = lines[4] ?? '';
+  assert.ok(activityRow.includes('recovering'));
+  assert.equal(activityRow.includes('working'), false);
+
+  // Idle without observed activity still reads `awaiting Human`.
+  state.header!.work = null;
+  const idle = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  assert.ok((idle[4] ?? '').includes('awaiting Human'));
+});
+
+test('reports the observed activity on line 3 while active without a cue', () => {
   const state = fixture();
   state.header!.work = {
     lifecycle: 'working',
@@ -547,16 +533,17 @@ test('reports the WHAT with task title and step while active without a cue', () 
   state.header!.blocked = false;
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  // Relocation: the capsule keeps a title row alive even without selection.
-  const status = plain(lines[4] ?? '');
+  const activityRow = plain(lines[4] ?? '');
 
-  assert.ok(status.includes('working › implementing ⟩ Plan title'));
-  assert.equal(status.includes('step 7/16'), false);
-  assert.equal(plain(lines[2] ?? '').includes('stps 6/16'), false);
-  assert.equal(status.includes('󰁕 Plan title'), false);
+  assert.ok(activityRow.trimEnd().endsWith('implementing'));
+  assert.equal(activityRow.includes('step 7/16'), false);
+  assert.equal(activityRow.includes('requesting'), false);
+  // Without a selection the clock leads line 2 alone.
+  assert.ok(plain(lines[2] ?? '').startsWith("󰠭 000:07'00"));
+  assert.doesNotMatch(plain(lines[2] ?? ''), /Plan title/u);
 });
 
-test('silences the what when the selection band already shows it', () => {
+test('renders the selected work title exactly once across the deck', () => {
   const state = fixture();
   const echoTitle = 'Git joins the project crown; model telemetry rides the row';
   state.header!.work = {
@@ -574,14 +561,12 @@ test('silences the what when the selection band already shows it', () => {
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
   const titleLine = plain(lines.find((line) => line.includes("000:07'00")) ?? '');
-  const statusLine = plain(lines[4] ?? '');
   assert.ok(titleLine.includes(echoTitle), 'selection band shows the title');
-  assert.ok(statusLine.includes('working › implementing'), 'stage stays');
   // No-echo contract: the title renders exactly once across the whole deck.
   assert.equal(lines.join('\n').split(echoTitle).length - 1, 1);
 });
 
-test('keeps lifecycle contextual and colors progress by completion', () => {
+test('keeps the clock accent and the counters absent in every counter state', () => {
   const state = fixture();
   state.header!.work!.color = 'warning';
   const colors: string[] = [];
@@ -595,10 +580,8 @@ test('keeps lifecycle contextual and colors progress by completion', () => {
 
   renderHeaderDeck(state, 160, theme as never);
 
-  assert.ok(colors.includes('warning:waiting'));
   assert.ok(colors.includes("accent:000:07'00"));
   assert.ok(!colors.some((entry) => entry.endsWith(':idle')));
-  assert.ok(colors.includes('warning:requesting validation or redirection'));
   assert.ok(
     colors.includes(
       'accent:Read-only preflight for the interrupted one-line Review ledger fix › before further OpenSpec validation and implementation',
@@ -652,41 +635,36 @@ test('keeps compact telemetry islands together with one gap cell', () => {
   assert.match(lines.join('\n'), new RegExp(`${escapeRegExp(resources)}$`, 'm'));
 });
 
-test('keeps child-run and subagent counters visible and changes only their color', () => {
+test('renders no task, stps, or run-counter tiles in any state', () => {
   const state = fixture();
-  const colors: string[] = [];
-  const theme = {
-    fg: (semanticColor: string, text: string) => {
-      colors.push(`${semanticColor}:${plain(text)}`);
-      return text;
+  const variants: Array<() => void> = [
+    () => {},
+    () => {
+      state.header!.counters.activeRuns = { children: 0, subagents: 0 };
+      state.header!.counters.tasks = undefined;
+      state.header!.counters.steps = undefined;
     },
-    bold: (text: string) => text,
-  };
-
-  state.header!.counters.activeRuns = { children: 0, subagents: 0 };
-  let lines = renderHeaderDeck(state, 160, theme as never);
-  const counterRow = plain(lines[2] ?? '');
-  assert.ok(counterRow.includes("000:07'00"));
-  // Relocation phase: runs ride the lifecycle row, off the title band.
-  assert.match(plain(lines[4] ?? ''), /^. 00 › . 00 ⟩ waiting/u);
-  assert.ok(colors.includes('dim: 00'));
-  assert.doesNotMatch(lines[0] ?? '', /||󰈙/u);
-
-  colors.length = 0;
-  state.header!.counters.activeRuns = { children: 1, subagents: 0 };
-  lines = renderHeaderDeck(state, 160, theme as never);
-  assert.ok(plain(lines[2] ?? '').includes("000:07'00"));
-  assert.match(plain(lines[4] ?? ''), /^. 01 › . 00 ⟩ waiting/u);
-  assert.ok(colors.includes('accent: 01'));
-  assert.ok(colors.includes('dim: 00'));
-
-  colors.length = 0;
-  state.header!.counters.activeRuns = { children: 3, subagents: 2 };
-  lines = renderHeaderDeck(state, 160, theme as never);
-  assert.ok(plain(lines[2] ?? '').includes("000:07'00"));
-  assert.match(plain(lines[4] ?? ''), /^. 03 › . 02 ⟩ waiting/u);
-  assert.ok(colors.includes('accent: 03'));
-  assert.ok(colors.includes('accent: 02'));
+    () => {
+      state.header!.counters.activeRuns = { children: 3, subagents: 2 };
+      state.header!.counters.tasks = { completed: 0, total: 0 };
+    },
+    () => {
+      state.header = null;
+    },
+  ];
+  for (const apply of variants) {
+    apply();
+    for (const width of [160, 120, 79, 60, 39, 20]) {
+      const rendered = renderHeaderDeck(state, width, plainTheme as never).map(plain);
+      for (const forbidden of ['task 00/00', 'stps 00/00', '00 › 00']) {
+        assert.equal(
+          rendered.some((line) => line.includes(forbidden)),
+          false,
+          `${forbidden} at ${width}`,
+        );
+      }
+    }
+  }
 });
 
 test('never leaves a telemetry separator dangling at narrow widths', () => {
@@ -763,11 +741,12 @@ test('renders unavailable optional telemetry honestly', () => {
   assert.equal(plain(lines[2] ?? '').includes('stps 00/00'), false);
   assert.equal(plain(lines[2] ?? '').trim(), "󰠭 000:00'00");
   assert.doesNotMatch(all, /next direction/u);
+  assert.doesNotMatch(all, /clean/u);
   assert.equal(all.includes('task'), false);
   assert.equal(all.includes('stps'), false);
-  const status = lines.find((line) => line.includes('waiting')) ?? '';
-  // Frozen contract: full silence when nothing is running or selected.
-  assert.equal(status, '');
+  // Line 3 idle reads `awaiting Human`; without a published turn meter the
+  // cost slot stays silent rather than narrating zeros it cannot know.
+  assert.equal(plain(lines[4] ?? '').trimEnd(), ' awaiting Human');
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
 });
@@ -1070,4 +1049,140 @@ test('prefixes the unfocused open-goal hint to the subject until notices land', 
     titleRow,
     /󰠭 000:00'00 ⟩ \(2 open goals · \/goal-focus\) Pivot cockpit/u,
   );
+});
+
+// --- Step 2.2: line 3 on the title-state contract ---------------------------
+
+const TURN_MIDWORK = { tokens: 4_200, elapsedMs: 38_000 };
+
+test('renders line 3 idle as awaiting Human with the zeroed turn meter', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    turn: { tokens: 0, elapsedMs: 0 },
+  };
+
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
+  assert.ok(activityRow.startsWith(' awaiting Human'));
+  assert.ok(activityRow.trimEnd().endsWith('— · 0 tok'));
+});
+
+test('renders line 3 mid-work as editing target with this-turn cost', () => {
+  const state = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      activity: {
+        class: 'editing',
+        target: 'packages/pi-stardeck/src/deck.ts',
+        span: 't87',
+        parent: null,
+      },
+    },
+    elapsedMs: 4_120,
+  });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    turn: TURN_MIDWORK,
+  };
+
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const activityRow = lines.find((line) => line.includes('editing')) ?? '';
+  assert.ok(activityRow.includes(' editing packages/pi-stardeck/src/deck.ts'));
+  assert.ok(activityRow.trimEnd().endsWith('this turn 4.2k · 0:38'));
+});
+
+test('renders every observed activity class with its target', () => {
+  for (const [class_, expected] of [
+    ['reading', 'reading schema.yaml'],
+    ['grepping', 'grepping title-state'],
+    ['bash', 'bash npm run test:stardeck'],
+    ['subagent', 'subagent: scout'],
+  ] as const) {
+    const state = titleFixture({
+      title: {
+        ...IDLE_TITLE,
+        activity: { class: class_, target: 'x', span: 't1', parent: null },
+      },
+    });
+    state.header = {
+      ...(state.header as NonNullable<typeof state.header>),
+      title: {
+        ...IDLE_TITLE,
+        activity: {
+          class: class_,
+          target: class_ === 'subagent' ? 'scout' : expected.slice(class_.length + 1),
+          span: 't1',
+          parent: null,
+        },
+      },
+    };
+    const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+    const activityRow =
+      lines.find((line) => line.includes('awaiting Human') || line.includes(class_)) ??
+      '';
+    assert.ok(activityRow.includes(` ${expected}`), expected);
+  }
+});
+
+test('keeps the turn-cost slot silent for pre-title publishers', () => {
+  const lines = renderHeaderDeck(fixture(), 100, plainTheme as never).map(plain);
+  const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
+  assert.ok(activityRow.includes('awaiting Human'));
+  assert.equal(activityRow.includes('0 tok'), false);
+  assert.equal(activityRow.includes('this turn'), false);
+});
+
+test('colors the activity and turn meter by liveness', () => {
+  const colors: string[] = [];
+  const theme = {
+    fg: (name: string, text: string) => {
+      colors.push(`${name}:${plain(text)}`);
+      return text;
+    },
+    bold: (text: string) => text,
+  };
+  const idle = titleFixture({ title: IDLE_TITLE });
+  idle.header = {
+    ...(idle.header as NonNullable<typeof idle.header>),
+    turn: { tokens: 0, elapsedMs: 0 },
+  };
+  renderHeaderDeck(idle, 100, theme as never);
+  assert.ok(colors.includes('dim:awaiting Human'));
+  assert.ok(colors.includes('dim:— · 0 tok'));
+
+  colors.length = 0;
+  const midwork = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      activity: { class: 'bash', target: 'npm test', span: 'b2', parent: 't9' },
+    },
+  });
+  midwork.header = {
+    ...(midwork.header as NonNullable<typeof midwork.header>),
+    turn: { tokens: 980, elapsedMs: 65_000 },
+  };
+  renderHeaderDeck(midwork, 100, theme as never);
+  assert.ok(colors.includes('text:bash npm test'));
+  assert.ok(colors.includes('accent:this turn 980 · 1:05'));
+});
+
+test('spans rows keep their home directly beneath line 3', () => {
+  const state = fixture();
+  state.header!.activeRunSpans = [
+    {
+      id: 'sub-1:reviewer',
+      kind: 'subagent',
+      parent: 'sub-1',
+      agent: 'reviewer',
+      stage: 'assuring',
+      elapsedMs: 41_000,
+    },
+  ];
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const activityIndex = lines.findIndex((line) => line.includes('awaiting Human'));
+  assert.ok(activityIndex >= 0);
+  assert.match(lines[activityIndex + 1] ?? '', /└ \(00'41\) reviewer assuring/u);
+  // The engine row (Step 2.3's line 4) still closes the deck beneath them.
+  assert.ok(lines[activityIndex + 2]?.includes('GPT-5.6 Sol'));
 });
