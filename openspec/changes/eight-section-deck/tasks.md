@@ -211,8 +211,12 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         `openspec/changes/eight-section-deck/tasks.md`,
         `openspec/changes/eight-section-deck/plan.md` (docs ride this
         commit)
-- [ ] 3.3 Human validation: idle and mid-work sessions match the accepted
-      layout; notices appear and clear with their sources.
+- [x] 3.3 Human validation: idle and mid-work sessions match the accepted
+      layout; notices appear and clear with their sources. outcome: VALID ·
+      at: 2026-10-14 · Human confirmed on live sessions; placement default
+      accepted (notices own line 4 right, machine group yields wholesale);
+      goal hint / companion warnings / blocked+approval verified via
+      fixtures and live clean-state render
       - Open question for this review: notice-slot placement when line 4 is
         crowded — implemented default (notices own the right end, machine
         group yields wholesale) vs. the alternative (machine group compacts
@@ -220,12 +224,18 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 
 ## 4. Gate and release 0.3.0
 
-- [ ] 4.1 Full gate green (tsc, component suites, format, lint,
+- [x] 4.1 Full gate green (tsc, component suites, format, lint,
       composition, package pack/load); refresh the current baseline
-      manifest (`imported-source.sha256` untouched).
-- [ ] 4.2 Hand the release to Human: `just publish 0.3.0`, push, swap the
-      personal install with the explicit version pin; `pi list` confirms
-      `npm:@aemonge-dev/pi-vimux-starship@0.3.0`.
+      manifest (`imported-source.sha256` untouched). outcome: VALID · at:
+      2026-10-14 · `npm run check` FULL PASS at `89056df` (stardeck 149,
+      status 186, components green, tarball 83/88, openspec strict PASS,
+      baseline 119 files, import record 87); tree unchanged since
+- [ ] 4.2 Hand the release to Human: `just publish 0.4.0` (0.3.0 shipped
+      early per Human decision 2026-10-14 carrying the rename + four-line
+      deck; 0.4.0 adds notices + waiver — minor bump, new features), push,
+      then `pi update --extensions`; `pi list` confirms
+      `npm:@aemonge-dev/pi-vimux-starship@0.4.0`. Host-only: devbox blocks
+      push/publish
       - Note: 0.3.0 published early per Human decision 2026-10-14 (rename
         + four-line deck, commits through 9124f03); notices/waiver target
         the next release — re-cut this step's version before handoff.
