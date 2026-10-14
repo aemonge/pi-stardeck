@@ -125,6 +125,15 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         `check-baseline` PASS (imported manifest untouched), prettier
         green, `check:openspec` PASS, `check:composition` PASS.
         Checkpoint stays open for the Human.
+      - Open-checkpoint amendment (2026-10-14): at the 2.4 review the
+        Human ruled four strong separator rules on screen too many (the
+        deck's three plus pi's prompt border) and directed the rule
+        beneath line 1 removed — line 1 is now the deck's header strip,
+        and the pi-status severity counts that rode that rule ride
+        line 1's right end beside the companion chips. Applied with
+        lockstep test shifts and the plan.md Task-2 mockup blocks
+        updated to the amended shape; 2.4 remains open for the Human's
+        live confirmation.
 
 ## 3. Notices and waiver
 

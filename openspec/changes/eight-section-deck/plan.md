@@ -92,7 +92,6 @@ After this Task, with the deck intentionally unchanged:
 - **Rendered (idle, 100+ cols):**
   ```text
   ~/projects/pi-vimux-starship ⟩ main › clean                          [↻ ▤] ⌬  ⛨
-  ─────────────────────────────────────────────────────────────────────────────
   󰠭 000:00'00 ⟩ Pivot cockpit to pure pi-starship-header chrome    — no change owns the moment
   ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
    awaiting Human                                                                  — · 0 tok
@@ -101,12 +100,16 @@ After this Task, with the deck intentionally unchanged:
 - **Rendered (mid-work, 100+ cols):**
   ```text
   ~/projects/pi-vimux-starship ⟩ main › +2                              [↻ ▤] ⌬  ⛨
-  ─────────────────────────────────────────────────────────────────────────────
   󰠭 000:04'12 ⟩ Pivot cockpit to pure pi-starship-header chrome    eight-section-deck · 1/4
   ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
    editing packages/header/src/deck.ts                                  this turn 4.2k · 0:38
   ─────────────────────────────────────────────────────────────────────────────
   ```
+- Amendment at the 2.4 checkpoint (2026-10-14): the Human directed the
+  rule beneath line 1 removed — line 1 is the deck's header strip, at
+  most three strong rules on screen (the deck's two plus pi's prompt
+  border); the pi-status severity counts that rode that rule now ride
+  line 1's right end beside the companion chips.
 - Engine/quota/machine/cost move from line 1 right to line 4 left; nothing
   on line 4 right yet (Task 3).
 - Counters `task 00/00`, `stps 00/00`, `00 › 00` are absent in every state.

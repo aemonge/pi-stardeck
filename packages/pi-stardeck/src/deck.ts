@@ -581,12 +581,16 @@ function costTile(state: HeaderDeckState, theme: Theme): string {
   return color(theme, 'accent', `󰜦 ${formatCost(telemetry.totalCost)}`);
 }
 
-function topRailPrefix(
+function statusAlertTile(
   state: HeaderDeckState,
   width: number,
   theme: Theme,
   lineColor: string,
 ): string {
+  // Line 1 rider (2.4 amendment): the severity counts formerly opened the
+  // deleted line-1 rule; they now ride line 1's right end beside the
+  // companion chips, compacting — drop the command, then merge to one
+  // count, then yield — before the always-visible chips ever do.
   const errors = state.piStatus?.errors ?? 0;
   const warnings = state.piStatus?.warnings ?? 0;
   if (errors === 0 && warnings === 0) return '';
@@ -596,16 +600,15 @@ function topRailPrefix(
     warnings > 0 ? loud(theme, 'warning', ` ${warnings}`) : '',
   ].filter(Boolean);
   const summary = groups.join(color(theme, lineColor, ' › '));
-  const full = `${color(theme, lineColor, '─ ')}${summary}${color(theme, lineColor, ' ⟩ ')}${color(theme, 'dim', '/pi-status')} `;
+  const full = `${summary}${color(theme, lineColor, ' ⟩ ')}${color(theme, 'dim', '/pi-status')}`;
   if (visibleWidth(full) < width) return full;
-
-  const compact = `${color(theme, lineColor, '─ ')}${summary} `;
-  if (visibleWidth(compact) < width) return compact;
+  if (visibleWidth(summary) < width) return summary;
 
   const total = errors + warnings;
   const severity = errors > 0 ? 'error' : 'warning';
   const icon = errors > 0 ? '󰅙' : '';
-  return `${color(theme, lineColor, '─ ')}${loud(theme, severity, `${icon} ${total}`)} `;
+  const count = loud(theme, severity, `${icon} ${total}`);
+  return visibleWidth(count) < width ? count : '';
 }
 
 function formatGoalElapsed(seconds: number): string {
@@ -676,12 +679,6 @@ export function renderHeaderDeck(
   if (boundedWidth === 0) return [];
 
   const lineColor = 'thinkingHigh';
-  const topPrefix = topRailPrefix(state, boundedWidth, theme, lineColor);
-  const top = `${topPrefix}${color(
-    theme,
-    lineColor,
-    '─'.repeat(Math.max(0, boundedWidth - visibleWidth(topPrefix))),
-  )}`;
   const bottom = color(theme, lineColor, '─'.repeat(boundedWidth));
   const divider = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   // Line 2 (four-line deck): the clock and Subject lead with Work on the
@@ -721,16 +718,24 @@ export function renderHeaderDeck(
     boundedWidth,
   );
 
-  // Band adjacency (Human-directed, accepted mockups): line 1 carries the
-  // path left with the companion chips right; ─ after lines 1 and 3, ┈
-  // between 2 and 3; line 4 closes the deck with no separator beneath it.
+  // Band adjacency (Human-directed, accepted mockups; 2.4 amendment):
+  // line 1 is the deck's header strip — path/git left, severity alert and
+  // companion chips right — with no rule beneath it, keeping the deck at
+  // two strong rules of its own; ┈ sits between lines 2 and 3, ─ above
+  // line 4; line 4 closes the deck with no separator beneath it.
+  const chips = extensionStatusCodes(state, theme);
+  const alert = statusAlertTile(
+    state,
+    Math.max(0, boundedWidth - visibleWidth(chips) - 2),
+    theme,
+    lineColor,
+  );
   const rows = [
     alignedSingleRow(
       projectDeckLeft(state, theme, boundedWidth),
-      extensionStatusCodes(state, theme),
+      alert ? `${alert} ${chips}` : chips,
       boundedWidth,
     ),
-    top,
     ...titleRows,
     ...goalRows,
     divider,

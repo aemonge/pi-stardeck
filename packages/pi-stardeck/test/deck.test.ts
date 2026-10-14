@@ -92,14 +92,15 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 test('renders the approved rich wide header without side borders or spacer rows', () => {
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  // Four-line deck: L1, ─, L2, ┈, L3, ─, L4 — line 4 closes with no
-  // separator beneath it.
-  assert.equal(lines.length, 7);
-  const titleRow = plain(lines[2] ?? '');
+  // Four-line deck (2.4 amendment): L1 header strip, L2, ┈, L3, ─, L4
+  // — no rule beneath line 1; line 4 closes with no separator beneath it.
+  assert.equal(lines.length, 6);
+  const titleRow = plain(lines[1] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
   assert.ok(titleRow.includes("000:07'00"));
-  assert.match(lines[1] ?? '', /^─+$/u);
-  const activityRow = plain(lines[4] ?? '');
+  // 2.4 amendment: the title band follows line 1 directly — no rule.
+  assert.doesNotMatch(lines[1] ?? '', /─/u);
+  const activityRow = plain(lines[3] ?? '');
   // Line 3 (four-line deck): idle renders `awaiting Human`; the
   // lifecycle/suggestion/runs tiles are gone with the status row.
   assert.ok(activityRow.trimEnd().endsWith('awaiting Human'));
@@ -109,22 +110,22 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // tiles never render there again (accepted mockups supersede them).
   assert.equal(titleRow.includes('task 0/1'), false);
   assert.equal(titleRow.includes('stps 6/16'), false);
-  assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
-  assert.match(lines[3] ?? '', /^\[2m/u);
+  assert.equal(plain(lines[2] ?? ''), '┈'.repeat(160));
+  assert.match(lines[2] ?? '', /^\[2m/u);
   assert.match(plain(lines[0] ?? ''), /^\[.\] [\u{E000}-\u{F8FF}] ~\/galactica ⟩/u);
   assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
   // Step 2.3 relocation: the companion chips ride line 1's right end.
   assert.match(plain(lines[0] ?? ''), /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
   // Line 4 (four-line deck): engine, quota, machine, global cost left —
   // the right end stays empty until the notices slot (Task 3).
-  const telemetryRow = plain(lines[6] ?? '');
+  const telemetryRow = plain(lines[5] ?? '');
   assert.ok(telemetryRow.includes('GPT-5.6 Sol'));
   assert.ok(telemetryRow.trimEnd().endsWith('$5.16'));
   assert.match(
-    lines[6] ?? '',
+    lines[5] ?? '',
     /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63% \u{27E9} 48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
   );
-  assert.match(lines[5] ?? '', /^─+$/u);
+  assert.match(lines[4] ?? '', /^─+$/u);
   assert.equal(lines.join('\n').includes('32K/128K'), false);
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
@@ -137,11 +138,17 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   state.piStatus = { errors: 2, warnings: 3, nativeStatusCount: 0 };
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const alert = lines.find((line) => plain(line).startsWith('─ 󰅙')) ?? '';
-  assert.match(plain(alert), /^─ 󰅙 2 ›  3 ⟩ \/pi-status ─+$/u);
-  assert.equal(alert.split('⟩').length - 1, 1);
-  assert.doesNotMatch(alert, /󰠭/u);
-  assert.ok(alert.includes('\u001b[7m'));
+  // 2.4 amendment: the severity counts ride line 1 beside the chips.
+  const line1 = plain(lines[0] ?? '');
+  assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
+  assert.match(
+    line1,
+    /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
+    'chips keep the right end',
+  );
+  assert.equal(line1.split('⟩').length - 1, 2, 'path separator + alert command');
+  assert.doesNotMatch(line1, /\u{F082D}/u);
+  assert.ok((lines[0] ?? '').includes('\u001b[7m'), 'counts stay reverse-video');
 
   const colors: string[] = [];
   renderHeaderDeck(state, 160, {
@@ -156,12 +163,14 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.ok(colors.includes('dim:/pi-status'));
 });
 
-test('drops the footer count; diagnostics stay on the top rule', () => {
+test('drops the footer count; no rule beneath the line-1 strip', () => {
   const state = fixture();
   state.piStatus = { errors: 0, warnings: 0, nativeStatusCount: 3 };
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.match(lines[1] ?? '', /^─+$/u);
+  // 2.4 amendment: the title band directly follows line 1 — the old top
+  // rule is gone, clean or not.
+  assert.match(plain(lines[1] ?? ''), /^\u{F082D} 000:07'00/u);
   assert.equal(lines.join('').includes('·3'), false);
   // Relocation phase: the footer count is deleted; the anchor echo remains.
   assert.doesNotMatch(lines.at(-1) ?? '', /[0-9] ‹/u);
@@ -172,8 +181,8 @@ test('drops the footer count; diagnostics stay on the top rule', () => {
   };
   const wrapped = renderHeaderDeck(state, 59, ansiTheme as never);
   assert.ok(wrapped.every((line) => visibleWidth(line) <= 59));
-  const wrappedTop = wrapped.find((line) => /^─+$/u.test(plain(line))) ?? '';
-  assert.match(plain(wrappedTop), /^─+$/u);
+  const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
+  assert.equal(solidRules.length, 1, 'only the rule above line 4 remains');
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
@@ -317,21 +326,20 @@ test('drops the status command before severity counts at narrow widths', () => {
   const state = fixture();
   state.piStatus = { errors: 2, warnings: 3, nativeStatusCount: 0 };
 
-  const compact =
-    renderHeaderDeck(state, 20, plainTheme as never).find((line) =>
-      plain(line).startsWith('─ 󰅙'),
-    ) ?? '';
-  assert.match(plain(compact), /^─ 󰅙 2 ›  3 /u);
+  // Sharing line 1 with the always-visible chips, the alert compacts one
+  // step earlier than it did on its own rule row (2.4 amendment).
+  const compact = plain(renderHeaderDeck(state, 20, plainTheme as never)[0] ?? '');
+  assert.match(compact, /\u{F0159} 5/u);
   assert.doesNotMatch(compact, /pi-status/u);
+  assert.doesNotMatch(compact, /\u{F0159} 2/u);
+  assert.match(compact, /\u{232C}/u, 'chips stay visible beside the alert');
 
-  const narrow =
-    renderHeaderDeck(state, 9, plainTheme as never).find((line) =>
-      plain(line).startsWith('─ 󰅙'),
-    ) ?? '';
-  assert.match(plain(narrow), /^─ 󰅙 5/u);
-  assert.ok(visibleWidth(narrow) <= 9);
+  // Extreme narrow: the chips own line 1 and the alert yields entirely.
+  const narrow = renderHeaderDeck(state, 9, plainTheme as never);
+  assert.doesNotMatch(narrow.join(''), /\u{F0159}/u);
+  assert.match(plain(narrow[0] ?? ''), /\u{232C}/u);
+  assert.ok(narrow.every((line) => visibleWidth(line) <= 9));
 });
-
 test('keeps activity and focus distinct on the title row', () => {
   const state = fixture();
   state.header!.work = {
@@ -348,13 +356,13 @@ test('keeps activity and focus distinct on the title row', () => {
   state.header!.suggestion = 'requesting-validation';
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const activityRow = plain(lines[4] ?? '');
+  const activityRow = plain(lines[3] ?? '');
   // Line 3 (four-line deck): the legacy observed activity owns the slot —
   // the stage label and suggestion cue are gone (accepted mockups).
   assert.ok(activityRow.trimEnd().endsWith('verify'));
   assert.equal(activityRow.includes('assuring'), false);
   assert.equal(activityRow.includes('requesting validation or redirection'), false);
-  const titleRow = plain(lines[2] ?? '');
+  const titleRow = plain(lines[1] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Plan title › Current task"));
   assert.ok(titleRow.includes("000:07'00"));
   assert.equal(lines.join('\n').split('Running checks').length - 1, 0);
@@ -372,8 +380,8 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.doesNotMatch(wide[4] ?? '', /Parent Plan title/u);
-  const titleRow = plain(wide[2] ?? '');
+  assert.doesNotMatch(wide[3] ?? '', /Parent Plan title/u);
+  const titleRow = plain(wide[1] ?? '');
   assert.ok(
     titleRow.startsWith(`󰠭 000:07'00 ⟩ Parent Plan title › ${expected}`.slice(0, 40)),
   );
@@ -401,8 +409,8 @@ test('keeps a single selected title on the focus row only', () => {
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.doesNotMatch(wide[4] ?? '', /One focused work title/u);
-  const titleRow = plain(wide[2] ?? '');
+  assert.doesNotMatch(wide[3] ?? '', /One focused work title/u);
+  const titleRow = plain(wide[1] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ One focused work title"));
   assert.ok(titleRow.includes("000:07'00"));
   assert.equal(wide.join('\n').split('One focused work title').length - 1, 1);
@@ -425,13 +433,13 @@ test('renders the subject selection on the focus row instead of an em dash', () 
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  const subjectRow = plain(wide[2] ?? '');
+  const subjectRow = plain(wide[1] ?? '');
   assert.ok(subjectRow.startsWith("󰠭 000:07'00 ⟩ Session subject"));
   assert.ok(subjectRow.includes("000:07'00"));
   assert.doesNotMatch(wide.join('\n'), /󰠭 ⟩ —/u);
 
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
-  assert.notEqual(plain(narrow[2] ?? ''), `󰠭 ⟩ —`);
+  assert.notEqual(plain(narrow[1] ?? ''), `󰠭 ⟩ —`);
 });
 
 test('bolds only current control and status anchors', () => {
@@ -507,14 +515,14 @@ test('renders every legacy activity class on line 3 without stage narration', ()
     activity: { kind: 'recovery' },
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const activityRow = lines[4] ?? '';
+  const activityRow = lines[3] ?? '';
   assert.ok(activityRow.includes('recovering'));
   assert.equal(activityRow.includes('working'), false);
 
   // Idle without observed activity still reads `awaiting Human`.
   state.header!.work = null;
   const idle = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  assert.ok((idle[4] ?? '').includes('awaiting Human'));
+  assert.ok((idle[3] ?? '').includes('awaiting Human'));
 });
 
 test('reports the observed activity on line 3 while active without a cue', () => {
@@ -531,14 +539,14 @@ test('reports the observed activity on line 3 while active without a cue', () =>
   state.header!.blocked = false;
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const activityRow = plain(lines[4] ?? '');
+  const activityRow = plain(lines[3] ?? '');
 
   assert.ok(activityRow.trimEnd().endsWith('implementing'));
   assert.equal(activityRow.includes('step 7/16'), false);
   assert.equal(activityRow.includes('requesting'), false);
   // Without a selection the clock leads line 2 alone.
-  assert.ok(plain(lines[2] ?? '').startsWith("󰠭 000:07'00"));
-  assert.doesNotMatch(plain(lines[2] ?? ''), /Plan title/u);
+  assert.ok(plain(lines[1] ?? '').startsWith("󰠭 000:07'00"));
+  assert.doesNotMatch(plain(lines[1] ?? ''), /Plan title/u);
 });
 
 test('renders the selected work title exactly once across the deck', () => {
@@ -738,16 +746,16 @@ test('renders unavailable optional telemetry honestly', () => {
   );
   // Counter removal lockstep: without counters the title's right end is
   // silent — Work renders nothing for pre-title publishers (no placeholder).
-  assert.equal(plain(lines[2] ?? '').includes('task 00/00'), false);
-  assert.equal(plain(lines[2] ?? '').includes('stps 00/00'), false);
-  assert.equal(plain(lines[2] ?? '').trim(), "󰠭 000:00'00");
+  assert.equal(plain(lines[1] ?? '').includes('task 00/00'), false);
+  assert.equal(plain(lines[1] ?? '').includes('stps 00/00'), false);
+  assert.equal(plain(lines[1] ?? '').trim(), "󰠭 000:00'00");
   assert.doesNotMatch(all, /next direction/u);
   assert.doesNotMatch(all, /clean/u);
   assert.equal(all.includes('task'), false);
   assert.equal(all.includes('stps'), false);
   // Line 3 idle reads `awaiting Human`; without a published turn meter the
   // cost slot stays silent rather than narrating zeros it cannot know.
-  assert.equal(plain(lines[4] ?? '').trimEnd(), ' awaiting Human');
+  assert.equal(plain(lines[3] ?? '').trimEnd(), ' awaiting Human');
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
 });
@@ -968,7 +976,7 @@ test('renders the clock leading alone when the subject is null', () => {
   const state = titleFixture({ title: { ...IDLE_TITLE, subject: null } });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines[2] ?? '';
+  const titleRow = lines[1] ?? '';
   assert.ok(titleRow.startsWith("󰠭 000:00'00"));
   assert.doesNotMatch(titleRow, /⟩\s*$/u);
   assert.doesNotMatch(titleRow, /󰠭\s+⟩/u);
@@ -1001,8 +1009,8 @@ test('colors the Work label by completion and drops it on narrow frames', () => 
 
   // Narrow frames: the Work slot yields before the clock anchor does.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
-  assert.ok((narrow[2] ?? '').includes("000:00'00"));
-  assert.equal((narrow[2] ?? '').includes('eight-section-deck · 1/4'), false);
+  assert.ok((narrow[1] ?? '').includes("000:00'00"));
+  assert.equal((narrow[1] ?? '').includes('eight-section-deck · 1/4'), false);
 });
 
 test('keeps pre-title publishers on the legacy selection band with a silent right end', () => {
@@ -1246,7 +1254,7 @@ test('composes line 4 left as engine, quota, machine, global cost', () => {
     ],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const line4 = lines[6] ?? '';
+  const line4 = lines[5] ?? '';
   const engineAt = line4.indexOf('GPT-5.6 Sol');
   const calendarAt = line4.indexOf('12%');
   const flameAt = line4.indexOf('82%');
@@ -1270,7 +1278,7 @@ test('leaves line 4 right empty until the notices slot lands', () => {
     nativeStatuses: [{ key: 'graphify', text: 'graphify stale · update recommended' }],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const line4 = lines[6] ?? '';
+  const line4 = lines[5] ?? '';
   assert.ok(line4.trimEnd().endsWith('$5.16'), 'nothing rides after the cost');
   assert.equal(line4.includes('⚠'), false, 'no notice glyph before Task 3');
   assert.equal(line4.includes('update recommended'), false);
@@ -1283,9 +1291,9 @@ test('closes the deck on line 4 with a solid rule above and nothing beneath', ()
     100,
     plainTheme as never,
   ).map(plain);
-  assert.equal(lines.length, 7);
-  assert.match(lines[5] ?? '', /^─+$/u);
-  assert.ok((lines[6] ?? '').includes('GPT-5.6 Sol'));
+  assert.equal(lines.length, 6);
+  assert.match(lines[4] ?? '', /^─+$/u);
+  assert.ok((lines[5] ?? '').includes('GPT-5.6 Sol'));
   // No separator beneath the last band.
   assert.ok((lines.at(-1) ?? '').includes('GPT-5.6 Sol'));
 });
@@ -1317,24 +1325,25 @@ test('renders the accepted idle mockup at wide widths', () => {
   };
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 7);
+  assert.equal(lines.length, 6);
   // Line 1: path/git left, companion chips right.
   assert.match(
     lines[0] ?? '',
     /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
   );
-  assert.match(lines[1] ?? '', /^\u2500+$/u);
+  // 2.4 amendment: no rule beneath the header strip — the band under it
+  // belongs to line 2.
   // Line 2: clock + Subject left, the dim no-work hint right.
   assert.match(
-    lines[2] ?? '',
+    lines[1] ?? '',
     /^\u{F082D} 000:00'00 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
   );
-  assert.match(lines[3] ?? '', /^\u2508+$/u);
+  assert.match(lines[2] ?? '', /^\u2508+$/u);
   // Line 3: awaiting Human left, the zeroed turn meter right.
-  assert.match(lines[4] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
-  assert.match(lines[5] ?? '', /^\u2500+$/u);
+  assert.match(lines[3] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
+  assert.match(lines[4] ?? '', /^\u2500+$/u);
   // Line 4 closes the deck: engine, quota, machine, global cost left.
-  assert.match(lines[6] ?? '', /^\u{F06A9} /u);
+  assert.match(lines[5] ?? '', /^\u{F06A9} /u);
 });
 
 test('renders the accepted mid-work mockup at wide widths', () => {
@@ -1357,7 +1366,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   };
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 7);
+  assert.equal(lines.length, 6);
   // Line 1: `main › +2` in the mockup is the dirty-entry transcription —
   // two modified files ride the git segment.
   assert.match(
@@ -1366,19 +1375,19 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   );
   // Line 2: Work owns the right end with `change · done/total`.
   assert.match(
-    lines[2] ?? '',
+    lines[1] ?? '',
     /^\u{F082D} 000:04'12 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck \u00b7 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
-    lines[4] ?? '',
+    lines[3] ?? '',
     /^ editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
-  // Separators and line 4 hold the accepted band pattern.
-  assert.match(lines[1] ?? '', /^\u2500+$/u);
-  assert.match(lines[3] ?? '', /^\u2508+$/u);
-  assert.match(lines[5] ?? '', /^\u2500+$/u);
-  assert.match(lines[6] ?? '', /^\u{F06A9} /u);
+  // Separators and line 4 hold the amended band pattern (2.4: no rule
+  // beneath the header strip).
+  assert.match(lines[2] ?? '', /^\u2508+$/u);
+  assert.match(lines[4] ?? '', /^\u2500+$/u);
+  assert.match(lines[5] ?? '', /^\u{F06A9} /u);
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {
@@ -1391,7 +1400,7 @@ test('renders both mockups identically at 100 and 120 columns', () => {
   for (const width of [100, 120]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
     assert.ok((lines[0] ?? '').includes('~/projects/pi-vimux-starship'), String(width));
-    assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
-    assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
+    assert.ok((lines[1] ?? '').includes('Pivot cockpit'), String(width));
+    assert.ok((lines[3] ?? '').includes('awaiting Human'), String(width));
   }
 });
