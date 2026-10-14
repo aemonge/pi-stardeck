@@ -1,6 +1,6 @@
 {
   "name": "@aemonge-dev/pi-vimux-starship",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A Vim- and tmux-inspired command deck for Pi",
   "type": "module",
   "keywords": [
