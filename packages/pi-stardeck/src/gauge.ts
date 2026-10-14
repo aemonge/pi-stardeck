@@ -1,5 +1,12 @@
 import { truncateToWidth } from '@earendil-works/pi-tui';
 
+import {
+  type DeckTitleState,
+  type DeckTurnCost,
+  parseDeckTitleState,
+  parseDeckTurnCost,
+} from './title-state.ts';
+
 export const CONTEXT_GAUGE_WIDTH = 7;
 export const FANCY_FOOTER_WIDGET_CHANNEL = 'pi-fancy-footer:widget';
 export const FANCY_FOOTER_READY_CHANNEL = 'pi-fancy-footer:ready';
@@ -127,6 +134,10 @@ export type HeaderSnapshot = {
   selection?: HeaderSelection | null;
   suggestion?: HeaderSuggestion | null;
   work: HeaderWork | null;
+  /** Versioned deck-title-state contract; null when published malformed. */
+  title?: DeckTitleState | null;
+  /** Per-turn cost meter published beside the title state. */
+  turn?: DeckTurnCost | null;
   diagnostics: HeaderDiagnostics | null;
   backgroundActivity: boolean;
   approvalRequired: boolean;
@@ -1168,6 +1179,8 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
     message,
     'selection',
   );
+  const hasExplicitTitle = Object.prototype.hasOwnProperty.call(message, 'title');
+  const hasExplicitTurn = Object.prototype.hasOwnProperty.call(message, 'turn');
 
   return {
     openGoals,
@@ -1177,6 +1190,8 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
       : legacyHeaderSelection(work),
     suggestion: parseHeaderSuggestion(message.suggestion),
     work,
+    ...(hasExplicitTitle ? { title: parseDeckTitleState(message.title) } : {}),
+    ...(hasExplicitTurn ? { turn: parseDeckTurnCost(message.turn) } : {}),
     diagnostics,
     backgroundActivity: message.backgroundActivity === true,
     ...(parseActiveRunSpans(message.activeRunSpans)

@@ -7,6 +7,7 @@ import {
   renderHeaderDeck,
   type HeaderDeckState,
 } from '../src/deck.ts';
+import { parseDeckTitleState } from '../src/title-state.ts';
 
 const plainTheme = {
   fg: (_color: string, text: string) => text,
@@ -99,8 +100,10 @@ test('renders the approved rich wide header without side borders or spacer rows'
   const statusRow = plain(lines[4] ?? '');
   assert.ok(statusRow.includes('waiting'));
   assert.ok(statusRow.includes('requesting validation or redirection'));
-  assert.ok(titleRow.includes('task 0/1'));
-  assert.ok(titleRow.includes('stps 6/16'));
+  // Counter removal lockstep: Work owns line 2's right end — the task/stps
+  // tiles never render there again (accepted mockups supersede them).
+  assert.equal(titleRow.includes('task 0/1'), false);
+  assert.equal(titleRow.includes('stps 6/16'), false);
   assert.equal(statusRow.includes('idle'), false);
   assert.match(statusRow, /^. 02 › . 01 ⟩ waiting/u);
   assert.doesNotMatch(lines[4] ?? '', /requesting validation or redirection ⟩  task/u);
@@ -441,7 +444,6 @@ test('bolds only current control and status anchors', () => {
   renderHeaderDeck(fixture(), 160, theme as never);
 
   assert.ok(bolded.includes('waiting'));
-  assert.ok(bolded.includes(' task 0/1'));
   assert.ok(bolded.includes('[󰆧]'));
   assert.ok(bolded.includes('⟩'));
   for (const regular of [
@@ -450,7 +452,6 @@ test('bolds only current control and status anchors', () => {
     'requesting validation or redirection',
     'Read-only preflight for the interrupted one-line Review ledger fix',
     'before further OpenSpec validation and implementation',
-    ' stps 6/16',
     ' ~/galactica',
     ' feature/review-ledger/preserve-openspec-validation',
     'GPT-5.6 Sol',
@@ -551,7 +552,7 @@ test('reports the WHAT with task title and step while active without a cue', () 
 
   assert.ok(status.includes('working › implementing ⟩ Plan title'));
   assert.equal(status.includes('step 7/16'), false);
-  assert.ok(plain(lines[2] ?? '').includes('stps 6/16'));
+  assert.equal(plain(lines[2] ?? '').includes('stps 6/16'), false);
   assert.equal(status.includes('󰁕 Plan title'), false);
 });
 
@@ -603,41 +604,18 @@ test('keeps lifecycle contextual and colors progress by completion', () => {
       'accent:Read-only preflight for the interrupted one-line Review ledger fix › before further OpenSpec validation and implementation',
     ),
   );
-  assert.ok(colors.includes('text: task 0/1'));
-  assert.ok(colors.includes('dim:›'));
-  assert.ok(colors.includes('text: stps 6/16'));
-
+  // Counter removal lockstep: task/stps tiles are gone in every counter
+  // state — Work is their replacement on line 2's right end.
+  assert.ok(
+    !colors.some((entry) => entry.includes('task 0/1') || entry.includes('stps 6/16')),
+  );
   state.header!.counters.tasks = { completed: 1, total: 1 };
   state.header!.counters.steps = { completed: 16, total: 16 };
   colors.length = 0;
   renderHeaderDeck(state, 160, theme as never);
-  assert.ok(colors.includes('success: task 1/1'));
-  assert.ok(colors.includes('success: stps 16/16'));
-
-  state.header!.counters.tasks = undefined;
-  state.header!.counters.steps = undefined;
-  colors.length = 0;
-  renderHeaderDeck(state, 160, theme as never);
-  // Frozen contract: absent counters remove their slots — no dash narration.
   assert.ok(
-    !colors.some((entry) => entry.includes('task') && !entry.startsWith('dim:')),
+    !colors.some((entry) => entry.includes('task 1/1') || entry.includes('stps 16/16')),
   );
-  assert.ok(
-    !colors.some((entry) => entry.includes('stps') && !entry.startsWith('dim:')),
-  );
-
-  state.header!.counters.tasks = { completed: 0, total: 1 };
-  colors.length = 0;
-  renderHeaderDeck(state, 160, theme as never);
-  assert.ok(colors.some((entry) => entry.includes(' task 0/1')));
-  assert.ok(!colors.some((entry) => entry.includes('stps')));
-
-  state.header!.counters.tasks = undefined;
-  state.header!.counters.steps = { completed: 10, total: 10 };
-  colors.length = 0;
-  renderHeaderDeck(state, 160, theme as never);
-  assert.ok(!colors.some((entry) => entry.includes('task')));
-  assert.ok(colors.some((entry) => entry.includes(' stps 10/10')));
 });
 
 test('uses prompt-line color for rules and major separators with violet ladybugs', () => {
@@ -774,23 +752,19 @@ test('renders unavailable optional telemetry honestly', () => {
   const all = lines.join('\n');
   // Frozen contract: absent facts remove their slots — the frame collapses
   // without a single placeholder dash or emptiness narration.
-  // Gray-out amendment: dim numeric zeros replace every placeholder dash.
+  // Counter removal lockstep: placeholders are gone with the tiles.
   assert.equal(
     lines.some((line) => line.includes('—')),
     false,
   );
-  assert.ok(plain(lines[2] ?? '').includes('task 00/00'), 'dim title placeholder');
-  assert.ok(plain(lines[2] ?? '').includes('stps 00/00'), 'dim title placeholder');
+  // Counter removal lockstep: without counters the title's right end is
+  // silent — Work renders nothing for pre-title publishers (no placeholder).
+  assert.equal(plain(lines[2] ?? '').includes('task 00/00'), false);
+  assert.equal(plain(lines[2] ?? '').includes('stps 00/00'), false);
+  assert.equal(plain(lines[2] ?? '').trim(), "󰠭 000:00'00");
   assert.doesNotMatch(all, /next direction/u);
-  assert.doesNotMatch(all, /clean/u);
-  assert.ok(
-    !lines.filter((_line, index) => index !== 2).some((line) => line.includes('task')),
-    'no task slot below the title without counters',
-  );
-  assert.ok(
-    !lines.filter((_line, index) => index !== 2).some((line) => line.includes('stps')),
-    'no steps slot below the title without counters',
-  );
+  assert.equal(all.includes('task'), false);
+  assert.equal(all.includes('stps'), false);
   const status = lines.find((line) => line.includes('waiting')) ?? '';
   // Frozen contract: full silence when nothing is running or selected.
   assert.equal(status, '');
@@ -939,5 +913,161 @@ test('span rows collapse when no child runs are live', () => {
   assert.equal(
     lines.some((line) => line.includes('├') || line.includes('└')),
     false,
+  );
+});
+
+// --- Step 2.1: line 2 on the title-state contract ---------------------------
+
+const IDLE_TITLE = {
+  v: 1 as const,
+  subject: 'Pivot cockpit to pure pi-starship-header chrome',
+  work: null,
+  activity: null,
+  waiver: null,
+};
+
+function titleFixture(overrides: {
+  title?: unknown;
+  elapsedMs?: number | null;
+}): HeaderDeckState {
+  const state = fixture();
+  state.elapsedMs = overrides.elapsedMs ?? null;
+  if ('title' in overrides) {
+    state.header = {
+      ...(state.header as NonNullable<typeof state.header>),
+      // Production snapshots are always parseHeaderSnapshot output — the
+      // fixture models that boundary by parsing raw payloads here.
+      ...(overrides.title === null
+        ? {}
+        : { title: parseDeckTitleState(overrides.title) }),
+    };
+  }
+  return state;
+}
+
+test('renders line 2 as clock ⟩ Subject with the Work label on the right', () => {
+  const state = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      work: { change: 'eight-section-deck', task: '2.1', done: 1, total: 4 },
+    },
+    elapsedMs: 4_120,
+  });
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const titleRow = lines.find((line) => line.includes("000:04'12")) ?? '';
+  assert.ok(
+    titleRow.startsWith(
+      "󰠭 000:04'12 ⟩ Pivot cockpit to pure pi-starship-header chrome",
+    ),
+  );
+  assert.ok(titleRow.includes('eight-section-deck · 1/4'));
+  // The optional task segment is parsed for the contract but never rendered —
+  // the accepted mockup shows exactly `change · done/total`.
+  assert.equal(titleRow.includes('2.1 ·'), false);
+});
+
+test('renders the dim no-work hint when no change owns the moment', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
+  assert.ok(titleRow.includes('— no change owns the moment'));
+  const colors: string[] = [];
+  renderHeaderDeck(state, 120, {
+    fg: (name: string, text: string) => {
+      colors.push(`${name}:${plain(text)}`);
+      return text;
+    },
+    bold: (text: string) => text,
+  } as never);
+  assert.ok(colors.includes('dim:— no change owns the moment'));
+});
+
+test('renders the clock leading alone when the subject is null', () => {
+  const state = titleFixture({ title: { ...IDLE_TITLE, subject: null } });
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const titleRow = lines[2] ?? '';
+  assert.ok(titleRow.startsWith("󰠭 000:00'00"));
+  assert.doesNotMatch(titleRow, /⟩\s*$/u);
+  assert.doesNotMatch(titleRow, /󰠭\s+⟩/u);
+  // The fresh session still owns its right end: the work hint stays.
+  assert.ok(titleRow.includes('— no change owns the moment'));
+});
+
+test('colors the Work label by completion and drops it on narrow frames', () => {
+  const state = titleFixture({
+    title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 1, total: 4 } },
+  });
+  const colors: string[] = [];
+  const theme = {
+    fg: (name: string, text: string) => {
+      colors.push(`${name}:${plain(text)}`);
+      return text;
+    },
+    bold: (text: string) => text,
+  };
+
+  renderHeaderDeck(state, 120, theme as never);
+  assert.ok(colors.includes('text:eight-section-deck · 1/4'));
+
+  colors.length = 0;
+  const done = titleFixture({
+    title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 4, total: 4 } },
+  });
+  renderHeaderDeck(done, 120, theme as never);
+  assert.ok(colors.includes('success:eight-section-deck · 4/4'));
+
+  // Narrow frames: the Work slot yields before the clock anchor does.
+  const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
+  assert.ok((narrow[2] ?? '').includes("000:00'00"));
+  assert.equal((narrow[2] ?? '').includes('eight-section-deck · 1/4'), false);
+});
+
+test('keeps pre-title publishers on the legacy selection band with a silent right end', () => {
+  const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
+  const titleRow = lines.find((line) => line.includes("000:07'00")) ?? '';
+  assert.ok(titleRow.includes('Read-only preflight'));
+  // No title state means no Work slot: absent facts stay silent, and the
+  // superseded counter tiles never come back to fill the gap.
+  assert.equal(titleRow.includes('·'), false);
+  assert.equal(titleRow.includes('no change owns the moment'), false);
+});
+
+test('ignores a malformed title state and falls back to the legacy band', () => {
+  const state = titleFixture({ title: { v: 9, subject: 'stale' } });
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
+  assert.ok(titleRow.includes('Read-only preflight'), 'selection keeps the band');
+  assert.equal(titleRow.includes('stale'), false);
+});
+
+test('wraps a long subject onto an indented continuation line', () => {
+  const subject =
+    'Deliver one deliberately long session subject that needs a second responsive line without inventing new machinery';
+  const state = titleFixture({ title: { ...IDLE_TITLE, subject } });
+
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const first = lines.findIndex((line) => line.includes("000:00'00"));
+  assert.ok(first >= 0);
+  assert.ok((lines[first] ?? '').startsWith("󰠭 000:00'00 ⟩ Deliver one deliberately"));
+  assert.ok((lines[first + 1] ?? '').startsWith(' '.repeat(12)));
+  assert.ok((lines[first + 1] ?? '').includes('machinery'));
+});
+
+test('prefixes the unfocused open-goal hint to the subject until notices land', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    openGoals: 2,
+  };
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
+  assert.match(
+    titleRow,
+    /󰠭 000:00'00 ⟩ \(2 open goals · \/goal-focus\) Pivot cockpit/u,
   );
 });

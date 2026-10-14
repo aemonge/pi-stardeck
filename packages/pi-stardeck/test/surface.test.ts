@@ -133,11 +133,12 @@ test('editor-deck publishes a renderer without registering an above-editor widge
     bold: (text: string) => text,
   };
   const lines = renderer?.(120, theme) ?? [];
-  // Frozen contract: with no selection the anchor row collapses entirely —
-  // no slot, no dash, but the deck still renders its structure.
+  // Four-line deck lockstep: line 2's clock anchor always leads with its
+  // icon — the old "anchor row collapses without a selection" contract is
+  // superseded by the accepted mockups (clock ⟩ Subject is line 2).
   assert.equal(
     lines.some((line) => line.includes('󰠭')),
-    false,
+    true,
   );
   assert.equal(
     // Gray-out amendment: dim numeric zeros replace every placeholder dash.

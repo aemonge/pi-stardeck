@@ -13,7 +13,9 @@ import type {
   VimMode,
 } from './gauge.ts';
 import type { ResourceTelemetry } from './process-resources.ts';
+import type { DeckTitleState } from './title-state.ts';
 import { formatDeckCountdown } from './gauge.ts';
+import { formatDeckWorkLabel } from './title-state.ts';
 
 export interface HeaderDeckModeRail {
   plain: string;
@@ -182,33 +184,61 @@ function wrapFocus(text: string, width: number, maximumLines: number): string[] 
   return lines.slice(0, maximumLines);
 }
 
-function elevatedSelectionLines(
-  state: HeaderDeckState,
-  width: number,
-  theme: Theme,
-): string[] {
-  // Relocation phase: the clock leads the title band; the anchor keeps its corner.
-  const prefix = `${color(theme, 'customMessageLabel', '󰠭')} ${timerTile(state, theme)} ${semanticSeparator(theme)} `;
-  const indent = ' '.repeat(visibleWidth(prefix));
+function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): string[] {
+  // Line 2 anchor: the clock always leads the band with its icon; the
+  // Subject follows when the title state carries one, and a fresh session
+  // (subject null) leaves the clock leading alone — no dangling separator.
+  const clock = `${color(theme, 'customMessageLabel', '󰠭')} ${timerTile(state, theme)}`;
+  const title = state.header?.title ?? null;
+  if (title) {
+    const subject = safeText(title.subject ?? '');
+    if (!subject) return [clock];
+    const openGoals =
+      state.header?.selection?.source === 'goal' ? 0 : (state.header?.openGoals ?? 0);
+    const goalHint =
+      openGoals > 0
+        ? `(${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus) `
+        : '';
+    return focusWrapLines(`${goalHint}${subject}`, clock, width, theme, 'accent');
+  }
+  // Pre-title publishers: the legacy selection keeps the band alive.
   const selection = state.header?.selection;
   const titles = (selection?.titles ?? [])
     .map((value) => safeText(value))
     .filter(Boolean);
   if (!selection || titles.length === 0) {
-    return []; // frozen contract: no selection means no slot
+    return [clock]; // frozen contract: no selection means no slot, clock stays
   }
   const openGoals = selection.source !== 'goal' ? (state.header?.openGoals ?? 0) : 0;
   const goalHint =
     openGoals > 0
       ? `(${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus) `
       : '';
-  const contentWidth = Math.max(1, width - visibleWidth(prefix));
   const selectionColor = ['accent', 'success'].includes(selection.color)
     ? 'accent'
     : selection.color;
-  return wrapFocus(`${goalHint}${titles.join(' › ')}`, contentWidth, 2).map(
+  return focusWrapLines(
+    `${goalHint}${titles.join(' › ')}`,
+    clock,
+    width,
+    theme,
+    selectionColor,
+  );
+}
+
+function focusWrapLines(
+  content: string,
+  clock: string,
+  width: number,
+  theme: Theme,
+  contentColor: string,
+): string[] {
+  const lead = `${clock} ${semanticSeparator(theme)} `;
+  const indent = ' '.repeat(visibleWidth(lead));
+  const contentWidth = Math.max(1, width - visibleWidth(lead));
+  return wrapFocus(content, contentWidth, 2).map(
     (line, index) =>
-      `${index === 0 ? prefix : indent}${color(theme, selectionColor, line)}`,
+      `${index === 0 ? lead : indent}${color(theme, contentColor, line)}`,
   );
 }
 
@@ -238,31 +268,24 @@ function alignedSingleRow(left: string, right: string, width: number): string {
   return `${fittedLeft}${' '.repeat(gap)}${right}`;
 }
 
-function progressLine(state: HeaderDeckState, theme: Theme): string {
-  const tasks = state.header?.counters.tasks;
-  const steps = state.header?.counters.steps;
-  // Frozen contract: absent facts remove their slots; placeholder dashes are
-  // forbidden. No counters at all collapses the whole progress slot.
-  const segments: string[] = [];
-  if (tasks && tasks.total > 0) {
-    const semantic = tasks.completed >= tasks.total ? 'success' : 'text';
-    segments.push(
-      color(theme, semantic, ` task ${tasks.completed}/${tasks.total}`, true),
-    );
-  }
-  if (steps && steps.total > 0) {
-    const semantic = steps.completed >= steps.total ? 'success' : 'text';
-    segments.push(color(theme, semantic, ` stps ${steps.completed}/${steps.total}`));
-  }
-  if (segments.length === 0) return '';
-  if (segments.length === 1) return segments[0] ?? '';
-  return `${segments[0]} ${minorSeparator(theme, 'dim')} ${segments[1]}`;
+function workTile(state: HeaderDeckState, theme: Theme): string {
+  // Line 2 right: Work — derived from OpenSpec focus, never authored here.
+  // A fresh session keeps the slot with the accepted dim hint; pre-title
+  // publishers leave it silent (absent facts remove their slots).
+  const title = state.header?.title ?? null;
+  if (!title) return '';
+  const work = title.work;
+  if (!work) return color(theme, 'dim', '— no change owns the moment');
+  return color(
+    theme,
+    work.total > 0 && work.done >= work.total ? 'success' : 'text',
+    formatDeckWorkLabel(work),
+  );
 }
 
 // Relocation phase (Human-directed): the clock leads the title band beside
-// the anchor, runs ride the lifecycle row, and progress keeps the title's
-// right end — real values when live, dim numeric zeros when not
-// (gray-out amendment).
+// the anchor, runs ride the lifecycle row, and Work keeps the title's
+// right end — real values when live, the dim hint when idle.
 function timerTile(state: HeaderDeckState, theme: Theme): string {
   const elapsed = state.elapsedMs;
   const idle = state.idleMs;
@@ -284,13 +307,6 @@ function runsTile(state: HeaderDeckState, theme: Theme): string {
       `${icon} ${String(value).padStart(2, '0')}`,
     );
   return `${cell(children, '')} ${minorSeparator(theme, 'dim')} ${cell(subagents, '')}`;
-}
-
-function progressTile(state: HeaderDeckState, theme: Theme): string {
-  const live = progressLine(state, theme);
-  if (live) return live;
-  const fallback = `${color(theme, 'dim', ` task 00/00`)} ${minorSeparator(theme, 'dim')} ${color(theme, 'dim', ` stps 00/00`)}`;
-  return fallback;
 }
 
 function spanElapsed(ms: number): string {
@@ -364,7 +380,7 @@ function whatLine(state: HeaderDeckState): string {
   );
   const pathLabel = safeText(work?.activityPath?.at(-1)?.label ?? '');
   const base = safeText(title ?? '') || pathLabel;
-  // Frozen contract: one home per fact — step counts live in progressLine only.
+  // Frozen contract: one home per fact — step counts never ride this line.
   return base;
 }
 
@@ -746,10 +762,9 @@ export function renderHeaderDeck(
     ? color(theme, recovering ? 'accent' : 'text', activityText)
     : '';
   const suggestionSegment = suggestionLine(state, theme, recovering);
-  // Relocation phase: the clock leads the title band with progress alone on
-  // the right end; runs ride the lifecycle row; the project context heads
-  // the telemetry row.
-  // Narrow frames: the progress slot yields before the selection anchor does.
+  // Line 2 (four-line deck): the clock and Subject lead with Work on the
+  // right end; goal progress rows keep their home beneath this line.
+  // Narrow frames: the Work slot yields before the clock anchor does.
   const goalDetail =
     state.header?.selection?.source === 'goal'
       ? state.header.selection.goal
@@ -758,18 +773,14 @@ export function renderHeaderDeck(
     boundedWidth >= 40
       ? goalDetail
         ? goalBadgeTile(goalDetail, theme)
-        : progressTile(state, theme)
+        : workTile(state, theme)
       : '';
-  const focusLines = elevatedSelectionLines(state, boundedWidth, theme);
-  // Relocation phase: without a selection the bare clock keeps the band alive.
-  const titleBase = focusLines.length > 0 ? focusLines : [timerTile(state, theme)];
-  const titleRows =
-    titleRight || focusLines.length > 0
-      ? [
-          alignedSingleRow(titleBase[0] ?? '', titleRight, boundedWidth),
-          ...titleBase.slice(1),
-        ]
-      : [];
+  const focusLines = titleBandLines(state, boundedWidth, theme);
+  const titleRows = [
+    alignedSingleRow(focusLines[0] ?? '', titleRight, boundedWidth),
+    ...focusLines.slice(1),
+  ];
+  const goalRows = goalDetail ? goalTreeLines(goalDetail, boundedWidth, theme) : [];
 
   // Relocation phase: runs ride the lifecycle row after leaving the title
   // metrics; the project context now heads the telemetry row.
@@ -786,7 +797,8 @@ export function renderHeaderDeck(
   const status = alignedSingleRow(statusLeft, statusRight, boundedWidth);
 
   // Band adjacency (Human-directed): telemetry crowns the deck, the title
-  // band reads beneath it, and the status row anchors the base by the rail.
+  // band reads beneath it with the goal rows in its keep, and the status
+  // row anchors the base by the rail.
   const rows = [
     ...alignedRows(
       compactTelemetryLeft(state, theme, boundedWidth),
@@ -795,9 +807,9 @@ export function renderHeaderDeck(
     ),
     top,
     ...titleRows,
+    ...goalRows,
     divider,
     status,
-    ...(goalDetail ? goalTreeLines(goalDetail, boundedWidth, theme) : []),
     ...spanTreeRows(state, boundedWidth, theme),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
