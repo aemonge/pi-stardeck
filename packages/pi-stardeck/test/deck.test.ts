@@ -92,9 +92,9 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 test('renders the approved rich wide header without side borders or spacer rows', () => {
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  // Step 2.2 transitional: six rows — the engine group keeps its own row
-  // until Step 2.3 re-homes it on line 4 left.
-  assert.equal(lines.length, 6);
+  // Four-line deck: L1, ─, L2, ┈, L3, ─, L4 — line 4 closes with no
+  // separator beneath it.
+  assert.equal(lines.length, 7);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
   assert.ok(titleRow.includes("000:07'00"));
@@ -111,27 +111,25 @@ test('renders the approved rich wide header without side borders or spacer rows'
   assert.equal(titleRow.includes('stps 6/16'), false);
   assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
   assert.match(lines[3] ?? '', /^\[2m/u);
-  assert.match(
-    plain(lines[0] ?? ''),
-    /^\[.\] \[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}  \u{203A} [\u{E000}-\u{F8FF}] ~\/galactica ⟩/u,
-  );
+  assert.match(plain(lines[0] ?? ''), /^\[.\] [\u{E000}-\u{F8FF}] ~\/galactica ⟩/u);
   assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
-  const engineRow = plain(lines[5] ?? '');
-  assert.ok(engineRow.includes('GPT-5.6 Sol'));
-  assert.ok(engineRow.trimEnd().endsWith('63%'));
+  // Step 2.3 relocation: the companion chips ride line 1's right end.
+  assert.match(plain(lines[0] ?? ''), /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
+  // Line 4 (four-line deck): engine, quota, machine, global cost left —
+  // the right end stays empty until the notices slot (Task 3).
+  const telemetryRow = plain(lines[6] ?? '');
+  assert.ok(telemetryRow.includes('GPT-5.6 Sol'));
+  assert.ok(telemetryRow.trimEnd().endsWith('$5.16'));
   assert.match(
-    lines[5] ?? '',
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%$/u,
+    lines[6] ?? '',
+    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63% \u{27E9} 48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
   );
-  assert.match(
-    lines[0] ?? '',
-    /48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
-  );
+  assert.match(lines[5] ?? '', /^─+$/u);
   assert.equal(lines.join('\n').includes('32K/128K'), false);
   assert.ok(lines.every((line) => line.length > 0));
-  assert.ok(lines.every((line) => !line.startsWith('│') && !line.endsWith('│')));
+  assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
   assert.equal(lines.join('').split('󰠭').length - 1, 1);
-  assert.equal(lines.join('').includes('󰒋 LSP'), false);
+  assert.equal(lines.join('').includes('󱒋 LSP'), false);
 });
 
 test('turns the top ladybug into distinct error and warning counts', () => {
@@ -248,11 +246,11 @@ test('extension statuses ride the telemetry tail as icons', () => {
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const telemetry = lines[0] ?? '';
-  assert.match(
-    telemetry,
-    /^\[.\] \[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}  \u{203A} [\u{E000}-\u{F8FF}] ~/u,
-  );
-  assert.ok(telemetry.indexOf('~/') > telemetry.indexOf('\u{F08BE}'));
+  // Step 2.3 relocation: the path heads line 1; the chips ride its right
+  // end (bold, spacing, and on/warn/off colors unchanged).
+  assert.match(telemetry, /^\[.\] [\u{E000}-\u{F8FF}] ~/u);
+  assert.match(telemetry, /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
+  assert.ok(telemetry.indexOf('~/') < telemetry.indexOf('\u{232C}'));
   assert.equal(telemetry.includes('engram'), false);
   assert.equal(telemetry.includes('graphify'), false);
   assert.equal(
@@ -631,8 +629,11 @@ test('keeps compact telemetry islands together with one gap cell', () => {
   const modelGroup = '󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%';
   const resources = '48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16';
   const lines = renderHeaderDeck(fixture(), 120, plainTheme as never);
-  assert.match(lines.join('\n'), new RegExp(`${escapeRegExp(modelGroup)}$`, 'm'));
-  assert.match(lines.join('\n'), new RegExp(`${escapeRegExp(resources)}$`, 'm'));
+  // Line 4 (four-line deck): the engine group leads, machine and cost
+  // follow on the same line, cost anchoring the end.
+  const joined = lines.join('\n');
+  assert.match(joined, new RegExp(escapeRegExp(modelGroup) + ' ⟩', 'm'));
+  assert.match(joined, new RegExp(escapeRegExp(resources) + '$', 'm'));
 });
 
 test('renders no task, stps, or run-counter tiles in any state', () => {
@@ -1183,6 +1184,108 @@ test('spans rows keep their home directly beneath line 3', () => {
   const activityIndex = lines.findIndex((line) => line.includes('awaiting Human'));
   assert.ok(activityIndex >= 0);
   assert.match(lines[activityIndex + 1] ?? '', /└ \(00'41\) reviewer assuring/u);
-  // The engine row (Step 2.3's line 4) still closes the deck beneath them.
-  assert.ok(lines[activityIndex + 2]?.includes('GPT-5.6 Sol'));
+  // A ─ rule follows the spans rows, then line 4 closes the deck.
+  assert.match(lines[activityIndex + 2] ?? '', /^─+$/u);
+  assert.ok(lines[activityIndex + 3]?.includes('GPT-5.6 Sol'));
+});
+
+// --- Step 2.3: line 1 right relocation and line 4 ---------------------------
+
+test('relocates companion chips to line 1 right and bolds them', () => {
+  const state = fixture();
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 1,
+    nativeStatuses: [{ key: 'engram', text: 'ready' }],
+  };
+  const bolded: string[] = [];
+  const theme = {
+    fg: (_name: string, text: string) => text,
+    bold: (text: string) => {
+      bolded.push(text);
+      return text;
+    },
+  };
+
+  const lines = renderHeaderDeck(state, 120, theme as never).map(plain);
+  const line1 = lines[0] ?? '';
+  assert.ok(line1.includes('~/galactica'));
+  assert.match(line1, /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
+  assert.ok(bolded.includes('[\u{21BB} \u{25A4}]'), 'chips stay bold');
+});
+
+test('keeps companion chips on line 1 right while the path yields first', () => {
+  const state = fixture();
+  for (const width of [79, 60, 39, 24, 14]) {
+    const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
+    const line1 = lines[0] ?? '';
+    assert.match(line1, /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u, String(width));
+    if (width >= 39) assert.ok(line1.includes('~/'), String(width));
+  }
+});
+
+test('keeps the devbox marker as a path prefix on line 1 left', () => {
+  const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
+  const line1 = lines[0] ?? '';
+  assert.match(line1, /^\[.\] \u{F07B} ~/u);
+  assert.match(line1, /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
+});
+
+test('composes line 4 left as engine, quota, machine, global cost', () => {
+  const state = fixture();
+  state.footerTelemetry = {
+    totalCost: 5.16,
+    quotaWindows: [
+      {
+        label: '5h',
+        percent: 82,
+        resetAt: Math.floor(Date.now() / 1000) + 90 * 60 + 30,
+      },
+      { label: '7d', percent: 12 },
+    ],
+  };
+  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  const line4 = lines[6] ?? '';
+  const engineAt = line4.indexOf('GPT-5.6 Sol');
+  const calendarAt = line4.indexOf('12%');
+  const flameAt = line4.indexOf('82%');
+  const machineAt = line4.indexOf('48.2%');
+  const mcpAt = line4.indexOf('3/3');
+  const costAt = line4.indexOf('$5.16');
+  assert.ok(engineAt >= 0 && flameAt > engineAt, 'engine leads the quota windows');
+  assert.ok(calendarAt > engineAt && calendarAt < flameAt, 'calendar before flame');
+  assert.ok(machineAt > flameAt, 'machine after quota');
+  assert.ok(mcpAt > machineAt, 'mcp rides the machine group');
+  assert.ok(costAt > mcpAt, 'global cost anchors the end');
+  assert.ok(line4.trimEnd().endsWith('$5.16'));
+});
+
+test('leaves line 4 right empty until the notices slot lands', () => {
+  const state = fixture();
+  state.piStatus = {
+    errors: 2,
+    warnings: 1,
+    nativeStatusCount: 2,
+    nativeStatuses: [{ key: 'graphify', text: 'graphify stale · update recommended' }],
+  };
+  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  const line4 = lines[6] ?? '';
+  assert.ok(line4.trimEnd().endsWith('$5.16'), 'nothing rides after the cost');
+  assert.equal(line4.includes('⚠'), false, 'no notice glyph before Task 3');
+  assert.equal(line4.includes('update recommended'), false);
+});
+
+test('closes the deck on line 4 with a solid rule above and nothing beneath', () => {
+  // Single-line subject at this width so the band count is fixed at seven.
+  const lines = renderHeaderDeck(
+    titleFixture({ title: IDLE_TITLE }),
+    100,
+    plainTheme as never,
+  ).map(plain);
+  assert.equal(lines.length, 7);
+  assert.match(lines[5] ?? '', /^─+$/u);
+  assert.ok((lines[6] ?? '').includes('GPT-5.6 Sol'));
+  // No separator beneath the last band.
+  assert.ok((lines.at(-1) ?? '').includes('GPT-5.6 Sol'));
 });

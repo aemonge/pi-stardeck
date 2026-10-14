@@ -232,12 +232,6 @@ function loud(theme: Theme, name: string, text: string): string {
   return `\u001b[7m${color(theme, name, text, true)}\u001b[27m`;
 }
 
-function alignedRows(left: string, right: string, width: number): string[] {
-  const gap = width - visibleWidth(left) - visibleWidth(right);
-  if (gap >= 1) return [`${left}${' '.repeat(gap)}${right}`];
-  return [fit(left, width), fit(right, width)].filter(Boolean);
-}
-
 function alignedSingleRow(left: string, right: string, width: number): string {
   if (!right) return fit(left, width);
   const rightWidth = visibleWidth(right);
@@ -372,18 +366,6 @@ function turnCostTile(state: HeaderDeckState, theme: Theme): string {
   );
 }
 
-function projectLeft(state: HeaderDeckState, theme: Theme, statusIcons = ''): string {
-  const devbox = state.devbox ? `${color(theme, 'success', '[󰆧]', true)} ` : '';
-  if (statusIcons === '') {
-    return `${devbox}${color(theme, 'success', ` ${safeText(state.cwd)}`)}`;
-  }
-  return `${devbox}${statusIcons}  ${minorSeparator(theme, 'dim')} ${color(
-    theme,
-    'success',
-    ` ${safeText(state.cwd)}`,
-  )}`;
-}
-
 function gitRight(state: HeaderDeckState, theme: Theme): string {
   // Gray-out amendment (Human-directed): absent Git shows a dim marker.
   if (!state.branch && !state.gitAvailable) {
@@ -418,22 +400,15 @@ function globalLeft(state: HeaderDeckState, theme: Theme): string {
   return `${color(theme, 'accent', `󰚩 ${safeText(state.model, 80)}`)} ${minorSeparator(theme)} ${color(theme, state.thinking ? 'thinkingHigh' : 'dim', safeText(state.thinking || 'off', 16))}`;
 }
 
-function compactTelemetryLeft(
-  state: HeaderDeckState,
-  theme: Theme,
-  width: number,
-): string {
-  // Human contract: companion symbols are always visible at any width —
-  // only their color changes (on / warn / off). They ride inside the project
-  // segment when it fits and lead standalone on narrow frames.
-  const statusIcons = extensionStatusCodes(state, theme);
-  const projectSegment = width >= 100 ? projectLeft(state, theme, statusIcons) : '';
-  const leadSegment = projectSegment !== '' ? '' : statusIcons;
+function projectDeckLeft(state: HeaderDeckState, theme: Theme, width: number): string {
+  // Line 1 left: the devbox marker is a path prefix, then the path; the git
+  // segment yields below 79 columns before the path does. The companion
+  // chips ride line 1's right end and never drop (always-visible contract).
+  const devbox = state.devbox ? `${color(theme, 'success', '[󰆧]', true)} ` : '';
+  const path = `${devbox}${color(theme, 'success', ` ${safeText(state.cwd)}`)}`;
   const gitSegment =
     width >= 79 ? truncateToWidth(gitRight(state, theme), 52, '…') : '';
-  return [projectSegment, leadSegment, gitSegment]
-    .filter((segment) => segment !== '')
-    .join(` ${semanticSeparator(theme)} `);
+  return gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
 }
 
 const KNOWN_COMPANION_ICONS: ReadonlyArray<{
@@ -491,14 +466,16 @@ function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
   return out;
 }
 
-function compactTelemetryRight(
+function telemetryRowLeft(
   state: HeaderDeckState,
   theme: Theme,
   nowMs = Date.now(),
 ): string {
+  // Line 4 left (four-line deck): engine, quota window, machine, global
+  // cost — in that order. Line 4's right end stays empty until the notices
+  // slot lands (Task 3); nothing here may invent one.
+  const machineSegments: string[] = [];
   const resources = state.resources;
-  // Relocation: resources left-to-right, cost anchors the far end.
-  const resourceSegments: string[] = [];
   if (resources) {
     const resourceColor =
       resources.cpuWarning || resources.memoryWarning ? 'warning' : 'accent';
@@ -506,18 +483,20 @@ function compactTelemetryRight(
       color(theme, resourceColor, `${formatDeckCpu(resources.cpuPercent)}`),
       color(theme, resourceColor, `${formatDeckBytes(resources.memoryBytes)}`),
     ];
-    resourceSegments.push(parts.join(` ${minorSeparator(theme, resourceColor)} `));
+    machineSegments.push(parts.join(` ${minorSeparator(theme, resourceColor)} `));
   }
   if (state.mcp) {
-    resourceSegments.push(
+    machineSegments.push(
       color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`),
     );
   }
-  const windows = windowQuotaTiles(state, theme, nowMs);
-  if (windows) resourceSegments.unshift(windows);
-  const cost = costTile(state, theme);
-  if (cost) resourceSegments.push(cost);
-  return resourceSegments.join(` ${semanticSeparator(theme)} `);
+  const groups = [
+    modelGroupLeft(state, theme),
+    windowQuotaTiles(state, theme, nowMs),
+    machineSegments.join(` ${semanticSeparator(theme)} `),
+    costTile(state, theme),
+  ].filter((group) => group !== '');
+  return groups.join(` ${semanticSeparator(theme)} `);
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
@@ -703,6 +682,7 @@ export function renderHeaderDeck(
     lineColor,
     '─'.repeat(Math.max(0, boundedWidth - visibleWidth(topPrefix))),
   )}`;
+  const bottom = color(theme, lineColor, '─'.repeat(boundedWidth));
   const divider = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   // Line 2 (four-line deck): the clock and Subject lead with Work on the
   // right end; goal progress rows keep their home beneath this line.
@@ -733,17 +713,21 @@ export function renderHeaderDeck(
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // Step 2.2 transitional: the engine group keeps a row of its own until
-  // Step 2.3 re-homes it on line 4 left (engine, quota, machine, cost).
-  const engineRow = alignedSingleRow('', modelGroupLeft(state, theme), boundedWidth);
+  // Line 4 (four-line deck): engine, quota window, machine, global cost on
+  // the left; the right end stays empty until the notices slot (Task 3).
+  const telemetryRow = alignedSingleRow(
+    telemetryRowLeft(state, theme),
+    '',
+    boundedWidth,
+  );
 
-  // Band adjacency (Human-directed): telemetry crowns the deck, the title
-  // band reads beneath it with the goal rows in its keep, and the activity
-  // row anchors the base by the rail with the spans rows beneath it.
+  // Band adjacency (Human-directed, accepted mockups): line 1 carries the
+  // path left with the companion chips right; ─ after lines 1 and 3, ┈
+  // between 2 and 3; line 4 closes the deck with no separator beneath it.
   const rows = [
-    ...alignedRows(
-      compactTelemetryLeft(state, theme, boundedWidth),
-      compactTelemetryRight(state, theme),
+    alignedSingleRow(
+      projectDeckLeft(state, theme, boundedWidth),
+      extensionStatusCodes(state, theme),
       boundedWidth,
     ),
     top,
@@ -752,7 +736,8 @@ export function renderHeaderDeck(
     divider,
     activityRow,
     ...spanTreeRows(state, boundedWidth, theme),
-    engineRow,
+    bottom,
+    telemetryRow,
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }
