@@ -730,11 +730,12 @@ export function renderHeaderDeck(
       ? alignedSingleRow(engineGroup, machineGroup, boundedWidth)
       : fit(engineGroup, boundedWidth);
 
-  // Band adjacency (Human-directed, accepted mockups; second 2.4
-  // amendment): strong ─ rules bookend the deck — a full rule directly
-  // beneath the line-1 strip and a closing rule after line 4, with nothing
-  // rendering beneath it — while the internal seams stay dotted ┈ between
-  // lines 2 and 3 and between line 3 (spans rows included) and line 4.
+  // Band adjacency (Human-directed, accepted mockups; third 2.4
+  // amendment): the deck opens with a full ─ rule directly beneath the
+  // line-1 strip and ends at the telemetry row — nothing renders beneath
+  // line 4; pi's own prompt chrome below closes the visual block — while
+  // the internal seams stay dotted ┈ between lines 2 and 3 and between
+  // line 3 (spans rows included) and line 4.
   const chips = extensionStatusCodes(state, theme);
   const alert = statusAlertTile(
     state,
@@ -756,7 +757,6 @@ export function renderHeaderDeck(
     ...spanTreeRows(state, boundedWidth, theme),
     dottedRule,
     telemetryRow,
-    solidRule,
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }

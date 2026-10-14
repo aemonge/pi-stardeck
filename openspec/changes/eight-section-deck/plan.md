@@ -98,7 +98,6 @@ After this Task, with the deck intentionally unchanged:
  awaiting Human                                                                    — · 0 tok
 ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
 󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%                      48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16
- ────────────────────────────────────────────────────────────────────────────────────────────
   ```
 - **Rendered (mid-work, 100+ cols):**
   ```text
@@ -109,7 +108,6 @@ After this Task, with the deck intentionally unchanged:
  editing packages/pi-stardeck/src/deck.ts                                  this turn 4.2k · 0:38
 ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
 󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%                      48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16
- ────────────────────────────────────────────────────────────────────────────────────────────
   ```
 - Amendment at the 2.4 checkpoint (2026-10-14): the Human directed the
   rule beneath line 1 removed — line 1 is the deck's header strip, at
@@ -124,7 +122,12 @@ After this Task, with the deck intentionally unchanged:
   lines 2 and 3 are ┈; line 4 splits into the engine/context group
   flush left and the machine group (quota flame, machine readings,
   global cost) flush right, the machine group yielding first on
-  narrow frames.
+  narrow frames. (Closing rule superseded by the third amendment
+  below; the opening rule, dotted seams, and the line-4 split stand.)
+- Third Human amendment at 2.4 review, 2026-10-14: deck ends at the
+  telemetry row; pi's prompt chrome closes the block — no trailing rule
+  (the closing rule stacked against pi's own prompt/input chrome below
+  the deck, reading as a doubled big separator).
 - Engine/context hold line 4's left end; the quota flame, machine
   readings, and global cost hold its right end (second amendment); the
   notices slot's home is an open Step-3 question (flagged under

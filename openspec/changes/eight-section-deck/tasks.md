@@ -148,6 +148,14 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         occupies — placement to be decided at the Step-3 mockup review
         (candidates: notices between the two groups, or the machine
         group yields when notices are present).
+      - Third amendment at the 2.4 review (2026-10-14): the Human's
+        live render showed the closing rule stacking directly against
+        pi's own prompt/input chrome below the deck, reading as a
+        doubled big separator — the deck now ends at the telemetry
+        row; the opening ─ rule beneath line 1, the dotted ┈ seams, and
+        the line-4 split stand. Applied with lockstep test shifts;
+        plan.md Task-2 mockup blocks updated; 2.4 stays open for the
+        Human's live confirmation.
 
 ## 3. Notices and waiver
 

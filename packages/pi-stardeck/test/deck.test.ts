@@ -92,9 +92,10 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 test('renders the approved rich wide header without side borders or spacer rows', () => {
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  // Eight-row deck (second 2.4 amendment): L1, ─, L2, ┈, L3, ┈, L4, ─ —
-  // strong rules bookend the deck; the internal seams stay dotted.
-  assert.equal(lines.length, 8);
+  // Seven-row deck (third 2.4 amendment): L1, ─, L2, ┈, L3, ┈, L4 — the
+  // strong rule opens the deck and the deck ends at the telemetry row;
+  // the internal seams stay dotted.
+  assert.equal(lines.length, 7);
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
   assert.match(plain(lines[1] ?? ''), /^─+$/u);
   const titleRow = plain(lines[2] ?? '');
@@ -129,9 +130,8 @@ test('renders the approved rich wide header without side borders or spacer rows'
     lines[6] ?? '',
     /\s{2,}48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
   );
-  // Dotted seam above line 4; strong closing rule beneath it.
+  // Dotted seam above line 4; the deck ends at the telemetry row.
   assert.match(plain(lines[5] ?? ''), /^┈+$/u);
-  assert.match(plain(lines[7] ?? ''), /^─+$/u);
   assert.equal(lines.join('\n').includes('32K/128K'), false);
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
@@ -169,13 +169,14 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.ok(colors.includes('dim:/pi-status'));
 });
 
-test('drops the footer count; strong rules bookend the deck', () => {
+test('drops the footer count; the strong rule opens the deck', () => {
   const state = fixture();
   state.piStatus = { errors: 0, warnings: 0, nativeStatusCount: 3 };
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
   // Second 2.4 amendment: the solid rule rides beneath line 1 again —
-  // clean or alerting, the bookend is constant.
+  // clean or alerting, the rule is constant (third amendment: it is the
+  // only one; the deck ends at the telemetry row).
   assert.match(plain(lines[1] ?? ''), /^\u2500+$/u);
   assert.match(plain(lines[2] ?? ''), /^\u{F082D} 000:07'00/u);
   assert.equal(lines.join('').includes('·3'), false);
@@ -189,7 +190,7 @@ test('drops the footer count; strong rules bookend the deck', () => {
   const wrapped = renderHeaderDeck(state, 59, ansiTheme as never);
   assert.ok(wrapped.every((line) => visibleWidth(line) <= 59));
   const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
-  assert.equal(solidRules.length, 2, 'strong rules beneath line 1 and after line 4');
+  assert.equal(solidRules.length, 1, 'the lone strong rule opens the deck');
   const dottedSeams = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
   assert.equal(dottedSeams.length, 2, 'dotted seams inside the deck');
 
@@ -1202,14 +1203,14 @@ test('spans rows keep their home directly beneath line 3', () => {
   const activityIndex = lines.findIndex((line) => line.includes('awaiting Human'));
   assert.ok(activityIndex >= 0);
   assert.match(lines[activityIndex + 1] ?? '', /└ \(00'41\) reviewer assuring/u);
-  // A ┈ seam follows the spans rows, then line 4 and its closing ─ rule.
+  // A ┈ seam follows the spans rows, then line 4 — the deck ends at
+  // the telemetry row.
   assert.match(lines[activityIndex + 2] ?? '', /^┈+$/u);
   assert.ok(lines[activityIndex + 3]?.includes('GPT-5.6 Sol'));
-  assert.match(lines[activityIndex + 4] ?? '', /^─+$/u);
   assert.equal(
     lines.length,
-    activityIndex + 5,
-    'nothing renders beneath the closing rule',
+    activityIndex + 4,
+    'nothing renders beneath the telemetry row',
   );
 });
 
@@ -1310,21 +1311,20 @@ test('keeps line 4 right to the machine group until notices land', () => {
   assert.equal(line4.includes('update recommended'), false);
 });
 
-test('bookends the deck with strong rules and dotted internal seams', () => {
-  // Single-line subject at this width so the band count is fixed at eight.
+test('opens the deck with a strong rule and dotted internal seams', () => {
+  // Single-line subject at this width so the band count is fixed at seven.
   const lines = renderHeaderDeck(
     titleFixture({ title: IDLE_TITLE }),
     100,
     plainTheme as never,
   ).map(plain);
-  assert.equal(lines.length, 8);
+  assert.equal(lines.length, 7);
   assert.match(lines[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
   assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam beneath line 2');
   assert.match(lines[5] ?? '', /^┈+$/u, 'dotted seam beneath line 3');
   assert.ok((lines[6] ?? '').includes('GPT-5.6 Sol'));
-  assert.match(lines[7] ?? '', /^─+$/u, 'strong closing rule beneath line 4');
-  // Nothing renders beneath the closing bookend.
-  assert.equal(lines[7], lines.at(-1));
+  // The deck ends at the telemetry row — nothing renders beneath it.
+  assert.equal(lines[6], lines.at(-1));
 });
 
 // --- Step 2.4: the two accepted mockups as lockstep fixtures ----------------
@@ -1354,7 +1354,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   };
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 8);
+  assert.equal(lines.length, 7);
   // Line 1: path/git left, companion chips right.
   assert.match(
     lines[0] ?? '',
@@ -1371,13 +1371,12 @@ test('renders the accepted idle mockup at wide widths', () => {
   // Line 3: awaiting Human left, the zeroed turn meter right.
   assert.match(lines[4] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
-  // Line 4 splits across the row: engine left, machine right; the deck
-  // closes on the strong rule beneath it.
+  // Line 4 splits across the row: engine left, machine right — the deck
+  // ends at the telemetry row (third 2.4 amendment).
   assert.match(
     lines[6] ?? '',
     /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s{2,}48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
   );
-  assert.match(lines[7] ?? '', /^\u2500+$/u);
 });
 
 test('renders the accepted mid-work mockup at wide widths', () => {
@@ -1400,7 +1399,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   };
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 8);
+  assert.equal(lines.length, 7);
   // Line 1: `main › +2` in the mockup is the dirty-entry transcription —
   // two modified files ride the git segment.
   assert.match(
@@ -1419,15 +1418,14 @@ test('renders the accepted mid-work mockup at wide widths', () => {
     lines[4] ?? '',
     /^ editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
-  // Dotted seams inside; line 4 splits across the row; the deck closes
-  // on the strong rule beneath it (second 2.4 amendment).
+  // Dotted seams inside; line 4 splits across the row and the deck ends
+  // at the telemetry row (third 2.4 amendment).
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
   assert.match(
     lines[6] ?? '',
     /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s{2,}48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
   );
-  assert.match(lines[7] ?? '', /^\u2500+$/u);
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {
