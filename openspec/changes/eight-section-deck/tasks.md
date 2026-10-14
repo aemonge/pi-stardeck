@@ -113,8 +113,14 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         paths: `packages/pi-stardeck/src/deck.ts`,
         `packages/pi-stardeck/test/deck.test.ts`,
         `baseline/source.sha256`
-- [ ] 2.4 Lockstep deck tests for both accepted mockups; checkpoint:
-      Human confirms live sessions match.
+- [x] 2.4 Lockstep deck tests for both accepted mockups; checkpoint:
+      Human confirms live sessions match. outcome: VALID · at: 2026-10-14 ·
+      Human confirmed idle + mid-work on live sessions; THREE mockup
+      amendments accepted during review (1: drop line-1 rule — superseded;
+      2: restore line-1 rule, dotted internal seams, telemetry split across
+      line 4 ends; 3: no closing rule — deck ends at the telemetry row,
+      pi's prompt chrome closes the block); fixtures lockstepped to the
+      final shape; diagnostic guard reverted after confirmation
       - Test portion complete: both mockups reproduce as fixtures at
         100+ columns (idle: clean git + dim work hint + `— · 0 tok`;
         mid-work: dirty git + `eight-section-deck · 1/4` + `this turn

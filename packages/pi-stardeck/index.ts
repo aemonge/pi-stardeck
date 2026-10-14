@@ -545,7 +545,6 @@ export default function galacticaContextHeader(
 
     const renderDeck = (width: number, theme: Theme): string[] => {
       if (width <= 0) return [];
-      try {
       const usage = ctx.getContextUsage();
       const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow;
       const hasContext =
@@ -583,18 +582,6 @@ export default function galacticaContextHeader(
         width,
         theme,
       );
-      } catch (error) {
-        // TEMP DIAGNOSTIC (eight-section-deck 2.4): surface swallowed
-        // render failures in the frame itself; remove after the 1.0.4
-        // blank-deck incident is diagnosed.
-        const message = error instanceof Error ? error.message : String(error);
-        try {
-          console.error('[pi-stardeck] deck render failed:', error);
-        } catch {
-          /* console unavailable */
-        }
-        return [`deck render failed: ${message}`.slice(0, Math.max(1, width))];
-      }
     };
 
     if (editorDeckSurface) {
