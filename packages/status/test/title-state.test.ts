@@ -6,6 +6,7 @@ import {
   deriveTitleWork,
   parseTitleState,
   shortenTitleTarget,
+  titleStateDebugLine,
 } from '../src/title-state.ts';
 
 const openSpec: OpenSpecState = {
@@ -287,4 +288,29 @@ test('builder output round-trips through the defensive parser', () => {
     },
   };
   assert.equal(parseTitleState(hostile), null);
+});
+
+test('debug line prints the compact live title-state JSON', () => {
+  const built = buildTitleState({
+    subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
+    focus: { mode: 'task', change: 'eight-section-deck', taskId: '1.1' },
+    openspec: openSpec,
+    activity: {
+      class: 'editing',
+      target: 'packages/header/src/deck.ts',
+      span: 't87',
+      parent: null,
+    },
+  });
+  const line = titleStateDebugLine(built);
+  assert.ok(line.startsWith('title-state: {"v":1,'));
+  assert.ok(
+    line.endsWith(
+      '"activity":{"class":"editing","target":"packages/header/src/deck.ts","span":"t87","parent":null},"waiver":null}',
+    ),
+  );
+  assert.deepEqual(
+    parseTitleState(JSON.parse(line.slice('title-state: '.length))),
+    built,
+  );
 });

@@ -69,7 +69,11 @@ import {
 } from './src/publisher.ts';
 import { RuntimeSpanStore } from './src/runtime-runs.ts';
 import { TitleActivityFeed } from './src/title-activity.ts';
-import { buildTitleState } from './src/title-state.ts';
+import {
+  buildTitleState,
+  titleStateDebugLine,
+  type TitleState,
+} from './src/title-state.ts';
 import { TurnCostMeter } from './src/turn-cost.ts';
 import {
   AtomicStatusStore,
@@ -642,12 +646,7 @@ class GalacticaStatusRuntime {
     const focus = this.cockpitFacts.openSpec;
     const work = this.cockpitFacts.work;
     const subject = this.cockpitFacts.subject;
-    const title = buildTitleState({
-      subject,
-      focus,
-      openspec: snapshot.openspec,
-      activity: this.titleActivity.current(),
-    });
+    const title = this.currentTitleState(snapshot);
     const focusedOpenSpec =
       focus.mode === 'task' && snapshot.openspec?.changeId === focus.change
         ? snapshot.openspec
@@ -697,6 +696,15 @@ class GalacticaStatusRuntime {
     );
     this.updateTitle(snapshot);
     this.publishStatusHealth();
+  }
+
+  private currentTitleState(snapshot = this.store.get()): TitleState {
+    return buildTitleState({
+      subject: this.cockpitFacts.subject,
+      focus: this.cockpitFacts.openSpec,
+      openspec: snapshot.openspec,
+      activity: this.titleActivity.current(),
+    });
   }
 
   private updateTitle(snapshot = this.store.get()): void {
@@ -1107,7 +1115,7 @@ class GalacticaStatusRuntime {
 
   debug(): string {
     const snapshot = this.store.get();
-    return JSON.stringify(
+    return `${JSON.stringify(
       {
         projectRoot: snapshot.projectRoot,
         configPath: snapshot.configPath,
@@ -1138,7 +1146,7 @@ class GalacticaStatusRuntime {
       },
       null,
       2,
-    );
+    )}\n${titleStateDebugLine(this.currentTitleState(snapshot))}`;
   }
 
   stop(): void {

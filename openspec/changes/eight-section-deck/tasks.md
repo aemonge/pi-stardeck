@@ -1,8 +1,10 @@
 # Tasks
 
+Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
+
 ## 1. Title-state publisher
 
-- [ ] 1.1 Add `packages/status/src/title-state.ts`: v1 types
+- [x] 1.1 Add `packages/status/src/title-state.ts`: v1 types
       (`subject`, `work{change,task?,done,total}`, `activity{class,target,
       span,parent}`, `waiver{id,notice}`), defensive parser (unknown
       version → null; target ≤ 48 chars; totals ≤ 999), and a builder
@@ -10,7 +12,12 @@
       - Expected: parser rejects malformed input with null, never throws;
         unit tests cover null/active/malformed shapes and bounds (~12
         cases).
-- [ ] 1.2 Wire the activity feed in the status runtime: classify
+      - Receipt: start: 2026-10-14T08:42:00Z · elapsed: ~14m · check:
+        `npm --prefix packages/status test` green (166/166; 13 new
+        title-state cases), `tsc --noEmit` green · commit `5c4d93a` ·
+        paths: `packages/status/src/title-state.ts`,
+        `packages/status/test/title-state.test.ts`
+- [x] 1.2 Wire the activity feed in the status runtime: classify
       tool-execution starts/updates into
       `editing | reading | grepping | bash | subagent`, attribute
       `span`/`parent` from the runtime span ids, publish the newest event,
@@ -19,13 +26,37 @@
         `{"class":"editing","target":"packages/header/src/deck.ts","span":"t87","parent":null}`;
         subagent events carry the parent span id; runtime tests add ~8
         cases (one per class, nesting, idle reset).
-- [ ] 1.3 Add the per-turn cost meter beside the title state: provider
+      - Receipt: start: 2026-10-14T08:57:00Z · elapsed: ~8m · check:
+        `npm --prefix packages/status test` green (177/177; 10 feed cases
+        + 1 publisher passthrough case), `tsc --noEmit` green · commit
+        `b83aadc` · paths: `packages/status/src/title-activity.ts`,
+        `packages/status/src/publisher.ts`, `packages/status/index.ts`,
+        `packages/status/test/title-activity.test.ts`,
+        `packages/status/test/publisher.test.ts`
+- [x] 1.3 Add the per-turn cost meter beside the title state: provider
       usage delta + turn elapsed, reset at `before_agent_start`.
       - Expected: mid-turn `{tokens:4200,elapsedMs:38000}`, idle
         `{tokens:0,elapsedMs:0}`; meter tests cover zero/mid/settled.
-- [ ] 1.4 Extend `/galactica-status-debug` with one line printing the live
+      - Receipt: start: 2026-10-14T09:05:00Z · elapsed: ~3m · check:
+        `npm --prefix packages/status test` green (185/185; 7 meter
+        cases + 1 publisher passthrough case), `tsc --noEmit` green ·
+        commit `e860539` · paths: `packages/status/src/turn-cost.ts`,
+        `packages/status/src/publisher.ts`, `packages/status/index.ts`,
+        `packages/status/test/turn-cost.test.ts`,
+        `packages/status/test/publisher.test.ts`
+- [x] 1.4 Extend `/galactica-status-debug` with one line printing the live
       title-state JSON.
       - Expected: command output ends with `title-state: {"v":1,...}`.
+      - Receipt: start: 2026-10-14T09:07:00Z · elapsed: ~3m · check:
+        `npm --prefix packages/status test` green (186/186),
+        `npm run test:stardeck` green (111/111, deck untouched),
+        `npm run typecheck` green, `check-baseline` PASS with refreshed
+        manifest (117 files; `imported-source.sha256` untouched),
+        `prettier --check` green on touched files, `check:openspec` PASS
+        (4 changes) · paths: `packages/status/index.ts`,
+        `packages/status/src/title-state.ts`,
+        `packages/status/test/title-state.test.ts`,
+        `baseline/source.sha256`, `openspec/changes/eight-section-deck/tasks.md`
 - [ ] 1.5 Checkpoint: state publishes; the deck renders pixel-identical
       to v0.2.1 (Human confirms via debug line).
 

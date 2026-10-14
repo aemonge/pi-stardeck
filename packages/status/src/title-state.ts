@@ -211,3 +211,8 @@ export function buildTitleState(options: {
     waiver: null,
   };
 }
+
+/** Checkpoint line for `/galactica-status-debug`: the live title-state JSON. */
+export function titleStateDebugLine(title: TitleState): string {
+  return `title-state: ${JSON.stringify(title)}`;
+}
