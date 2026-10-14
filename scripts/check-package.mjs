@@ -52,7 +52,9 @@ export function validatePackedFiles(paths) {
   const errors = [];
   if (missing.length > 0) errors.push(`missing=${missing.join(',')}`);
   if (forbidden.length > 0) errors.push(`forbidden=${forbidden.join(',')}`);
-  if (unique.length > 80) errors.push(`entry-count=${unique.length}>80`);
+  // Budget: 83 entries at 0.3.0 (title-state publisher + deck parser);
+  // headroom to 88 for the notices/waiver modules (Step 3).
+  if (unique.length > 88) errors.push(`entry-count=${unique.length}>88`);
   return { files: unique, errors };
 }
 
