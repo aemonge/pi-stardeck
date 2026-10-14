@@ -1,6 +1,7 @@
 import type { SessionSubject, SessionWorkFocus } from './active-work.ts';
 import type { GoalHeaderState } from './goal.ts';
 import type { ActiveRunSpanView, ActiveRuntimeRuns } from './runtime-runs.ts';
+import type { TitleState } from './title-state.ts';
 import type {
   DiagnosticsState,
   FancyFooterMessage,
@@ -546,6 +547,8 @@ export type HeaderStatusEvent = {
   blocked: boolean;
   openGoals?: number;
   activeRunSpans?: ActiveRunSpanView[];
+  /** Versioned deck-title-state contract for the deck's upper half. */
+  title?: TitleState;
   counters: {
     agents: { active: number; total: number };
     activeRuns?: ActiveRuntimeRuns;
@@ -1030,6 +1033,7 @@ export function buildHeaderStatusEvent(
     activeRuns?: ActiveRuntimeRuns;
     activeRunSpans?: ActiveRunSpanView[];
     idleMs?: number;
+    title?: TitleState | null;
   } = {},
 ): HeaderStatusEvent {
   const diagnosticsWidget = widgets.find(
@@ -1153,6 +1157,7 @@ export function buildHeaderStatusEvent(
     ...(options.openGoals ? { openGoals: options.openGoals } : {}),
     ...(options.activeRunSpans ? { activeRunSpans: options.activeRunSpans } : {}),
     ...(options.idleMs ? { idleMs: options.idleMs } : {}),
+    ...(options.title ? { title: options.title } : {}),
     activity: activity ?? null,
     selection,
     suggestion,

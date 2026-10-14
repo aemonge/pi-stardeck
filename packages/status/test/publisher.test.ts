@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as publisherModule from '../src/publisher.ts';
+import { buildTitleState } from '../src/title-state.ts';
 import {
   buildWidgetSnapshots,
   FancyFooterPublisher,
@@ -909,4 +910,44 @@ test('resource cleanup is idempotent and prevents duplicate cleanup', () => {
   resources.close();
   assert.equal(cleanups, 1);
   assert.equal(resources.isClosed, true);
+});
+
+test('header events carry the title state only when provided', () => {
+  const idle = buildTitleState({
+    subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
+    focus: { mode: 'none' },
+  });
+  const withTitle = publisherModule.buildHeaderStatusEvent([], { title: idle });
+  assert.deepEqual(withTitle.title, {
+    v: 1,
+    subject: 'Pivot cockpit to pure pi-starship-header chrome',
+    work: null,
+    activity: null,
+    waiver: null,
+  });
+  const midWork = buildTitleState({
+    subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
+    focus: { mode: 'task', change: 'closed-loop', taskId: '1.2' },
+    openspec: openSpec,
+    activity: {
+      class: 'editing',
+      target: 'packages/header/src/deck.ts',
+      span: 't87',
+      parent: null,
+    },
+  });
+  const withWork = publisherModule.buildHeaderStatusEvent([], { title: midWork });
+  assert.deepEqual(withWork.title?.work, {
+    change: 'closed-loop',
+    task: '1.2',
+    done: 2,
+    total: 3,
+  });
+  assert.deepEqual(withWork.title?.activity, {
+    class: 'editing',
+    target: 'packages/header/src/deck.ts',
+    span: 't87',
+    parent: null,
+  });
+  assert.equal(publisherModule.buildHeaderStatusEvent([]).title, undefined);
 });
