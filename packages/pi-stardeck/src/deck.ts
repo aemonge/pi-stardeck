@@ -167,18 +167,14 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
   // Line 2 anchor: the clock always leads the band with its icon; the
   // Subject follows when the title state carries one, and a fresh session
   // (subject null) leaves the clock leading alone — no dangling separator.
+  // Task 3.1: the unfocused open-goal hint left this band for the notice
+  // slot (design: "notices absorb the unfocused open-goal hint").
   const clock = `${color(theme, 'customMessageLabel', '󰠭')} ${timerTile(state, theme)}`;
   const title = state.header?.title ?? null;
   if (title) {
     const subject = safeText(title.subject ?? '');
     if (!subject) return [clock];
-    const openGoals =
-      state.header?.selection?.source === 'goal' ? 0 : (state.header?.openGoals ?? 0);
-    const goalHint =
-      openGoals > 0
-        ? `(${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus) `
-        : '';
-    return focusWrapLines(`${goalHint}${subject}`, clock, width, theme, 'accent');
+    return focusWrapLines(subject, clock, width, theme, 'accent');
   }
   // Pre-title publishers: the legacy selection keeps the band alive.
   const selection = state.header?.selection;
@@ -188,21 +184,10 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
   if (!selection || titles.length === 0) {
     return [clock]; // frozen contract: no selection means no slot, clock stays
   }
-  const openGoals = selection.source !== 'goal' ? (state.header?.openGoals ?? 0) : 0;
-  const goalHint =
-    openGoals > 0
-      ? `(${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus) `
-      : '';
   const selectionColor = ['accent', 'success'].includes(selection.color)
     ? 'accent'
     : selection.color;
-  return focusWrapLines(
-    `${goalHint}${titles.join(' › ')}`,
-    clock,
-    width,
-    theme,
-    selectionColor,
-  );
+  return focusWrapLines(titles.join(' › '), clock, width, theme, selectionColor);
 }
 
 function focusWrapLines(
@@ -466,10 +451,65 @@ function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
   return out;
 }
 
+const BLOCKED_NOTICE = '\u26d4 blocked';
+const APPROVAL_NOTICE = 'approval required';
+
+function companionWarningTexts(state: HeaderDeckState): string[] {
+  // Same sources as the capability-health chips: the known companions'
+  // native-status texts, goal key filtered, ranked after blocked/approval.
+  const texts = new Map<string, string>();
+  for (const item of state.piStatus?.nativeStatuses ?? []) {
+    if (item.key === 'goal' || texts.has(item.key)) continue;
+    texts.set(item.key, item.text);
+  }
+  const warnings: string[] = [];
+  for (const companion of KNOWN_COMPANION_ICONS) {
+    const published = companion.keys
+      .map((key) => texts.get(key))
+      .find((text) => text !== undefined);
+    if (published !== undefined && COMPANION_WARNING_PATTERN.test(published)) {
+      warnings.push(safeText(published, 180));
+    }
+  }
+  return warnings;
+}
+
+/**
+ * Aggregate the deck's scattered warning signals into one notice slot
+ * (Task 3.1). Ranked per the spec's accepted mixed render: the unfocused
+ * open-goal hint, then the companion group (blocked, approval, warning
+ * texts), then the diagnostics count — `·`-joined, empty when clean.
+ */
+export function collectDeckNotices(state: HeaderDeckState): string[] {
+  const header = state.header;
+  const openGoals = header?.selection?.source === 'goal' ? 0 : (header?.openGoals ?? 0);
+  const notices: string[] = [];
+  if (openGoals > 0) {
+    notices.push(`${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus`);
+  }
+  if (header?.blocked) notices.push(BLOCKED_NOTICE);
+  if (header?.approvalRequired) notices.push(APPROVAL_NOTICE);
+  notices.push(...companionWarningTexts(state));
+  const diagnostics = header?.diagnostics?.count;
+  if (diagnostics !== undefined && diagnostics > 0) {
+    notices.push(`${diagnostics} diagnostic${diagnostics === 1 ? '' : 's'}`);
+  }
+  return notices;
+}
+
+function noticeTile(state: HeaderDeckState, theme: Theme): string {
+  const notices = collectDeckNotices(state);
+  if (notices.length === 0) return '';
+  // Blocked carries the error severity it wore on the deleted lifecycle
+  // tile; every other notice renders at warning.
+  const semantic = notices.includes(BLOCKED_NOTICE) ? 'error' : 'warning';
+  return color(theme, semantic, `⚠ ${notices.join(' · ')}`);
+}
+
 function telemetryRowLeft(state: HeaderDeckState, theme: Theme): string {
   // Line 4 left (2.4 second amendment): the engine group — engine ›
   // thinking, then context, compaction, and the calendar quota — owns
-  // the row's left end; nothing here may invent a notice slot for it.
+  // the row's left end; the notice slot owns the right end (Task 3).
   return modelGroupLeft(state, theme);
 }
 
@@ -717,17 +757,19 @@ export function renderHeaderDeck(
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // Line 4 (2.4 second amendment): the engine group holds the row's left
-  // end and the machine group its right end, on the same row. Narrow-width
-  // yield ladder: the machine group yields before the engine group — the
-  // engine/context group stays visible while any telemetry fits, and the
-  // machine group renders only when it fits beside it at full width.
+  // Line 4 (2.4 second amendment + Task 3 placement default): the engine
+  // group holds the row's left end. Its right end belongs to the machine
+  // group — until notices land: a non-empty notice slot owns the right end
+  // and the machine group yields wholesale, riding the same ladder as the
+  // narrow-frame yield (the right group renders only when it fits beside
+  // the engine group at full width; the engine group never yields to it).
   const engineGroup = telemetryRowLeft(state, theme);
-  const machineGroup = telemetryRowRight(state, theme);
+  const noticeGroup = noticeTile(state, theme);
+  const rightGroup = noticeGroup !== '' ? noticeGroup : telemetryRowRight(state, theme);
   const telemetryRow =
-    machineGroup !== '' &&
-    visibleWidth(engineGroup) + 1 + visibleWidth(machineGroup) <= boundedWidth
-      ? alignedSingleRow(engineGroup, machineGroup, boundedWidth)
+    rightGroup !== '' &&
+    visibleWidth(engineGroup) + 1 + visibleWidth(rightGroup) <= boundedWidth
+      ? alignedSingleRow(engineGroup, rightGroup, boundedWidth)
       : fit(engineGroup, boundedWidth);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4

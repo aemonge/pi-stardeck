@@ -692,6 +692,7 @@ class GalacticaStatusRuntime {
         idleMs: this.runtimeSpans.idleMs(),
         title,
         turn: this.turnCost.snapshot(),
+        diagnostics: snapshot.diagnostics,
       }),
     );
     this.updateTitle(snapshot);

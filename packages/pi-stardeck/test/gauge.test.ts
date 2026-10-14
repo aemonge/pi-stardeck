@@ -813,6 +813,32 @@ test('accepts bounded diagnostic header events', () => {
     }),
     { text: 'clean ✓ tests', color: 'success', state: 'pass' },
   );
+  // Task 3.1: the findings count rides the diagnostics header field for
+  // the notice slot — bounded, optional, absent on older publishers.
+  assert.deepEqual(
+    parseDiagnosticsHeader?.({
+      protocol: 1,
+      diagnostics: {
+        text: '2E  ✗ tests',
+        color: 'error',
+        state: 'fail',
+        count: 2,
+      },
+    }),
+    { text: '2E ✗ tests', color: 'error', state: 'fail', count: 2 },
+  );
+  assert.deepEqual(
+    parseDiagnosticsHeader?.({
+      protocol: 1,
+      diagnostics: {
+        text: 'clean  ✓ tests',
+        color: 'success',
+        state: 'pass',
+        count: 1_000,
+      },
+    }),
+    { text: 'clean ✓ tests', color: 'success', state: 'pass' },
+  );
   assert.equal(parseDiagnosticsHeader?.({ protocol: 2 }), null);
 });
 

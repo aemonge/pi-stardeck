@@ -542,6 +542,8 @@ export type HeaderStatusEvent = {
     text: string;
     color: WidgetColor;
     state: 'pass' | 'fail' | 'running';
+    /** Aggregate findings count for the deck's notice slot (Task 3.1). */
+    count?: number;
   } | null;
   backgroundActivity: boolean;
   approvalRequired: boolean;
@@ -1038,6 +1040,8 @@ export function buildHeaderStatusEvent(
     idleMs?: number;
     title?: TitleState | null;
     turn?: TurnCostSnapshot | null;
+    /** Aggregate diagnostics state; supplies the findings count. */
+    diagnostics?: DiagnosticsState | null;
   } = {},
 ): HeaderStatusEvent {
   const diagnosticsWidget = widgets.find(
@@ -1173,6 +1177,14 @@ export function buildHeaderStatusEvent(
             text: diagnosticsWidget.content.text,
             color: diagnosticsWidget.style?.textColor ?? 'text',
             state: diagnosticsState,
+            ...(options.diagnostics
+              ? {
+                  count:
+                    options.diagnostics.errors +
+                    options.diagnostics.blockers +
+                    options.diagnostics.warnings,
+                }
+              : {}),
           }
         : null,
     backgroundActivity: Boolean(

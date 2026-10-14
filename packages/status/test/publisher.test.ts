@@ -257,6 +257,31 @@ test('builds a bounded diagnostics event for the prompt header', () => {
     counters: { agents: { active: 0, total: 0 } },
     progress: [],
   });
+  // Task 3.1: the findings count rides the diagnostics header field for
+  // the deck's notice slot — errors + blockers + warnings, only when the
+  // aggregate state is supplied (older callers stay count-free).
+  const countHeaderEvent = publisherModule.buildHeaderStatusEvent(widgets, {
+    diagnostics: {
+      errors: 1,
+      blockers: 1,
+      warnings: 0,
+      tests: 'pass',
+      typecheck: 'unknown',
+      meta: {
+        source: 'fixture',
+        refreshedAt: 10,
+        attemptedAt: 10,
+        updatedAt: 10,
+        stale: false,
+      },
+    },
+  });
+  assert.deepEqual(countHeaderEvent.diagnostics, {
+    text: 'clean  ✓ tests',
+    color: 'success',
+    state: 'pass',
+    count: 2,
+  });
   assert.deepEqual(buildHeaderStatusEvent?.([]), {
     protocol: 1,
     activity: null,

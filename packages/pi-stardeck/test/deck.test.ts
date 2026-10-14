@@ -42,7 +42,10 @@ function fixture(): HeaderDeckState {
       suggestion: 'requesting-validation',
       diagnostics: null,
       backgroundActivity: false,
-      approvalRequired: true,
+      // Task 3.1: the fixture models a clean deck — approval/blocked ride
+      // the notice slot now, and the accepted mockups show line 4's right
+      // end owned by the machine group when clean.
+      approvalRequired: false,
       blocked: false,
       counters: {
         agents: { active: 0, total: 0 },
@@ -199,16 +202,22 @@ test('drops the footer count; the strong rule opens the deck', () => {
   assert.doesNotMatch(empty[2] ?? '', /·0/u);
 });
 
-test('unfocused open goals ride the title row as an inline hint', () => {
+test('unfocused open goals leave line 2 for the notice slot', () => {
   const state = fixture();
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
     openGoals: 1,
   };
 
-  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes("000:07'00")) ?? '';
-  assert.match(titleRow, /000:07'00 ⟩ \(1 open goal · \/goal-focus\)/u);
+  // Task 3.1: the hint's line-2 prefix is gone — the notice slot absorbed
+  // it (design: "notices absorb the unfocused open-goal hint").
+  assert.doesNotMatch(titleRow, /open goal/u);
+  assert.doesNotMatch(titleRow, /\/goal-focus/u);
+  assert.match(titleRow, /000:07'00 ⟩ Read-only preflight/u);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.ok(line4.trimEnd().endsWith('⚠ 1 open goal · /goal-focus'));
   assert.equal(
     lines.some((line) => /^◆ /u.test(line)),
     false,
@@ -1056,7 +1065,7 @@ test('wraps a long subject onto an indented continuation line', () => {
   assert.ok((lines[first + 1] ?? '').includes('machinery'));
 });
 
-test('prefixes the unfocused open-goal hint to the subject until notices land', () => {
+test('moves the unfocused open-goal hint off the title band into notices', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
@@ -1065,10 +1074,12 @@ test('prefixes the unfocused open-goal hint to the subject until notices land', 
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
-  assert.match(
-    titleRow,
-    /󰠭 000:00'00 ⟩ \(2 open goals · \/goal-focus\) Pivot cockpit/u,
-  );
+  // Task 3.1 lockstep: the parenthesized prefix no longer rides line 2…
+  assert.match(titleRow, /󰠭 000:00'00 ⟩ Pivot cockpit/u);
+  assert.doesNotMatch(titleRow, /open goals/u);
+  // …it rides the notice slot on line 4 right, plural-aware.
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.ok(line4.trimEnd().endsWith('⚠ 2 open goals · /goal-focus'));
 });
 
 // --- Step 2.2: line 3 on the title-state contract ---------------------------
@@ -1294,7 +1305,7 @@ test('splits line 4 into engine left and machine right islands', () => {
   assert.equal(narrow4.includes('$5.16'), false, 'machine group yields first');
 });
 
-test('keeps line 4 right to the machine group until notices land', () => {
+test('line 4 right: machine group when clean, notices when warning', () => {
   const state = fixture();
   state.piStatus = {
     errors: 2,
@@ -1304,11 +1315,25 @@ test('keeps line 4 right to the machine group until notices land', () => {
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
   const line4 = lines[6] ?? '';
-  // The machine group owns line 4's right end; the notices slot's home
-  // is an open Step-3 question (flagged under tasks.md 2.4).
-  assert.ok(line4.trimEnd().endsWith('$5.16'), 'cost anchors the machine group');
-  assert.equal(line4.includes('⚠'), false, 'no notice glyph before Task 3');
-  assert.equal(line4.includes('update recommended'), false);
+  // Task 3.1 placement default: non-empty notices own line 4's right end
+  // and the machine group yields wholesale; the engine group stays left.
+  assert.ok(
+    line4.trimEnd().endsWith('⚠ graphify stale · update recommended'),
+    'notice anchors the right end',
+  );
+  assert.ok(line4.startsWith('󰚩'), 'engine group stays flush left');
+  assert.equal(line4.includes('$5.16'), false, 'machine group yields wholesale');
+  assert.equal(line4.includes('48.2%'), false);
+  assert.equal(line4.includes('3/3'), false);
+
+  state.piStatus = { errors: 2, warnings: 1, nativeStatusCount: 0 };
+  const clean = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  const clean4 = clean[6] ?? '';
+  // Clean: the machine group keeps the right end and no glyph renders.
+  assert.ok(clean4.trimEnd().endsWith('$5.16'), 'cost anchors the machine group');
+  assert.equal(clean4.includes('⚠'), false);
+  // Severity counts (line 1) and notices stay distinct surfaces.
+  assert.match(plain(clean[0] ?? ''), /⟩ \/pi-status/u);
 });
 
 test('opens the deck with a strong rule and dotted internal seams', () => {
@@ -1441,4 +1466,145 @@ test('renders both mockups identically at 100 and 120 columns', () => {
     assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
     assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
   }
+});
+
+// --- Step 3.1: the unified notice slot --------------------------------------
+
+test('aggregates mixed notices ranked goal hint, companion, diagnostics', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    openGoals: 1,
+    diagnostics: {
+      text: '2E  1W  ✗ tests',
+      color: 'error',
+      state: 'fail',
+      count: 2,
+    },
+  };
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 1,
+    nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
+  };
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  // The accepted mixed render, verbatim (spec scenario: one open goal,
+  // appa unreachable, two diagnostics).
+  assert.ok(
+    line4
+      .trimEnd()
+      .endsWith('⚠ 1 open goal · /goal-focus · appa unreachable · 2 diagnostics'),
+  );
+  assert.equal(line4.includes('$5.16'), false, 'machine group yields to notices');
+});
+
+test('restores blocked and approval signals as companion-group notices', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    blocked: true,
+    approvalRequired: true,
+  };
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  // Top of the companion group: blocked before approval, publisher wording.
+  assert.ok(line4.trimEnd().endsWith('⚠ ⛔ blocked · approval required'));
+
+  const colors: string[] = [];
+  const theme = {
+    fg: (name: string, text: string) => {
+      colors.push(`${name}:${plain(text)}`);
+      return text;
+    },
+    bold: (text: string) => text,
+  };
+  renderHeaderDeck(state, 120, theme as never);
+  assert.ok(colors.includes('error:⚠ ⛔ blocked · approval required'));
+
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    blocked: false,
+  };
+  colors.length = 0;
+  renderHeaderDeck(state, 120, theme as never);
+  const approvalOnly = renderHeaderDeck(state, 120, plainTheme as never)
+    .map(plain)
+    .find((line) => line.includes('GPT-5.6 Sol'));
+  assert.ok(approvalOnly?.trimEnd().endsWith('⚠ approval required'));
+  assert.ok(colors.includes('warning:⚠ approval required'));
+});
+
+test('notices ride the narrow ladder beside the engine group', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 1,
+    nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
+  };
+
+  // Wide: the notice owns the right end; the machine group yielded.
+  const wide = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  const wide4 = wide.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.ok(wide4.trimEnd().endsWith('⚠ appa unreachable'));
+  assert.equal(wide4.includes('$5.16'), false);
+
+  // The notice rides the same fit ladder as the machine group: it renders
+  // only when it fits beside the engine group at full width.
+  const fits = renderHeaderDeck(state, 79, plainTheme as never).map(plain);
+  assert.ok(
+    (fits.find((line) => line.includes('GPT-5.6 Sol')) ?? '')
+      .trimEnd()
+      .endsWith('⚠ appa unreachable'),
+    'notice fits beside the engine group at 79',
+  );
+  for (const width of [60, 39, 20]) {
+    const narrow = renderHeaderDeck(state, width, plainTheme as never);
+    assert.match(
+      plain(narrow.at(-1) ?? ''),
+      /GPT-5\.6 Sol/u,
+      `engine group survives at ${width}`,
+    );
+    assert.equal(
+      plain(narrow.at(-1) ?? '').includes('⚠'),
+      false,
+      `notice yields wholesale at ${width}`,
+    );
+    assert.ok(
+      narrow.every((line) => visibleWidth(line) <= width),
+      String(width),
+    );
+  }
+});
+
+test('keeps the notice slot empty and silent when clean', () => {
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    openGoals: 0,
+    diagnostics: {
+      text: 'clean  ✓ tests',
+      color: 'success',
+      state: 'pass',
+      count: 0,
+    },
+  };
+  state.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 1,
+    nativeStatuses: [{ key: 'graphify', text: 'graphify active · report available' }],
+  };
+
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  // Clean: no glyph, no slot — the machine group keeps line 4's right end.
+  assert.equal(lines.join('\n').includes('⚠'), false);
+  assert.ok(line4.trimEnd().endsWith('$5.16'));
+  // Healthy companion texts never surface as notices.
+  assert.equal(lines.join('\n').includes('report available'), false);
 });

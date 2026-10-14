@@ -46,6 +46,8 @@ export type HeaderDiagnostics = {
   text: string;
   color: HeaderColor;
   state: 'pass' | 'fail' | 'running';
+  /** Aggregate findings count for the notice slot (Task 3.1). */
+  count?: number;
 };
 
 export const HEADER_ACTIVITY_KINDS = [
@@ -1131,6 +1133,11 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
           text,
           color: candidate.color,
           state: candidate.state as HeaderDiagnostics['state'],
+          ...(Number.isInteger(candidate.count) &&
+          (candidate.count as number) >= 0 &&
+          (candidate.count as number) <= 999
+            ? { count: candidate.count as number }
+            : {}),
         };
       }
     }
