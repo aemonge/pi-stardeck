@@ -23,16 +23,19 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       `check:baseline` PASS (109 files), `check:package` PASS (78 files),
       `tsc --noEmit` green, `check:openspec` PASS (4 changes),
       `test:stardeck` green (107/107) paths: `baseline/source.sha256`
-- [ ] Step 4 — Human validation — host lockfile refresh, full `npm run check`
-      exit 0, push response: <!-- original reply --> · outcome: VALID · at:
-      <!-- UTC -->
+- [x] Step 4 — Human validation — host lockfile refresh, full `npm run check`
+      exit 0, push outcome: VALID · at: 2026-10-13T18:47Z · settle commit
+      `94f28c7` — fused tree landed, main in sync with origin at `94f28c7`;
+      lockfile carries `pi-stardeck` workspace with zero `packages/header`
+      references
 
-> **PAUSED 2026-10-13 (night).** Host gates all green; lockfile committed
-> (`0edcc23`). Push blocked by a remote fork: another session shipped
-> v0.2.0/v0.2.1 (live on npm) and adopted a spec-driven openspec schema,
-> conflicting with our ramona fresh-start. Resume: (1) arbitrate openspec
-> direction A (their spec-driven, recommended) vs B (our ramona local);
-> (2) integrate — keep the rename commits, prune/port the openspec pair;
-> (3) resolve rename-vs-header-evolution merge; (4) push; (5) release 0.3.0
-> carrying the rename. Local main is 9 ahead / 51 behind; wip branch pushed
-> as `wip/stardeck-rename`.
+> **RESOLVED 2026-10-13 (settle commit `94f28c7`).** The remote fork was
+> settled by adopting the spec-driven openspec schema (direction A);
+> our plan-era changes are preserved under `openspec.old/` with a
+> `.prettierignore` exemption. All rename steps `[x]`; gates green; push
+> complete.
+>
+> **Follow-ups (2026-10-14).** Origin swapped to
+> `git@github.com:aemonge/pi-stardeck.git`; branch tracking is unset, so the
+> first push needs `git push -u origin main`. Release `0.3.0` carrying the
+> rename is still pending (package.json at 0.2.1).
