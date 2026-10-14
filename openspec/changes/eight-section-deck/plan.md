@@ -91,27 +91,44 @@ After this Task, with the deck intentionally unchanged:
 
 - **Rendered (idle, 100+ cols):**
   ```text
-  ~/projects/pi-vimux-starship ⟩ main › clean                          [↻ ▤] ⌬  ⛨
-  󰠭 000:00'00 ⟩ Pivot cockpit to pure pi-starship-header chrome    — no change owns the moment
-  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-   awaiting Human                                                                  — · 0 tok
-  ─────────────────────────────────────────────────────────────────────────────
+ ~/projects/pi-vimux-starship ⟩  main ›  clean                                                  [↻ ▤] ⌬  ⛨
+ ────────────────────────────────────────────────────────────────────────────────────────────
+󰠭 000:00'00 ⟩ Pivot cockpit to pure pi-starship-header chrome                        — no change owns the moment
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+ awaiting Human                                                                    — · 0 tok
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%                      48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16
+ ────────────────────────────────────────────────────────────────────────────────────────────
   ```
 - **Rendered (mid-work, 100+ cols):**
   ```text
-  ~/projects/pi-vimux-starship ⟩ main › +2                              [↻ ▤] ⌬  ⛨
-  󰠭 000:04'12 ⟩ Pivot cockpit to pure pi-starship-header chrome    eight-section-deck · 1/4
-  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-   editing packages/header/src/deck.ts                                  this turn 4.2k · 0:38
-  ─────────────────────────────────────────────────────────────────────────────
+ ~/projects/pi-vimux-starship ⟩  main ›   2                                          [↻ ▤] ⌬  ⛨
+ ────────────────────────────────────────────────────────────────────────────────────────────
+󰠭 000:04'12 ⟩ Pivot cockpit to pure pi-starship-header chrome                        eight-section-deck · 1/4
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+ editing packages/pi-stardeck/src/deck.ts                                  this turn 4.2k · 0:38
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%                      48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16
+ ────────────────────────────────────────────────────────────────────────────────────────────
   ```
 - Amendment at the 2.4 checkpoint (2026-10-14): the Human directed the
   rule beneath line 1 removed — line 1 is the deck's header strip, at
   most three strong rules on screen (the deck's two plus pi's prompt
   border); the pi-status severity counts that rode that rule now ride
-  line 1's right end beside the companion chips.
-- Engine/quota/machine/cost move from line 1 right to line 4 left; nothing
-  on line 4 right yet (Task 3).
+  line 1's right end beside the companion chips. (Superseded by the
+  second amendment below; the severity counts keep their line-1 home.)
+- Second Human amendment at 2.4 review, 2026-10-14: strong bookends,
+  dotted internal seams, telemetry split across line 4 ends — the deck
+  opens with a full ─ rule beneath line 1 and closes with a full ─
+  rule after line 4 (nothing renders beneath it); the seams under
+  lines 2 and 3 are ┈; line 4 splits into the engine/context group
+  flush left and the machine group (quota flame, machine readings,
+  global cost) flush right, the machine group yielding first on
+  narrow frames.
+- Engine/context hold line 4's left end; the quota flame, machine
+  readings, and global cost hold its right end (second amendment); the
+  notices slot's home is an open Step-3 question (flagged under
+  tasks.md 2.4).
 - Counters `task 00/00`, `stps 00/00`, `00 › 00` are absent in every state.
 - Companion chips render right-aligned on line 1, keep bold, spacing, and
   on/warn/off colors, and persist on narrow frames (path yields first, per

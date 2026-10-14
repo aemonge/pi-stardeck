@@ -134,6 +134,20 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
         lockstep test shifts and the plan.md Task-2 mockup blocks
         updated to the amended shape; 2.4 remains open for the Human's
         live confirmation.
+      - Second amendment at the 2.4 review (2026-10-14): the Human
+        rejected the rule-less header strip and re-accepted a new
+        mockup — strong ─ rules bookend the deck (full rule beneath
+        line 1, closing rule after line 4), the internal seams are
+        dotted ┈, and line 4 splits across its ends: the engine/context
+        group flush left, the machine group (quota flame, machine
+        readings, global cost) flush right, the machine group yielding
+        first on narrow frames. Applied with lockstep test shifts;
+        plan.md Task-2 mockup blocks updated; 2.4 stays open for the
+        Human's live confirmation. Open Step-3 question: the notice
+        slot was designed for line 4 right, which the machine group now
+        occupies — placement to be decided at the Step-3 mockup review
+        (candidates: notices between the two groups, or the machine
+        group yields when notices are present).
 
 ## 3. Notices and waiver
 

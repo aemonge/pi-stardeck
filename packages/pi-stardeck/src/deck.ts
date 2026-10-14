@@ -466,14 +466,21 @@ function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
   return out;
 }
 
-function telemetryRowLeft(
+function telemetryRowLeft(state: HeaderDeckState, theme: Theme): string {
+  // Line 4 left (2.4 second amendment): the engine group — engine ›
+  // thinking, then context, compaction, and the calendar quota — owns
+  // the row's left end; nothing here may invent a notice slot for it.
+  return modelGroupLeft(state, theme);
+}
+
+function telemetryRowRight(
   state: HeaderDeckState,
   theme: Theme,
   nowMs = Date.now(),
 ): string {
-  // Line 4 left (four-line deck): engine, quota window, machine, global
-  // cost — in that order. Line 4's right end stays empty until the notices
-  // slot lands (Task 3); nothing here may invent one.
+  // Line 4 right (2.4 second amendment): the machine group — the coding
+  // quota flame with its countdown, machine readings, global cost — in
+  // that order, anchoring the row's right end.
   const machineSegments: string[] = [];
   const resources = state.resources;
   if (resources) {
@@ -490,13 +497,13 @@ function telemetryRowLeft(
       color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`),
     );
   }
-  const groups = [
-    modelGroupLeft(state, theme),
+  return [
     windowQuotaTiles(state, theme, nowMs),
     machineSegments.join(` ${semanticSeparator(theme)} `),
     costTile(state, theme),
-  ].filter((group) => group !== '');
-  return groups.join(` ${semanticSeparator(theme)} `);
+  ]
+    .filter((group) => group !== '')
+    .join(` ${semanticSeparator(theme)} `);
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
@@ -679,8 +686,8 @@ export function renderHeaderDeck(
   if (boundedWidth === 0) return [];
 
   const lineColor = 'thinkingHigh';
-  const bottom = color(theme, lineColor, '─'.repeat(boundedWidth));
-  const divider = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
+  const solidRule = color(theme, lineColor, '─'.repeat(boundedWidth));
+  const dottedRule = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   // Line 2 (four-line deck): the clock and Subject lead with Work on the
   // right end; goal progress rows keep their home beneath this line.
   // Narrow frames: the Work slot yields before the clock anchor does.
@@ -710,19 +717,24 @@ export function renderHeaderDeck(
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // Line 4 (four-line deck): engine, quota window, machine, global cost on
-  // the left; the right end stays empty until the notices slot (Task 3).
-  const telemetryRow = alignedSingleRow(
-    telemetryRowLeft(state, theme),
-    '',
-    boundedWidth,
-  );
+  // Line 4 (2.4 second amendment): the engine group holds the row's left
+  // end and the machine group its right end, on the same row. Narrow-width
+  // yield ladder: the machine group yields before the engine group — the
+  // engine/context group stays visible while any telemetry fits, and the
+  // machine group renders only when it fits beside it at full width.
+  const engineGroup = telemetryRowLeft(state, theme);
+  const machineGroup = telemetryRowRight(state, theme);
+  const telemetryRow =
+    machineGroup !== '' &&
+    visibleWidth(engineGroup) + 1 + visibleWidth(machineGroup) <= boundedWidth
+      ? alignedSingleRow(engineGroup, machineGroup, boundedWidth)
+      : fit(engineGroup, boundedWidth);
 
-  // Band adjacency (Human-directed, accepted mockups; 2.4 amendment):
-  // line 1 is the deck's header strip — path/git left, severity alert and
-  // companion chips right — with no rule beneath it, keeping the deck at
-  // two strong rules of its own; ┈ sits between lines 2 and 3, ─ above
-  // line 4; line 4 closes the deck with no separator beneath it.
+  // Band adjacency (Human-directed, accepted mockups; second 2.4
+  // amendment): strong ─ rules bookend the deck — a full rule directly
+  // beneath the line-1 strip and a closing rule after line 4, with nothing
+  // rendering beneath it — while the internal seams stay dotted ┈ between
+  // lines 2 and 3 and between line 3 (spans rows included) and line 4.
   const chips = extensionStatusCodes(state, theme);
   const alert = statusAlertTile(
     state,
@@ -736,13 +748,15 @@ export function renderHeaderDeck(
       alert ? `${alert} ${chips}` : chips,
       boundedWidth,
     ),
+    solidRule,
     ...titleRows,
     ...goalRows,
-    divider,
+    dottedRule,
     activityRow,
     ...spanTreeRows(state, boundedWidth, theme),
-    bottom,
+    dottedRule,
     telemetryRow,
+    solidRule,
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }

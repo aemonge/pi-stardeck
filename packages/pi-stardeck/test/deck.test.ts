@@ -92,15 +92,15 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 test('renders the approved rich wide header without side borders or spacer rows', () => {
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  // Four-line deck (2.4 amendment): L1 header strip, L2, ┈, L3, ─, L4
-  // — no rule beneath line 1; line 4 closes with no separator beneath it.
-  assert.equal(lines.length, 6);
-  const titleRow = plain(lines[1] ?? '');
+  // Eight-row deck (second 2.4 amendment): L1, ─, L2, ┈, L3, ┈, L4, ─ —
+  // strong rules bookend the deck; the internal seams stay dotted.
+  assert.equal(lines.length, 8);
+  // Second 2.4 amendment: the full solid rule returns beneath line 1.
+  assert.match(plain(lines[1] ?? ''), /^─+$/u);
+  const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
   assert.ok(titleRow.includes("000:07'00"));
-  // 2.4 amendment: the title band follows line 1 directly — no rule.
-  assert.doesNotMatch(lines[1] ?? '', /─/u);
-  const activityRow = plain(lines[3] ?? '');
+  const activityRow = plain(lines[4] ?? '');
   // Line 3 (four-line deck): idle renders `awaiting Human`; the
   // lifecycle/suggestion/runs tiles are gone with the status row.
   assert.ok(activityRow.trimEnd().endsWith('awaiting Human'));
@@ -110,22 +110,28 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // tiles never render there again (accepted mockups supersede them).
   assert.equal(titleRow.includes('task 0/1'), false);
   assert.equal(titleRow.includes('stps 6/16'), false);
-  assert.equal(plain(lines[2] ?? ''), '┈'.repeat(160));
-  assert.match(lines[2] ?? '', /^\[2m/u);
+  assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
+  assert.match(lines[3] ?? '', /^\[2m/u);
   assert.match(plain(lines[0] ?? ''), /^\[.\] [\u{E000}-\u{F8FF}] ~\/galactica ⟩/u);
   assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
   // Step 2.3 relocation: the companion chips ride line 1's right end.
   assert.match(plain(lines[0] ?? ''), /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
-  // Line 4 (four-line deck): engine, quota, machine, global cost left —
-  // the right end stays empty until the notices slot (Task 3).
-  const telemetryRow = plain(lines[5] ?? '');
+  // Line 4 split (second 2.4 amendment): the engine group anchors the
+  // left end; the machine group anchors the right end on the same row.
+  const telemetryRow = plain(lines[6] ?? '');
   assert.ok(telemetryRow.includes('GPT-5.6 Sol'));
   assert.ok(telemetryRow.trimEnd().endsWith('$5.16'));
   assert.match(
-    lines[5] ?? '',
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63% \u{27E9} 48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
+    lines[6] ?? '',
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%/u,
   );
-  assert.match(lines[4] ?? '', /^─+$/u);
+  assert.match(
+    lines[6] ?? '',
+    /\s{2,}48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
+  );
+  // Dotted seam above line 4; strong closing rule beneath it.
+  assert.match(plain(lines[5] ?? ''), /^┈+$/u);
+  assert.match(plain(lines[7] ?? ''), /^─+$/u);
   assert.equal(lines.join('\n').includes('32K/128K'), false);
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
@@ -163,14 +169,15 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.ok(colors.includes('dim:/pi-status'));
 });
 
-test('drops the footer count; no rule beneath the line-1 strip', () => {
+test('drops the footer count; strong rules bookend the deck', () => {
   const state = fixture();
   state.piStatus = { errors: 0, warnings: 0, nativeStatusCount: 3 };
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  // 2.4 amendment: the title band directly follows line 1 — the old top
-  // rule is gone, clean or not.
-  assert.match(plain(lines[1] ?? ''), /^\u{F082D} 000:07'00/u);
+  // Second 2.4 amendment: the solid rule rides beneath line 1 again —
+  // clean or alerting, the bookend is constant.
+  assert.match(plain(lines[1] ?? ''), /^\u2500+$/u);
+  assert.match(plain(lines[2] ?? ''), /^\u{F082D} 000:07'00/u);
   assert.equal(lines.join('').includes('·3'), false);
   // Relocation phase: the footer count is deleted; the anchor echo remains.
   assert.doesNotMatch(lines.at(-1) ?? '', /[0-9] ‹/u);
@@ -182,11 +189,13 @@ test('drops the footer count; no rule beneath the line-1 strip', () => {
   const wrapped = renderHeaderDeck(state, 59, ansiTheme as never);
   assert.ok(wrapped.every((line) => visibleWidth(line) <= 59));
   const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
-  assert.equal(solidRules.length, 1, 'only the rule above line 4 remains');
+  assert.equal(solidRules.length, 2, 'strong rules beneath line 1 and after line 4');
+  const dottedSeams = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
+  assert.equal(dottedSeams.length, 2, 'dotted seams inside the deck');
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.doesNotMatch(empty[1] ?? '', /·0/u);
+  assert.doesNotMatch(empty[2] ?? '', /·0/u);
 });
 
 test('unfocused open goals ride the title row as an inline hint', () => {
@@ -356,13 +365,13 @@ test('keeps activity and focus distinct on the title row', () => {
   state.header!.suggestion = 'requesting-validation';
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const activityRow = plain(lines[3] ?? '');
+  const activityRow = plain(lines[4] ?? '');
   // Line 3 (four-line deck): the legacy observed activity owns the slot —
   // the stage label and suggestion cue are gone (accepted mockups).
   assert.ok(activityRow.trimEnd().endsWith('verify'));
   assert.equal(activityRow.includes('assuring'), false);
   assert.equal(activityRow.includes('requesting validation or redirection'), false);
-  const titleRow = plain(lines[1] ?? '');
+  const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Plan title › Current task"));
   assert.ok(titleRow.includes("000:07'00"));
   assert.equal(lines.join('\n').split('Running checks').length - 1, 0);
@@ -380,8 +389,8 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.doesNotMatch(wide[3] ?? '', /Parent Plan title/u);
-  const titleRow = plain(wide[1] ?? '');
+  assert.doesNotMatch(wide[5] ?? '', /Parent Plan title/u);
+  const titleRow = plain(wide[2] ?? '');
   assert.ok(
     titleRow.startsWith(`󰠭 000:07'00 ⟩ Parent Plan title › ${expected}`.slice(0, 40)),
   );
@@ -409,8 +418,8 @@ test('keeps a single selected title on the focus row only', () => {
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.doesNotMatch(wide[3] ?? '', /One focused work title/u);
-  const titleRow = plain(wide[1] ?? '');
+  assert.doesNotMatch(wide[5] ?? '', /One focused work title/u);
+  const titleRow = plain(wide[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ One focused work title"));
   assert.ok(titleRow.includes("000:07'00"));
   assert.equal(wide.join('\n').split('One focused work title').length - 1, 1);
@@ -433,13 +442,13 @@ test('renders the subject selection on the focus row instead of an em dash', () 
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  const subjectRow = plain(wide[1] ?? '');
+  const subjectRow = plain(wide[2] ?? '');
   assert.ok(subjectRow.startsWith("󰠭 000:07'00 ⟩ Session subject"));
   assert.ok(subjectRow.includes("000:07'00"));
   assert.doesNotMatch(wide.join('\n'), /󰠭 ⟩ —/u);
 
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
-  assert.notEqual(plain(narrow[1] ?? ''), `󰠭 ⟩ —`);
+  assert.notEqual(plain(narrow[2] ?? ''), `󰠭 ⟩ —`);
 });
 
 test('bolds only current control and status anchors', () => {
@@ -515,14 +524,14 @@ test('renders every legacy activity class on line 3 without stage narration', ()
     activity: { kind: 'recovery' },
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const activityRow = lines[3] ?? '';
+  const activityRow = lines[4] ?? '';
   assert.ok(activityRow.includes('recovering'));
   assert.equal(activityRow.includes('working'), false);
 
   // Idle without observed activity still reads `awaiting Human`.
   state.header!.work = null;
   const idle = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  assert.ok((idle[3] ?? '').includes('awaiting Human'));
+  assert.ok((idle[4] ?? '').includes('awaiting Human'));
 });
 
 test('reports the observed activity on line 3 while active without a cue', () => {
@@ -539,14 +548,14 @@ test('reports the observed activity on line 3 while active without a cue', () =>
   state.header!.blocked = false;
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const activityRow = plain(lines[3] ?? '');
+  const activityRow = plain(lines[4] ?? '');
 
   assert.ok(activityRow.trimEnd().endsWith('implementing'));
   assert.equal(activityRow.includes('step 7/16'), false);
   assert.equal(activityRow.includes('requesting'), false);
   // Without a selection the clock leads line 2 alone.
-  assert.ok(plain(lines[1] ?? '').startsWith("󰠭 000:07'00"));
-  assert.doesNotMatch(plain(lines[1] ?? ''), /Plan title/u);
+  assert.ok(plain(lines[2] ?? '').startsWith("󰠭 000:07'00"));
+  assert.doesNotMatch(plain(lines[2] ?? ''), /Plan title/u);
 });
 
 test('renders the selected work title exactly once across the deck', () => {
@@ -629,19 +638,20 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
   );
 });
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-}
+// --- Line 4 split (second 2.4 amendment) -----------------------------------
 
-test('keeps compact telemetry islands together with one gap cell', () => {
-  const modelGroup = '󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%';
-  const resources = '48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16';
-  const lines = renderHeaderDeck(fixture(), 120, plainTheme as never);
-  // Line 4 (four-line deck): the engine group leads, machine and cost
-  // follow on the same line, cost anchoring the end.
-  const joined = lines.join('\n');
-  assert.match(joined, new RegExp(escapeRegExp(modelGroup) + ' ⟩', 'm'));
-  assert.match(joined, new RegExp(escapeRegExp(resources) + '$', 'm'));
+test('splits line 4 into engine and machine islands with a wide gap', () => {
+  const engineGroup = '󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%';
+  const machineGroup = '48.2% › 268M ⟩ 3/3 ⟩ 󰜦 $5.16';
+  const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
+  // Line 4 split: the engine group sits flush left, the machine group
+  // flush right, with the wide gap between them. The fixture subject
+  // wraps at this width, so the row is located by its engine lead.
+  const line4 = lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.ok(line4.startsWith(engineGroup), 'engine group flush left');
+  assert.ok(line4.endsWith(machineGroup), 'machine group flush right');
+  const gap = line4.slice(engineGroup.length, line4.length - machineGroup.length);
+  assert.ok(/^ {2,}$/u.test(gap), 'a wide gap separates the two groups');
 });
 
 test('renders no task, stps, or run-counter tiles in any state', () => {
@@ -746,16 +756,16 @@ test('renders unavailable optional telemetry honestly', () => {
   );
   // Counter removal lockstep: without counters the title's right end is
   // silent — Work renders nothing for pre-title publishers (no placeholder).
-  assert.equal(plain(lines[1] ?? '').includes('task 00/00'), false);
-  assert.equal(plain(lines[1] ?? '').includes('stps 00/00'), false);
-  assert.equal(plain(lines[1] ?? '').trim(), "󰠭 000:00'00");
+  assert.equal(plain(lines[2] ?? '').includes('task 00/00'), false);
+  assert.equal(plain(lines[2] ?? '').includes('stps 00/00'), false);
+  assert.equal(plain(lines[2] ?? '').trim(), "󰠭 000:00'00");
   assert.doesNotMatch(all, /next direction/u);
   assert.doesNotMatch(all, /clean/u);
   assert.equal(all.includes('task'), false);
   assert.equal(all.includes('stps'), false);
   // Line 3 idle reads `awaiting Human`; without a published turn meter the
   // cost slot stays silent rather than narrating zeros it cannot know.
-  assert.equal(plain(lines[3] ?? '').trimEnd(), ' awaiting Human');
+  assert.equal(plain(lines[4] ?? '').trimEnd(), ' awaiting Human');
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
 });
@@ -976,7 +986,7 @@ test('renders the clock leading alone when the subject is null', () => {
   const state = titleFixture({ title: { ...IDLE_TITLE, subject: null } });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines[1] ?? '';
+  const titleRow = lines[2] ?? '';
   assert.ok(titleRow.startsWith("󰠭 000:00'00"));
   assert.doesNotMatch(titleRow, /⟩\s*$/u);
   assert.doesNotMatch(titleRow, /󰠭\s+⟩/u);
@@ -1009,8 +1019,8 @@ test('colors the Work label by completion and drops it on narrow frames', () => 
 
   // Narrow frames: the Work slot yields before the clock anchor does.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
-  assert.ok((narrow[1] ?? '').includes("000:00'00"));
-  assert.equal((narrow[1] ?? '').includes('eight-section-deck · 1/4'), false);
+  assert.ok((narrow[2] ?? '').includes("000:00'00"));
+  assert.equal((narrow[2] ?? '').includes('eight-section-deck · 1/4'), false);
 });
 
 test('keeps pre-title publishers on the legacy selection band with a silent right end', () => {
@@ -1192,9 +1202,15 @@ test('spans rows keep their home directly beneath line 3', () => {
   const activityIndex = lines.findIndex((line) => line.includes('awaiting Human'));
   assert.ok(activityIndex >= 0);
   assert.match(lines[activityIndex + 1] ?? '', /└ \(00'41\) reviewer assuring/u);
-  // A ─ rule follows the spans rows, then line 4 closes the deck.
-  assert.match(lines[activityIndex + 2] ?? '', /^─+$/u);
+  // A ┈ seam follows the spans rows, then line 4 and its closing ─ rule.
+  assert.match(lines[activityIndex + 2] ?? '', /^┈+$/u);
   assert.ok(lines[activityIndex + 3]?.includes('GPT-5.6 Sol'));
+  assert.match(lines[activityIndex + 4] ?? '', /^─+$/u);
+  assert.equal(
+    lines.length,
+    activityIndex + 5,
+    'nothing renders beneath the closing rule',
+  );
 });
 
 // --- Step 2.3: line 1 right relocation and line 4 ---------------------------
@@ -1240,7 +1256,7 @@ test('keeps the devbox marker as a path prefix on line 1 left', () => {
   assert.match(line1, /\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u);
 });
 
-test('composes line 4 left as engine, quota, machine, global cost', () => {
+test('splits line 4 into engine left and machine right islands', () => {
   const state = fixture();
   state.footerTelemetry = {
     totalCost: 5.16,
@@ -1254,22 +1270,30 @@ test('composes line 4 left as engine, quota, machine, global cost', () => {
     ],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const line4 = lines[5] ?? '';
+  const line4 = lines[6] ?? '';
   const engineAt = line4.indexOf('GPT-5.6 Sol');
   const calendarAt = line4.indexOf('12%');
   const flameAt = line4.indexOf('82%');
   const machineAt = line4.indexOf('48.2%');
   const mcpAt = line4.indexOf('3/3');
   const costAt = line4.indexOf('$5.16');
-  assert.ok(engineAt >= 0 && flameAt > engineAt, 'engine leads the quota windows');
-  assert.ok(calendarAt > engineAt && calendarAt < flameAt, 'calendar before flame');
-  assert.ok(machineAt > flameAt, 'machine after quota');
+  assert.ok(line4.startsWith('󰚩'), 'engine group anchors the left end');
+  assert.ok(engineAt >= 0 && calendarAt > engineAt, 'calendar rides the engine group');
+  assert.ok(flameAt > calendarAt, 'quota flame leads the machine group');
+  assert.ok(machineAt > flameAt, 'machine after the flame');
   assert.ok(mcpAt > machineAt, 'mcp rides the machine group');
-  assert.ok(costAt > mcpAt, 'global cost anchors the end');
+  assert.ok(costAt > mcpAt, 'global cost anchors the right end');
   assert.ok(line4.trimEnd().endsWith('$5.16'));
+  // Narrow ladder: the machine group yields before the engine group —
+  // engine/context stays visible while any telemetry fits. The subject
+  // wraps at this width, so the row is located by its engine lead.
+  const narrow = renderHeaderDeck(state, 60, plainTheme as never).map(plain);
+  const narrow4 = narrow.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
+  assert.ok(narrow4.includes('GPT-5.6 Sol'), 'engine group stays visible');
+  assert.equal(narrow4.includes('$5.16'), false, 'machine group yields first');
 });
 
-test('leaves line 4 right empty until the notices slot lands', () => {
+test('keeps line 4 right to the machine group until notices land', () => {
   const state = fixture();
   state.piStatus = {
     errors: 2,
@@ -1278,24 +1302,29 @@ test('leaves line 4 right empty until the notices slot lands', () => {
     nativeStatuses: [{ key: 'graphify', text: 'graphify stale · update recommended' }],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const line4 = lines[5] ?? '';
-  assert.ok(line4.trimEnd().endsWith('$5.16'), 'nothing rides after the cost');
+  const line4 = lines[6] ?? '';
+  // The machine group owns line 4's right end; the notices slot's home
+  // is an open Step-3 question (flagged under tasks.md 2.4).
+  assert.ok(line4.trimEnd().endsWith('$5.16'), 'cost anchors the machine group');
   assert.equal(line4.includes('⚠'), false, 'no notice glyph before Task 3');
   assert.equal(line4.includes('update recommended'), false);
 });
 
-test('closes the deck on line 4 with a solid rule above and nothing beneath', () => {
-  // Single-line subject at this width so the band count is fixed at seven.
+test('bookends the deck with strong rules and dotted internal seams', () => {
+  // Single-line subject at this width so the band count is fixed at eight.
   const lines = renderHeaderDeck(
     titleFixture({ title: IDLE_TITLE }),
     100,
     plainTheme as never,
   ).map(plain);
-  assert.equal(lines.length, 6);
-  assert.match(lines[4] ?? '', /^─+$/u);
-  assert.ok((lines[5] ?? '').includes('GPT-5.6 Sol'));
-  // No separator beneath the last band.
-  assert.ok((lines.at(-1) ?? '').includes('GPT-5.6 Sol'));
+  assert.equal(lines.length, 8);
+  assert.match(lines[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
+  assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam beneath line 2');
+  assert.match(lines[5] ?? '', /^┈+$/u, 'dotted seam beneath line 3');
+  assert.ok((lines[6] ?? '').includes('GPT-5.6 Sol'));
+  assert.match(lines[7] ?? '', /^─+$/u, 'strong closing rule beneath line 4');
+  // Nothing renders beneath the closing bookend.
+  assert.equal(lines[7], lines.at(-1));
 });
 
 // --- Step 2.4: the two accepted mockups as lockstep fixtures ----------------
@@ -1325,25 +1354,30 @@ test('renders the accepted idle mockup at wide widths', () => {
   };
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 6);
+  assert.equal(lines.length, 8);
   // Line 1: path/git left, companion chips right.
   assert.match(
     lines[0] ?? '',
     /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
   );
-  // 2.4 amendment: no rule beneath the header strip — the band under it
-  // belongs to line 2.
+  // Second 2.4 amendment: the strong rule returns beneath line 1.
+  assert.match(lines[1] ?? '', /^\u2500+$/u);
   // Line 2: clock + Subject left, the dim no-work hint right.
   assert.match(
-    lines[1] ?? '',
+    lines[2] ?? '',
     /^\u{F082D} 000:00'00 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
   );
-  assert.match(lines[2] ?? '', /^\u2508+$/u);
+  assert.match(lines[3] ?? '', /^\u2508+$/u);
   // Line 3: awaiting Human left, the zeroed turn meter right.
-  assert.match(lines[3] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
-  assert.match(lines[4] ?? '', /^\u2500+$/u);
-  // Line 4 closes the deck: engine, quota, machine, global cost left.
-  assert.match(lines[5] ?? '', /^\u{F06A9} /u);
+  assert.match(lines[4] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
+  assert.match(lines[5] ?? '', /^\u2508+$/u);
+  // Line 4 splits across the row: engine left, machine right; the deck
+  // closes on the strong rule beneath it.
+  assert.match(
+    lines[6] ?? '',
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s{2,}48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
+  );
+  assert.match(lines[7] ?? '', /^\u2500+$/u);
 });
 
 test('renders the accepted mid-work mockup at wide widths', () => {
@@ -1366,28 +1400,34 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   };
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 6);
+  assert.equal(lines.length, 8);
   // Line 1: `main › +2` in the mockup is the dirty-entry transcription —
   // two modified files ride the git segment.
   assert.match(
     lines[0] ?? '',
     /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
   );
+  // Strong rule beneath line 1 (second 2.4 amendment).
+  assert.match(lines[1] ?? '', /^\u2500+$/u);
   // Line 2: Work owns the right end with `change · done/total`.
   assert.match(
-    lines[1] ?? '',
+    lines[2] ?? '',
     /^\u{F082D} 000:04'12 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck \u00b7 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
-    lines[3] ?? '',
+    lines[4] ?? '',
     /^ editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
-  // Separators and line 4 hold the amended band pattern (2.4: no rule
-  // beneath the header strip).
-  assert.match(lines[2] ?? '', /^\u2508+$/u);
-  assert.match(lines[4] ?? '', /^\u2500+$/u);
-  assert.match(lines[5] ?? '', /^\u{F06A9} /u);
+  // Dotted seams inside; line 4 splits across the row; the deck closes
+  // on the strong rule beneath it (second 2.4 amendment).
+  assert.match(lines[3] ?? '', /^\u2508+$/u);
+  assert.match(lines[5] ?? '', /^\u2508+$/u);
+  assert.match(
+    lines[6] ?? '',
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s{2,}48\.2% \u{203A} 268M \u{27E9} 3\/3 \u{27E9} \u{F0726} \$5\.16$/u,
+  );
+  assert.match(lines[7] ?? '', /^\u2500+$/u);
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {
@@ -1400,7 +1440,7 @@ test('renders both mockups identically at 100 and 120 columns', () => {
   for (const width of [100, 120]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
     assert.ok((lines[0] ?? '').includes('~/projects/pi-vimux-starship'), String(width));
-    assert.ok((lines[1] ?? '').includes('Pivot cockpit'), String(width));
-    assert.ok((lines[3] ?? '').includes('awaiting Human'), String(width));
+    assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
+    assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
   }
 });
