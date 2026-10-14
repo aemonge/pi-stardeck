@@ -69,7 +69,8 @@ import {
 } from './src/publisher.ts';
 import { RuntimeSpanStore } from './src/runtime-runs.ts';
 import { TitleActivityFeed } from './src/title-activity.ts';
-import { buildTitleState, type TitleState } from './src/title-state.ts';
+import { buildTitleState } from './src/title-state.ts';
+import { TurnCostMeter } from './src/turn-cost.ts';
 import {
   AtomicStatusStore,
   createDebouncer,
@@ -212,6 +213,7 @@ class GalacticaStatusRuntime {
   private directToolFailed = false;
   private readonly runtimeSpans = new RuntimeSpanStore();
   private readonly titleActivity = new TitleActivityFeed();
+  private readonly turnCost = new TurnCostMeter();
   private currentTurnId: string | null = null;
   private turnCounter = 0;
   private readonly statusHealth = new Map<Domain, StatusHealthCondition>();
@@ -690,6 +692,7 @@ class GalacticaStatusRuntime {
         activeRunSpans: this.runtimeSpans.snapshot().spans ?? [],
         idleMs: this.runtimeSpans.idleMs(),
         title,
+        turn: this.turnCost.snapshot(),
       }),
     );
     this.updateTitle(snapshot);
@@ -798,6 +801,7 @@ class GalacticaStatusRuntime {
     this.directToolActivities.clear();
     this.directToolFailed = false;
     this.titleActivity.reset();
+    this.turnCost.begin();
     this.turnCounter += 1;
     this.currentTurnId = `turn-${this.turnCounter}`;
     this.runtimeSpans.beginRoot(this.currentTurnId, 'understanding');
@@ -923,6 +927,14 @@ class GalacticaStatusRuntime {
     this.publish();
   }
 
+  /** Accumulate one provider response's usage into the per-turn cost meter. */
+  recordTurnUsage(message: unknown): void {
+    if (!message || typeof message !== 'object' || Array.isArray(message)) return;
+    const candidate = message as { role?: unknown; usage?: unknown };
+    if (candidate.role !== 'assistant') return;
+    if (this.turnCost.addUsage(candidate.usage)) this.publish();
+  }
+
   /** Feed the title-state activity slot from a tool-execution update. */
   updateTitleActivity(
     toolCallId: string,
@@ -1011,6 +1023,7 @@ class GalacticaStatusRuntime {
     this.directToolActivities.clear();
     this.directToolFailed = false;
     this.titleActivity.reset();
+    this.turnCost.settle();
     if (this.currentTurnId) {
       this.runtimeSpans.endRoot(this.currentTurnId);
       this.currentTurnId = null;
@@ -1429,6 +1442,10 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
 
   pi.on('message_update', (event) => {
     if (assistantHasVisibleText(event.message)) runtime?.markAnswering();
+  });
+
+  pi.on('message_end', (event) => {
+    runtime?.recordTurnUsage(event.message);
   });
 
   pi.on('turn_end', (event) => {

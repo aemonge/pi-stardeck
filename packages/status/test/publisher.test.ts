@@ -951,3 +951,15 @@ test('header events carry the title state only when provided', () => {
   });
   assert.equal(publisherModule.buildHeaderStatusEvent([]).title, undefined);
 });
+
+test('header events carry the per-turn cost meter beside the title state', () => {
+  const withTurn = publisherModule.buildHeaderStatusEvent([], {
+    turn: { tokens: 4_200, elapsedMs: 38_000 },
+  });
+  assert.deepEqual(withTurn.turn, { tokens: 4_200, elapsedMs: 38_000 });
+  assert.equal(publisherModule.buildHeaderStatusEvent([]).turn, undefined);
+  const idleTurn = publisherModule.buildHeaderStatusEvent([], {
+    turn: { tokens: 0, elapsedMs: 0 },
+  });
+  assert.deepEqual(idleTurn.turn, { tokens: 0, elapsedMs: 0 });
+});
