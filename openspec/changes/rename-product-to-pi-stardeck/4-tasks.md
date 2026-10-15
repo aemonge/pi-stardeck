@@ -39,7 +39,11 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       (`d53352c`); full `npm run check` exit 0. Remaining host actions: devbox
       blocks git tag/push and npm auth (`ENEEDAUTH`), and `~/.pi` is read-only
       in the sandbox — publish, tag `v0.5.0`, push, and the `pi install` swap
-      run on the host
+      run on the host · host 2026-10-15: push + `v0.5.0` tag done
+      (`d931fd4..dc71197`); `pi remove` of the old package done; publish
+      failed `E404` on package creation under the owned scope — registry
+      token/permission fix pending, then `npm publish --access public` from
+      the tagged tree
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:23:05Z
 
@@ -62,3 +66,9 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:30:22Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:30:51Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:33:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:34:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:34:44Z
