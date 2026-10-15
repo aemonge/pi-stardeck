@@ -1,6 +1,6 @@
 # Licenses and provenance
 
-`pi-vimux-starship` is private and currently marked `UNLICENSED` as a whole. Imported
+`pi-stardeck` is private and currently marked `UNLICENSED` as a whole. Imported
 third-party-derived components retain their own licenses:
 
 - `pi-vim-LICENSE` covers the imported `pi-vim-top-border` descendant;

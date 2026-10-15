@@ -26,9 +26,9 @@ export const COMPACTION_WIDGET_ID = 'galactica.compaction-count';
 export const RESOURCE_SEPARATOR_WIDGET_ID = 'galactica.resource-separator';
 export const SCOPE_SEPARATOR_WIDGET_ID = 'galactica.scope-separator';
 export const PROMPT_STATUS_CHANNEL = 'galactica-status:prompt-row';
-export const FOOTER_TELEMETRY_CHANNEL = 'pi-vimux-starship:footer-telemetry/v1';
-export const PI_NATIVE_STATUS_CHANNEL = 'pi-vimux-starship:native-status/v1';
-export const PI_STATUS_SNAPSHOT_CHANNEL = 'pi-vimux-starship:pi-status/v1';
+export const FOOTER_TELEMETRY_CHANNEL = 'pi-stardeck:footer-telemetry/v1';
+export const PI_NATIVE_STATUS_CHANNEL = 'pi-stardeck:native-status/v1';
+export const PI_STATUS_SNAPSHOT_CHANNEL = 'pi-stardeck:pi-status/v1';
 export const VIM_MODE_CHANNEL = 'pi-vim:mode-change';
 
 const HEADER_COLORS = [

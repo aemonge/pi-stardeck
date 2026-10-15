@@ -158,7 +158,7 @@ test('editor-deck publishes a renderer without registering an above-editor widge
     });
   }
   const degradedCapabilities = emitted
-    .filter(({ channel }) => channel === 'pi-vimux-starship:status-source/v1')
+    .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
     .at(-1)?.message as
     { source?: string; conditions?: Array<Record<string, unknown>> } | undefined;
   assert.equal(degradedCapabilities?.source, 'galactica-context-header');
@@ -177,7 +177,7 @@ test('editor-deck publishes a renderer without registering an above-editor widge
     });
   }
   const recoveredCapabilities = emitted
-    .filter(({ channel }) => channel === 'pi-vimux-starship:status-source/v1')
+    .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
     .at(-1)?.message as { conditions?: unknown[] } | undefined;
   assert.deepEqual(recoveredCapabilities?.conditions, []);
 
@@ -190,7 +190,7 @@ test('editor-deck publishes a renderer without registering an above-editor widge
   )({}, {}, {});
   assert.deepEqual(emptyFooter.render(120), []);
   const unavailableNativeStatuses = emitted
-    .filter(({ channel }) => channel === 'pi-vimux-starship:status-source/v1')
+    .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
     .at(-1)?.message as { conditions?: unknown[] } | undefined;
   assert.deepEqual(unavailableNativeStatuses?.conditions, [
     {

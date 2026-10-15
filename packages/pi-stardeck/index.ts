@@ -80,7 +80,7 @@ import { renderHeaderDeck } from './src/deck.ts';
 import { layoutLifecycleTitle, renderLifecycleTitleSections } from './src/title.ts';
 
 const WIDGET_KEY = 'galactica.work-identity';
-const PI_STATUS_SOURCE_CHANNEL = 'pi-vimux-starship:status-source/v1';
+const PI_STATUS_SOURCE_CHANNEL = 'pi-stardeck:status-source/v1';
 const EMPTY_GIT: GitStatusSummary = {
   staged: 0,
   modified: 0,

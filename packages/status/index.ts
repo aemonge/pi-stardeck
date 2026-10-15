@@ -111,7 +111,7 @@ type StatusHealthCondition = {
   summary: string;
 };
 
-const PI_STATUS_SOURCE_CHANNEL = 'pi-vimux-starship:status-source/v1';
+const PI_STATUS_SOURCE_CHANNEL = 'pi-stardeck:status-source/v1';
 
 function stableStatusId(prefix: string, value: string): string {
   let hash = 2_166_136_261;

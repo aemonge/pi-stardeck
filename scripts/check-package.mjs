@@ -11,8 +11,7 @@ const execFileAsync = promisify(execFile);
 
 export const REQUIRED_FILES = [
   'README.md',
-  'bin/cockpit-agents.mjs',
-  'demo/pi-vimux-starship.tape',
+  'demo/pi-stardeck.tape',
   'docs/architecture.md',
   'docs/development.md',
   'LICENSE',
@@ -21,7 +20,6 @@ export const REQUIRED_FILES = [
   'package.json',
   'packages/pi-stardeck/index.ts',
   'packages/status/index.ts',
-  'packages/cockpit-telemetry/index.ts',
   'packages/pi-fancy-footer-full-palette/src/index.ts',
   'packages/pi-vim-top-border/index.ts',
   'src/deck-surface.ts',
@@ -52,8 +50,8 @@ export function validatePackedFiles(paths) {
   const errors = [];
   if (missing.length > 0) errors.push(`missing=${missing.join(',')}`);
   if (forbidden.length > 0) errors.push(`forbidden=${forbidden.join(',')}`);
-  // Budget: 83 entries at 0.3.0 (title-state publisher + deck parser);
-  // headroom to 88 for the notices/waiver modules (Step 3).
+  // Budget: 84 entries at 0.5.0 (pi-stardeck rename drops the CLI and the
+  // cockpit-telemetry feeder); headroom stays at 88.
   if (unique.length > 88) errors.push(`entry-count=${unique.length}>88`);
   return { files: unique, errors };
 }
@@ -61,19 +59,18 @@ export function validatePackedFiles(paths) {
 export function validateDemoSources(readme, tape) {
   const errors = [];
   for (const required of [
-    'docs/assets/pi-vimux-starship.gif',
+    'docs/assets/pi-stardeck.gif',
     'nvim +terminal',
-    '/vimux-health',
+    '/stardeck-health',
     '## Installation',
-    'pi install npm:@aemonge-dev/pi-vimux-starship',
-    'npm install -g @aemonge-dev/pi-vimux-starship',
+    'pi install npm:@aemonge-dev/pi-stardeck',
     '### Rollback',
     '## Reproducible VHS demo',
   ]) {
     if (!readme.includes(required)) errors.push(`README missing ${required}`);
   }
   for (const required of [
-    'Output docs/assets/pi-vimux-starship.gif',
+    'Output docs/assets/pi-stardeck.gif',
     'Set Theme "Gruvbox Light"',
     'Set Height 520',
     'Set Padding 20',
@@ -83,25 +80,21 @@ export function validateDemoSources(readme, tape) {
     'Wait+Screen@60s /waiting/',
     'Type ":name Public cockpit demo"',
     'Wait+Screen /Public cockpit demo/',
-    'Type ":vimux-health"',
-    'Wait+Screen /pi-vimux-starship health/',
+    'Type ":stardeck-health"',
+    'Wait+Screen /pi-stardeck health/',
   ]) {
     if (!tape.includes(required)) errors.push(`tape missing ${required}`);
   }
   const orderedCommands = [
     'Hide',
-    'Type "npm install -g @aemonge-dev/pi-vimux-starship"',
-    'Wait+Screen@30s /added \\d+ packages/',
-    'Type "pi-agents --once"',
-    'Wait+Screen@30s /command center/',
-    'Type "pi install npm:@aemonge-dev/pi-vimux-starship"',
-    'Wait+Screen@30s /Installed npm:@aemonge-dev\\/pi-vimux-starship/',
+    'Type "pi install npm:@aemonge-dev/pi-stardeck"',
+    'Wait+Screen@30s /Installed npm:@aemonge-dev\\/pi-stardeck/',
     'Type "clear && pi --offline --no-session --no-context-files --tui-mode regular"',
     'Wait+Screen@60s /waiting/',
     'Type ":name Public cockpit demo"',
     'Wait+Screen /Public cockpit demo/',
-    'Type ":vimux-health"',
-    'Wait+Screen /pi-vimux-starship health/',
+    'Type ":stardeck-health"',
+    'Wait+Screen /pi-stardeck health/',
   ];
   let previous = -1;
   for (const command of orderedCommands) {
@@ -165,7 +158,7 @@ export function credentialFreeProbeEnvironment(home, pathValue) {
 }
 
 export async function inspectExtractedArtifact(cwd = process.cwd()) {
-  const directory = await mkdtemp(join(tmpdir(), 'pi-vimux-package-'));
+  const directory = await mkdtemp(join(tmpdir(), 'pi-stardeck-package-'));
   const archiveDirectory = join(directory, 'archive');
   const extractedDirectory = join(directory, 'extracted');
   const home = join(directory, 'home');
@@ -239,7 +232,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log(`packed artifact: PASS (${result.files.length} files)`);
   const [readme, tape] = await Promise.all([
     readFile(resolve('README.md'), 'utf8'),
-    readFile(resolve('demo', 'pi-vimux-starship.tape'), 'utf8'),
+    readFile(resolve('demo', 'pi-stardeck.tape'), 'utf8'),
   ]);
   const demoErrors = validateDemoSources(readme, tape);
   if (demoErrors.length > 0) {

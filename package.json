@@ -1,6 +1,6 @@
 {
-  "name": "@aemonge-dev/pi-vimux-starship",
-  "version": "0.4.0",
+  "name": "@aemonge-dev/pi-stardeck",
+  "version": "0.5.0",
   "description": "A Vim- and tmux-inspired command deck for Pi",
   "type": "module",
   "keywords": [
@@ -15,9 +15,8 @@
     "README.md",
     "docs/architecture.md",
     "docs/development.md",
-    "docs/assets/pi-vimux-starship.gif",
-    "demo/pi-vimux-starship.tape",
-    "bin/*.mjs",
+    "docs/assets/pi-stardeck.gif",
+    "demo/pi-stardeck.tape",
     "licenses",
     "src/*.ts",
     "!src/local-load-probe.ts",
@@ -52,8 +51,7 @@
     "test:stardeck": "npm --prefix packages/pi-stardeck test",
     "test:footer": "npm --prefix packages/pi-fancy-footer-full-palette test",
     "test:vim": "npm --prefix packages/pi-vim-top-border test",
-    "test:telemetry": "npm --prefix packages/cockpit-telemetry test",
-    "test:components": "npm run test:status && npm run test:stardeck && npm run test:footer && npm run test:vim && npm run test:telemetry"
+    "test:components": "npm run test:status && npm run test:stardeck && npm run test:footer && npm run test:vim"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
@@ -77,12 +75,9 @@
     "typescript-eslint": "8.69.0"
   },
   "pi": {
-    "image": "docs/assets/pi-vimux-starship.gif",
+    "image": "docs/assets/pi-stardeck.gif",
     "extensions": [
       "./src/index.ts"
     ]
-  },
-  "bin": {
-    "pi-agents": "bin/cockpit-agents.mjs"
   }
 }

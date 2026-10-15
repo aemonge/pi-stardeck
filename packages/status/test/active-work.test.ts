@@ -639,7 +639,7 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
     );
     assert.doesNotMatch(harness.titles.at(-1) ?? '', new RegExp(taskTitle, 'u'));
     const health = harness.sharedEvents
-      .filter(({ channel }) => channel === 'pi-vimux-starship:status-source/v1')
+      .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
       .at(-1)?.message as
       { source?: string; conditions?: Array<Record<string, unknown>> } | undefined;
     assert.equal(health?.source, 'galactica-status');

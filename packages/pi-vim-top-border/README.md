@@ -8,7 +8,7 @@ pi install npm:pi-vim
 
 Restart Pi after install; requires `@earendil-works/pi-tui >= 0.74.0`.
 
-When this module is composed by `pi-vimux-starship`, the root package selects its
+When this module is composed by `pi-stardeck`, the root package selects its
 `external-editor-only` surface. In regular Pi mode that surface starts in Normal, renders
 only the shared Header Deck, and redirects every currently supported Insert-producing
 command through the same existing external-editor adapter as Ctrl-E after the command's

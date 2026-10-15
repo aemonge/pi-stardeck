@@ -75,7 +75,7 @@ const footerConfig: FooterConfigSnapshot = {
 
 const agentWidgets: NormalizedFancyFooterDataWidget[] = [
   {
-    id: "pi-agents.workflows",
+    id: "board.workflows",
     label: "Active workflows",
     description: "Shows active workflow executions.",
     content: {
@@ -93,7 +93,7 @@ const agentWidgets: NormalizedFancyFooterDataWidget[] = [
     },
   },
   {
-    id: "pi-agents.agents",
+    id: "board.agents",
     label: "Agent progress",
     description: "Shows completed and total agents.",
     content: { type: "text", text: "1/3" },
@@ -268,12 +268,12 @@ test("data widgets honor default visibility and user color overrides", () => {
   const enabledConfig: FooterConfigSnapshot = {
     ...footerConfig,
     extensionWidgets: {
-      "pi-agents.workflows": {
+      "board.workflows": {
         enabled: true,
         iconColor: "success",
         textColor: "warning",
       },
-      "pi-agents.agents": { enabled: true },
+      "board.agents": { enabled: true },
     },
   };
   const enabledLines = renderFooterLines(
@@ -668,8 +668,8 @@ test("enabled opt-in data widgets remain hidden without text", () => {
   const enabledConfig: FooterConfigSnapshot = {
     ...footerConfig,
     extensionWidgets: {
-      "pi-agents.workflows": { enabled: true },
-      "pi-agents.agents": { enabled: true },
+      "board.workflows": { enabled: true },
+      "board.agents": { enabled: true },
     },
   };
   const emptyWidgets = agentWidgets.map((widget) => ({

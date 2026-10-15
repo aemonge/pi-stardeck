@@ -1,8 +1,8 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-export const PI_STATUS_SOURCE_CHANNEL = 'pi-vimux-starship:status-source/v1';
-export const PI_NATIVE_STATUS_CHANNEL = 'pi-vimux-starship:native-status/v1';
-export const PI_STATUS_SNAPSHOT_CHANNEL = 'pi-vimux-starship:pi-status/v1';
+export const PI_STATUS_SOURCE_CHANNEL = 'pi-stardeck:status-source/v1';
+export const PI_NATIVE_STATUS_CHANNEL = 'pi-stardeck:native-status/v1';
+export const PI_STATUS_SNAPSHOT_CHANNEL = 'pi-stardeck:pi-status/v1';
 
 const MAX_SOURCES = 64;
 const MAX_CONDITIONS_PER_SOURCE = 32;

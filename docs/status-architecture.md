@@ -1,7 +1,7 @@
 # Status Architecture
 
 > **Frozen contract.** This document records the agreed status architecture for the
-> pi-vimux-starship cockpit. Development proceeds against this contract; changing it
+> pi-stardeck cockpit. Development proceeds against this contract; changing it
 > requires explicit Human direction. Element relocation and layout redesign are
 > explicitly deferred and remain outside this contract.
 

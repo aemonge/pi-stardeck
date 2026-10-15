@@ -10,9 +10,9 @@ import type {
 } from '@earendil-works/pi-coding-agent';
 
 export type ExternalEditorHealth = 'ready' | 'missing' | 'unavailable';
-export type VimuxHealthStatus = 'PASS' | 'WARN' | 'INFO';
+export type StardeckHealthStatus = 'PASS' | 'WARN' | 'INFO';
 
-export interface VimuxHealthEvidence {
+export interface StardeckHealthEvidence {
   packageVersion: string;
   mode: string;
   hasUI: boolean;
@@ -27,7 +27,7 @@ export interface VimuxHealthEvidence {
   };
 }
 
-export interface VimuxHealthCheck {
+export interface StardeckHealthCheck {
   id:
     | 'package'
     | 'surface'
@@ -37,20 +37,20 @@ export interface VimuxHealthCheck {
     | 'openspec'
     | 'devbox'
     | 'tmux';
-  status: VimuxHealthStatus;
+  status: StardeckHealthStatus;
   message: string;
 }
 
-export interface VimuxHealthReport {
+export interface StardeckHealthReport {
   packageVersion: string;
   severity: 'info' | 'warning';
-  checks: readonly VimuxHealthCheck[];
+  checks: readonly StardeckHealthCheck[];
 }
 
 type HealthEvidenceProvider = (
   pi: ExtensionAPI,
   ctx: ExtensionCommandContext,
-) => Promise<VimuxHealthEvidence>;
+) => Promise<StardeckHealthEvidence>;
 
 type JsonSettings = { externalEditor?: unknown };
 
@@ -65,15 +65,15 @@ const PACKAGE_COMMANDS = [
   'galactica-status-refresh',
   'openspec-focus',
   'pi-status',
-  'vimux-health',
+  'stardeck-health',
   'work',
 ] as const;
 
 function check(
-  id: VimuxHealthCheck['id'],
-  status: VimuxHealthStatus,
+  id: StardeckHealthCheck['id'],
+  status: StardeckHealthStatus,
   message: string,
-): VimuxHealthCheck {
+): StardeckHealthCheck {
   return { id, status, message };
 }
 
@@ -83,10 +83,12 @@ function hasDuplicateCockpitCommand(commandNames: readonly string[]): boolean {
   );
 }
 
-export function evaluateVimuxHealth(evidence: VimuxHealthEvidence): VimuxHealthReport {
+export function evaluateStardeckHealth(
+  evidence: StardeckHealthEvidence,
+): StardeckHealthReport {
   const duplicate = hasDuplicateCockpitCommand(evidence.commandNames);
   const interactive = evidence.mode === 'tui' && evidence.hasUI;
-  const checks: VimuxHealthCheck[] = [
+  const checks: StardeckHealthCheck[] = [
     duplicate
       ? check('package', 'WARN', 'duplicate cockpit commands detected')
       : check('package', 'PASS', 'root command set is unique'),
@@ -120,8 +122,8 @@ export function evaluateVimuxHealth(evidence: VimuxHealthEvidence): VimuxHealthR
   };
 }
 
-export function formatVimuxHealth(report: VimuxHealthReport): string {
-  const lines = [`pi-vimux-starship health ${report.packageVersion}`];
+export function formatStardeckHealth(report: StardeckHealthReport): string {
+  const lines = [`pi-stardeck health ${report.packageVersion}`];
   for (const item of report.checks) {
     lines.push(`${item.status.padEnd(5)} ${item.id} · ${item.message}`);
   }
@@ -185,10 +187,10 @@ async function inspectExternalEditor(
   return (await isExecutable(command, pathValue)) ? 'ready' : 'unavailable';
 }
 
-export async function collectVimuxHealthEvidence(
+export async function collectStardeckHealthEvidence(
   pi: ExtensionAPI,
   ctx: ExtensionCommandContext,
-): Promise<VimuxHealthEvidence> {
+): Promise<StardeckHealthEvidence> {
   const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), '.pi', 'agent');
   const [externalEditor, git, openspec] = await Promise.all([
     inspectExternalEditor(ctx.cwd, agentDir, process.env.PATH ?? ''),
@@ -212,15 +214,15 @@ export async function collectVimuxHealthEvidence(
   };
 }
 
-export function registerVimuxHealth(
+export function registerStardeckHealth(
   pi: ExtensionAPI,
-  provideEvidence: HealthEvidenceProvider = collectVimuxHealthEvidence,
+  provideEvidence: HealthEvidenceProvider = collectStardeckHealthEvidence,
 ): void {
-  pi.registerCommand('vimux-health', {
-    description: 'Check pi-vimux-starship readiness and optional capabilities',
+  pi.registerCommand('stardeck-health', {
+    description: 'Check pi-stardeck readiness and optional capabilities',
     handler: async (_args, ctx) => {
-      const report = evaluateVimuxHealth(await provideEvidence(pi, ctx));
-      ctx.ui.notify(formatVimuxHealth(report), report.severity);
+      const report = evaluateStardeckHealth(await provideEvidence(pi, ctx));
+      ctx.ui.notify(formatStardeckHealth(report), report.severity);
     },
   });
 }

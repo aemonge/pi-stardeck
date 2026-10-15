@@ -267,7 +267,7 @@ test('extension statuses ride the telemetry tail as icons', () => {
     warnings: 0,
     nativeStatusCount: 2,
     nativeStatuses: [
-      { key: 'engram', text: '\u{1F9E0} pi-vimux-starship · ready' },
+      { key: 'engram', text: '\u{1F9E0} pi-stardeck · ready' },
       { key: 'graphify', text: 'graphify active · report available' },
     ],
   };
@@ -1362,7 +1362,7 @@ test('opens the deck with a strong rule and dotted internal seams', () => {
 
 function mockupDeckState(): HeaderDeckState {
   const state = titleFixture({ title: IDLE_TITLE });
-  state.cwd = '~/projects/pi-vimux-starship';
+  state.cwd = '~/projects/pi-stardeck';
   state.devbox = false;
   state.branch = 'main';
   state.gitAvailable = true;
@@ -1383,7 +1383,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   // Line 1: path/git left, companion chips right.
   assert.match(
     lines[0] ?? '',
-    /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
+    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1429,7 +1429,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // two modified files ride the git segment.
   assert.match(
     lines[0] ?? '',
-    /^\u{F07B} ~\/projects\/pi-vimux-starship \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
+    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB} \u{25A4}\] \u{232C}  \u{26E8}$/u,
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1462,7 +1462,7 @@ test('renders both mockups identically at 100 and 120 columns', () => {
   };
   for (const width of [100, 120]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
-    assert.ok((lines[0] ?? '').includes('~/projects/pi-vimux-starship'), String(width));
+    assert.ok((lines[0] ?? '').includes('~/projects/pi-stardeck'), String(width));
     assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
     assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
   }

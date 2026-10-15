@@ -1,15 +1,15 @@
-# pi-vimux-starship repository instructions
+# pi-stardeck repository instructions
 
 ## Repository role
 
-This repository is the canonical development home for `pi-vimux-starship`, a Vim- and
+This repository is the canonical development home for `pi-stardeck`, a Vim- and
 tmux-inspired command deck for Pi. It begins as a byte-identical import of four
 Galactica-managed extensions and will consolidate them behind one package identity
 without redesigning the Human-validated cockpit.
 
 The repository is temporarily staged at `~/galactica/pi-vimux-starship` only for Human
 handoff. Do not initialize Git while it remains anywhere inside Galactica. After Human
-moves it to `~/projects/pi-vimux-starship`, discover the actual root with `pwd -P` and
+moves it to `~/projects/pi-stardeck`, discover the actual root with `pwd -P` and
 confirm the destination before any mutation.
 
 ## Current baseline

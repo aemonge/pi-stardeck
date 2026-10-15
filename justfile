@@ -1,4 +1,4 @@
-# pi-vimux-starship gates and release.
+# pi-stardeck gates and release.
 
 # Static gates: formatting, lint, types.
 lint:
@@ -19,6 +19,5 @@ publish VERSION: lint test build
     @v=$(node -p 'require("./package.json").version'); \
      if [ "$v" = "{{VERSION}}" ]; then echo "already at {{VERSION}}, resuming"; \
      else npm version {{VERSION}} --message 'chore(release): v%s'; fi
-    npm publish
-    npm install -g @aemonge-dev/pi-vimux-starship@{{VERSION}}
-    pi-agents --version
+    npm publish --access public
+    pi install npm:@aemonge-dev/pi-stardeck@{{VERSION}}

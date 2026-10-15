@@ -55,39 +55,34 @@ test('clean-room Pi probe environment cannot inherit provider or session secrets
 
 test('README and VHS source preserve the credential-free public health demo', () => {
   const readme = [
-    'docs/assets/pi-vimux-starship.gif',
+    'docs/assets/pi-stardeck.gif',
     'nvim +terminal',
-    '/vimux-health',
+    '/stardeck-health',
     '## Installation',
-    'pi install npm:@aemonge-dev/pi-vimux-starship',
-    'npm install -g @aemonge-dev/pi-vimux-starship',
+    'pi install npm:@aemonge-dev/pi-stardeck',
     '### Rollback',
     '## Reproducible VHS demo',
   ].join('\n');
   const tape = [
-    'Output docs/assets/pi-vimux-starship.gif',
+    'Output docs/assets/pi-stardeck.gif',
     'Set Theme "Gruvbox Light"',
     'Set Height 520',
     'Set Padding 20',
     'Hide',
-    'Type "npm install -g @aemonge-dev/pi-vimux-starship"',
-    'Wait+Screen@30s /added \\d+ packages/',
-    'Type "pi-agents --once"',
-    'Wait+Screen@30s /command center/',
-    'Type "pi install npm:@aemonge-dev/pi-vimux-starship"',
-    'Wait+Screen@30s /Installed npm:@aemonge-dev\\/pi-vimux-starship/',
+    'Type "pi install npm:@aemonge-dev/pi-stardeck"',
+    'Wait+Screen@30s /Installed npm:@aemonge-dev\\/pi-stardeck/',
     'Type "clear && pi --offline --no-session --no-context-files --tui-mode regular"',
     'Wait+Screen@60s /waiting/',
     'Type ":name Public cockpit demo"',
     'Wait+Screen /Public cockpit demo/',
-    'Type ":vimux-health"',
-    'Wait+Screen /pi-vimux-starship health/',
+    'Type ":stardeck-health"',
+    'Wait+Screen /pi-stardeck health/',
   ].join('\n');
 
   assert.deepEqual(validateDemoSources(readme, tape), []);
   const misordered = tape.replace(
-    'Type "pi-agents --once"\nWait+Screen@30s /command center/',
-    'Wait+Screen@30s /command center/\nType "pi-agents --once"',
+    'Type "pi install npm:@aemonge-dev/pi-stardeck"\nWait+Screen@30s /Installed npm:@aemonge-dev\\/pi-stardeck/',
+    'Wait+Screen@30s /Installed npm:@aemonge-dev\\/pi-stardeck/\nType "pi install npm:@aemonge-dev/pi-stardeck"',
   );
   assert.match(validateDemoSources(readme, misordered).join('\n'), /order invalid/u);
 
@@ -109,7 +104,7 @@ test('README and VHS source preserve the credential-free public health demo', ()
 test('npm pack JSON exposes exactly one validated path list', () => {
   assert.deepEqual(
     packedPathsFromNpmJson({
-      'pi-vimux-starship': {
+      'pi-stardeck': {
         files: [{ path: 'README.md' }, { path: 'src/index.ts' }],
       },
     }),

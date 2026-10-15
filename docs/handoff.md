@@ -7,7 +7,7 @@ owns the move:
 
 ```bash
 mv ~/galactica/pi-vimux-starship ~/projects/
-cd ~/projects/pi-vimux-starship
+cd ~/projects/pi-stardeck
 ```
 
 If either source or destination differs, inspect both resolved paths before acting. Do

@@ -5,14 +5,14 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import {
-  collectVimuxHealthEvidence,
-  evaluateVimuxHealth,
-  formatVimuxHealth,
-  registerVimuxHealth,
-  type VimuxHealthEvidence,
+  collectStardeckHealthEvidence,
+  evaluateStardeckHealth,
+  formatStardeckHealth,
+  registerStardeckHealth,
+  type StardeckHealthEvidence,
 } from '../src/health.ts';
 
-const readyEvidence: VimuxHealthEvidence = {
+const readyEvidence: StardeckHealthEvidence = {
   packageVersion: '0.1.0',
   mode: 'tui',
   hasUI: true,
@@ -25,7 +25,7 @@ const readyEvidence: VimuxHealthEvidence = {
     'galactica-status-refresh',
     'openspec-focus',
     'pi-status',
-    'vimux-health',
+    'stardeck-health',
     'work',
   ],
   capabilities: {
@@ -37,7 +37,7 @@ const readyEvidence: VimuxHealthEvidence = {
 };
 
 test('health report classifies required, recommended, and optional readiness', () => {
-  const report = evaluateVimuxHealth(readyEvidence);
+  const report = evaluateStardeckHealth(readyEvidence);
 
   assert.equal(report.severity, 'info');
   assert.deepEqual(
@@ -53,12 +53,12 @@ test('health report classifies required, recommended, and optional readiness', (
       'INFO:tmux',
     ],
   );
-  assert.match(formatVimuxHealth(report), /^pi-vimux-starship health 0\.1\.0\n/u);
-  assert.match(formatVimuxHealth(report), /INFO  tmux · absent \(optional\)/u);
+  assert.match(formatStardeckHealth(report), /^pi-stardeck health 0\.1\.0\n/u);
+  assert.match(formatStardeckHealth(report), /INFO  tmux · absent \(optional\)/u);
 });
 
 test('health report warns only for actionable cockpit problems', () => {
-  const report = evaluateVimuxHealth({
+  const report = evaluateStardeckHealth({
     ...readyEvidence,
     mode: 'rpc',
     hasUI: true,
@@ -87,14 +87,14 @@ test('health formatting cannot disclose raw environment or editor values', () =>
     NVIM: '/run/user/1000/private-nvim.sock',
     externalEditorCommand: '/home/private/bin/bridge --token secret',
     settingsContent: '{"apiKey":"secret"}',
-  } as VimuxHealthEvidence;
-  const output = formatVimuxHealth(evaluateVimuxHealth(privateEvidence));
+  } as StardeckHealthEvidence;
+  const output = formatStardeckHealth(evaluateStardeckHealth(privateEvidence));
 
   assert.doesNotMatch(output, /private|token|secret|settingsContent|NVIM/u);
 });
 
 test('runtime health collection uses bounded local evidence without executing the editor', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'vimux-health-'));
+  const root = await mkdtemp(join(tmpdir(), 'stardeck-health-'));
   const agentDir = join(root, 'agent');
   const project = join(root, 'project');
   const bin = join(root, 'bin');
@@ -125,7 +125,7 @@ test('runtime health collection uses bounded local evidence without executing th
     process.env.TMUX = 'private-tmux';
     process.env.DEVBOX_PROJECT_ROOT = '/private/project';
 
-    const evidence = await collectVimuxHealthEvidence(
+    const evidence = await collectStardeckHealthEvidence(
       {
         getCommands: () => readyEvidence.commandNames.map((name) => ({ name })),
       } as never,
@@ -165,12 +165,12 @@ test('root health command collects at invocation and emits one bounded notificat
   const notifications: Array<{ text: string; level: string }> = [];
   const pi = {
     registerCommand(name: string, command: { handler: typeof handler }) {
-      assert.equal(name, 'vimux-health');
+      assert.equal(name, 'stardeck-health');
       handler = command.handler;
     },
   };
 
-  registerVimuxHealth(pi as never, async () => readyEvidence);
+  registerStardeckHealth(pi as never, async () => readyEvidence);
   assert.ok(handler);
   await handler('', {
     ui: {

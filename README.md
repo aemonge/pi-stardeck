@@ -1,10 +1,10 @@
-# pi-vimux-starship
+# pi-stardeck
 
 A Vim- and tmux-inspired command deck for
 [Pi](https://pi.dev): lifecycle context, external-Neovim prompt
 composition, Vim command handling, and responsive operational telemetry in one package.
 
-![Pi cockpit header demonstration](docs/assets/pi-vimux-starship.gif)
+![Pi cockpit header demonstration](docs/assets/pi-stardeck.gif)
 
 > [!IMPORTANT]
 > The best experience is **Pi in regular mode inside `nvim +terminal`**, with a blocking
@@ -119,13 +119,13 @@ Neovim configuration.
 Run the read-only health report directly:
 
 ```text
-/vimux-health
+/stardeck-health
 ```
 
 Or through the exact Pi EX-command bridge from Normal mode:
 
 ```vim
-:vimux-health
+:stardeck-health
 ```
 
 The bounded report classifies package registration, interactive TUI, external-editor
@@ -135,9 +135,9 @@ settings, endpoints, environment values, credentials, or absolute paths.
 
 ## Installation
 
-The package is MIT-licensed and published as `@aemonge-dev/pi-vimux-starship`.
+The package is MIT-licensed and published as `@aemonge-dev/pi-stardeck`.
 Review extensions before installation because Pi packages execute with user
-permissions. Both commands below work from any directory; neither requires
+permissions. The command below works from any directory; it does not require
 cloning this repository.
 
 ### From npm
@@ -145,13 +145,7 @@ cloning this repository.
 Install the cockpit extension through Pi:
 
 ```bash
-pi install npm:@aemonge-dev/pi-vimux-starship
-```
-
-Install the `pi-agents` command center on the PATH:
-
-```bash
-npm install -g @aemonge-dev/pi-vimux-starship
+pi install npm:@aemonge-dev/pi-stardeck
 ```
 
 Do not load this package alongside the four legacy component package entries.
@@ -187,7 +181,7 @@ After the repository has an authorized remote, install an immutable tag or
 commit:
 
 ```bash
-pi install git:<host>/<owner>/pi-vimux-starship@<tag-or-commit>
+pi install git:<host>/<owner>/pi-stardeck@<tag-or-commit>
 ```
 
 A pinned ref does not move during ordinary package updates.
@@ -198,8 +192,7 @@ Keep the previous source/ref before changing installation. To remove the npm
 installation:
 
 ```bash
-pi remove npm:@aemonge-dev/pi-vimux-starship
-npm uninstall -g @aemonge-dev/pi-vimux-starship
+pi remove npm:@aemonge-dev/pi-stardeck
 ```
 
 For local-path installations, pass the absolute path to `pi remove` instead.
@@ -208,18 +201,18 @@ been removed; never keep both cockpit registrations active.
 
 ## Reproducible VHS demo
 
-The checked-in tape simulates a fresh machine: both published packages
-install into an isolated throwaway `HOME` with a user-local npm prefix, the
-`pi-agents` board flashes once, and a clean offline Pi session runs the
-`/vimux-health` report through Pi Vim's Normal-mode EX bridge. No provider,
+The checked-in tape simulates a fresh machine: the published package
+installs into an isolated throwaway `HOME` with a user-local npm prefix, and
+a clean offline Pi session runs the `/stardeck-health` report through Pi
+Vim's Normal-mode EX bridge. No provider,
 session, credential, or private editor bridge is involved. From the
 repository root, run:
 
 ```bash
-vhs demo/pi-vimux-starship.tape
+vhs demo/pi-stardeck.tape
 ```
 
-It writes `docs/assets/pi-vimux-starship.gif` using VHS's explicit Gruvbox
+It writes `docs/assets/pi-stardeck.gif` using VHS's explicit Gruvbox
 Light terminal theme and a compact frame that keeps the cockpit prominent.
 Review the entire recording for private paths, notifications, or terminal
 history before committing it. The single reviewed GIF is the project's

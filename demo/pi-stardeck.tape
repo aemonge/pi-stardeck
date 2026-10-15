@@ -1,9 +1,9 @@
-# Run from the pi-vimux-starship repository root.
+# Run from the pi-stardeck repository root.
 # Requires Pi, npm, and VHS; the recording installs the published package
 # into an isolated throwaway HOME, so it never touches real settings,
 # sessions, providers, or the private editor bridge.
 
-Output docs/assets/pi-vimux-starship.gif
+Output docs/assets/pi-stardeck.gif
 
 Set Shell "bash"
 Set Theme "Gruvbox Light"
@@ -21,33 +21,20 @@ Set PlaybackSpeed 1
 # stays attached so the recording does not stall on a cold cache. Keep setup
 # out of the recording.
 Hide
-Type "export DEMO_HOME=/tmp/pi-vimux-demo && rm -rf $DEMO_HOME && mkdir -p $DEMO_HOME && export NPM_CACHE_KEEP=$HOME/.npm && export HOME=$DEMO_HOME && export NPM_CONFIG_PREFIX=$HOME/.npm-global && export npm_config_cache=$NPM_CACHE_KEEP && export PATH=$NPM_CONFIG_PREFIX/bin:$PATH && clear"
+Type "export DEMO_HOME=/tmp/pi-stardeck-demo && rm -rf $DEMO_HOME && mkdir -p $DEMO_HOME && export NPM_CACHE_KEEP=$HOME/.npm && export HOME=$DEMO_HOME && export NPM_CONFIG_PREFIX=$HOME/.npm-global && export npm_config_cache=$NPM_CACHE_KEEP && export PATH=$NPM_CONFIG_PREFIX/bin:$PATH && clear"
 Enter
 Wait
 Show
 
-# Install the published CLI from the registry and print the board once.
+# Install the cockpit through Pi's package manager.
 # Long work sleeps hidden; the visible Wait commands then match instantly
 # against output that is already on screen — nothing races the recording.
-Type "npm install -g @aemonge-dev/pi-vimux-starship"
-Enter
-Hide
-Sleep 75s
-Show
-Wait+Screen@30s /added \d+ packages/
-Sleep 1s
-Type "pi-agents --once"
-Enter
-Wait+Screen@30s /command center/
-Sleep 3s
-
-# Install the cockpit through Pi's package manager.
-Type "pi install npm:@aemonge-dev/pi-vimux-starship"
+Type "pi install npm:@aemonge-dev/pi-stardeck"
 Enter
 Hide
 Sleep 15s
 Show
-Wait+Screen@30s /Installed npm:@aemonge-dev\/pi-vimux-starship/
+Wait+Screen@30s /Installed npm:@aemonge-dev\/pi-stardeck/
 Sleep 1s
 
 # Launch a clean cockpit session from the fresh install.
@@ -66,7 +53,7 @@ Wait+Screen /Public cockpit demo/
 Sleep 3s
 
 # Dispatch the credential-free health report through Pi Vim's Normal-mode EX bridge.
-Type ":vimux-health"
+Type ":stardeck-health"
 Enter
-Wait+Screen /pi-vimux-starship health/
+Wait+Screen /pi-stardeck health/
 Sleep 5s

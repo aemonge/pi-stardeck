@@ -1,0 +1,4 @@
+schema: ramona-plan
+created: 2026-10-15
+goal: "One product name: pi-stardeck everywhere; no CLI surface"
+skip_specs: true
