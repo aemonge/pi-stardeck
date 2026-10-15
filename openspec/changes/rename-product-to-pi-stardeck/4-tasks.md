@@ -33,8 +33,13 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       `check:package:load` PASS (79 files, 3 model rows), `format:check`
       PASS, `lint` PASS, `check:openspec` PASS (5 changes) paths:
       `baseline/source.sha256`
-- [ ] Step 5 — Human validation — host lockfile refresh, full `npm run check`,
-      publish `0.5.0`, push, reinstall under the new name
+- [-] Step 5 — Human validation — host lockfile refresh, full `npm run check`,
+      publish `0.5.0`, push, reinstall under the new name · sandbox 2026-10-15:
+      lockfile refreshed in-repo (5× pi-stardeck, 0× old name) and committed
+      (`d53352c`); full `npm run check` exit 0. Remaining host actions: devbox
+      blocks git tag/push and npm auth (`ENEEDAUTH`), and `~/.pi` is read-only
+      in the sandbox — publish, tag `v0.5.0`, push, and the `pi install` swap
+      run on the host
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:23:05Z
 
@@ -53,3 +58,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:29:07Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:30:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:30:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:30:51Z
