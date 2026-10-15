@@ -33,17 +33,21 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       `check:package:load` PASS (79 files, 3 model rows), `format:check`
       PASS, `lint` PASS, `check:openspec` PASS (5 changes) paths:
       `baseline/source.sha256`
-- [-] Step 5 — Human validation — host lockfile refresh, full `npm run check`,
+- [x] Step 5 — Human validation — host lockfile refresh, full `npm run check`,
       publish `0.5.0`, push, reinstall under the new name · sandbox 2026-10-15:
       lockfile refreshed in-repo (5× pi-stardeck, 0× old name) and committed
-      (`d53352c`); full `npm run check` exit 0. Remaining host actions: devbox
-      blocks git tag/push and npm auth (`ENEEDAUTH`), and `~/.pi` is read-only
-      in the sandbox — publish, tag `v0.5.0`, push, and the `pi install` swap
-      run on the host · host 2026-10-15: push + `v0.5.0` tag done
-      (`d931fd4..dc71197`); `pi remove` of the old package done; publish
-      failed `E404` on package creation under the owned scope — registry
-      token/permission fix pending, then `npm publish --access public` from
-      the tagged tree
+      (`d53352c`); full `npm run check` exit 0 · host 2026-10-15: push +
+      `v0.5.0` tag done (`d931fd4..dc71197`); first publish attempt `E404`
+      (token/permission), re-authenticated via web flow; publish landed
+      (`+ @aemonge-dev/pi-stardeck@0.5.0`, tarball live 07:39:08Z, first
+      `pi install` raced registry propagation); retry installed
+      `npm:@aemonge-dev/pi-stardeck@0.5.0`; old package removal confirmed
+      (second remove: no matching package) · outcome: VALID
+
+> **RESOLVED 2026-10-15 (release `0.5.0`, tag `v0.5.0`).** One product
+> identity end to end: repo, npm, channels, health command, assets, gates.
+> CLI and its `cockpit-telemetry` feeder removed. Closing commit rides the
+> next host push.
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:23:05Z
 
@@ -72,3 +76,11 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:34:05Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T07:34:44Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:38:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:39:11Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:39:38Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T07:42:52Z
