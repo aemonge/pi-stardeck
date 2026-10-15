@@ -386,21 +386,25 @@ function globalLeft(state: HeaderDeckState, theme: Theme): string {
 }
 
 function projectDeckLeft(state: HeaderDeckState, theme: Theme, width: number): string {
-  // Line 1 left: the devbox marker is a path prefix, then the path; the git
-  // segment yields below 79 columns before the path does. The companion
-  // chips ride line 1's right end and never drop (always-visible contract).
-  const devbox = state.devbox ? `${color(theme, 'success', '[󰆧]', true)} ` : '';
-  const path = `${devbox}${color(theme, 'success', ` ${safeText(state.cwd)}`)}`;
+  // Line 1 left: the path; the git segment yields below 79 columns before
+  // the path does. The devbox marker moved to the line-1 corner with the
+  // companion chips (deck-machine-corner); the identity cluster never
+  // drops, so the path never carries it again.
+  const path = color(theme, 'success', ` \u{F07B} ${safeText(state.cwd)}`);
   const gitSegment =
     width >= 79 ? truncateToWidth(gitRight(state, theme), 52, '…') : '';
   return gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
 }
 
-const KNOWN_COMPANION_ICONS: ReadonlyArray<{
+type CompanionSpec = {
   keys: readonly string[];
   icons: readonly string[];
-}> = [
-  { keys: ['engram'], icons: ['\u{21BB}', '\u{25A4}'] },
+  /** Render the chip bracketed even at one icon (engram identity). */
+  bracket?: boolean;
+};
+
+const KNOWN_COMPANION_ICONS: ReadonlyArray<CompanionSpec> = [
+  { keys: ['engram'], icons: ['\u{21BB}'], bracket: true },
   { keys: ['graphify'], icons: ['\u{232C}'] },
   { keys: ['appa', 'openappa'], icons: ['\u{26E8}'] },
 ];
@@ -424,15 +428,23 @@ function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
     texts.set(item.key, item.text);
   }
   const parts: Array<{ bare: boolean; text: string }> = [];
+  if (state.devbox) {
+    // Corner lead chip (deck-machine-corner): the devbox marker joins
+    // the identity cluster ahead of the companions, success-colored as
+    // it was as a path prefix.
+    parts.push({ bare: false, text: color(theme, 'success', '[\u{F01A7}]', true) });
+  }
   for (const companion of KNOWN_COMPANION_ICONS) {
     const published = companion.keys
       .map((key) => texts.get(key))
       .find((text) => text !== undefined);
     for (const key of companion.keys) texts.delete(key);
     const joined = companion.icons.join(' ');
-    const chip = companion.icons.length > 1 ? `[${joined}]` : joined;
+    const bracketed =
+      companion.bracket === true || companion.icons.length > 1;
+    const chip = bracketed ? `[${joined}]` : joined;
     parts.push({
-      bare: companion.icons.length === 1,
+      bare: !bracketed,
       text: color(
         theme,
         companionIconColor(published, published !== undefined),
@@ -516,37 +528,64 @@ function telemetryRowLeft(state: HeaderDeckState, theme: Theme): string {
   return modelGroupLeft(state, theme);
 }
 
-function telemetryRowRight(
+export function machineCornerSegments(
   state: HeaderDeckState,
   theme: Theme,
   nowMs = Date.now(),
-): string {
-  // Line 4 right (2.4 second amendment): the machine group — the coding
-  // quota flame with its countdown, machine readings, global cost — in
-  // that order, anchoring the row's right end.
-  const machineSegments: string[] = [];
+): string[] {
+  // Machine corner (deck-machine-corner): icon-led machine readings for
+  // the line-1 corner — coding quota flame with its countdown, CPU,
+  // memory, MCP availability, global cost — in that frozen order, joined
+  // by minor separators. Segments yield right-to-left on narrow frames.
+  const segments: string[] = [];
+  const flame = windowQuotaTiles(state, theme, nowMs);
+  if (flame !== '') segments.push(flame);
   const resources = state.resources;
   if (resources) {
     const resourceColor =
       resources.cpuWarning || resources.memoryWarning ? 'warning' : 'accent';
-    const parts = [
-      color(theme, resourceColor, `${formatDeckCpu(resources.cpuPercent)}`),
-      color(theme, resourceColor, `${formatDeckBytes(resources.memoryBytes)}`),
-    ];
-    machineSegments.push(parts.join(` ${minorSeparator(theme, resourceColor)} `));
+    segments.push(
+      color(theme, resourceColor, `\u{F035B} ${formatDeckCpu(resources.cpuPercent)}`),
+    );
+    segments.push(
+      color(theme, resourceColor, `\u{F061A} ${formatDeckBytes(resources.memoryBytes)}`),
+    );
   }
   if (state.mcp) {
-    machineSegments.push(
+    segments.push(
       color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`),
     );
   }
-  return [
-    windowQuotaTiles(state, theme, nowMs),
-    machineSegments.join(` ${semanticSeparator(theme)} `),
-    costTile(state, theme),
-  ]
-    .filter((group) => group !== '')
-    .join(` ${semanticSeparator(theme)} `);
+  const cost = costTile(state, theme);
+  if (cost !== '') segments.push(cost);
+  return segments;
+}
+
+function deckCornerRight(
+  state: HeaderDeckState,
+  theme: Theme,
+  width: number,
+  nowMs = Date.now(),
+): string {
+  // Line 1 corner: the identity cluster (devbox lead, companion chips)
+  // split from the machine group by one major separator. Machine segments
+  // yield right-to-left (cost first) before the path truncates below a
+  // 20-column floor; the identity cluster never drops (always-visible
+  // contract).
+  const identity = extensionStatusCodes(state, theme);
+  const segments = machineCornerSegments(state, theme, nowMs);
+  const pathFloor = 20;
+  for (let keep = segments.length; keep >= 0; keep -= 1) {
+    const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
+    const corner =
+      tail === ''
+        ? identity
+        : `${identity} ${semanticSeparator(theme)} ${tail}`;
+    if (keep === 0 || width - visibleWidth(corner) - 1 >= pathFloor) {
+      return corner;
+    }
+  }
+  return identity;
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
@@ -760,19 +799,16 @@ export function renderHeaderDeck(
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // Line 4 (2.4 second amendment + Task 3 placement default): the engine
-  // group holds the row's left end. Its right end belongs to the machine
-  // group — until notices land: a non-empty notice slot owns the right end
-  // and the machine group yields wholesale, riding the same ladder as the
-  // narrow-frame yield (the right group renders only when it fits beside
-  // the engine group at full width; the engine group never yields to it).
+  // Line 4 (deck-machine-corner amendment): the engine group holds the
+  // row's left end; the right end is notice-only. The machine group moved
+  // to the line-1 corner, so notices can no longer starve machine
+  // readings — the old wholesale yield is gone with the group itself.
   const engineGroup = telemetryRowLeft(state, theme);
   const noticeGroup = noticeTile(state, theme);
-  const rightGroup = noticeGroup !== '' ? noticeGroup : telemetryRowRight(state, theme);
   const telemetryRow =
-    rightGroup !== '' &&
-    visibleWidth(engineGroup) + 1 + visibleWidth(rightGroup) <= boundedWidth
-      ? alignedSingleRow(engineGroup, rightGroup, boundedWidth)
+    noticeGroup !== '' &&
+    visibleWidth(engineGroup) + 1 + visibleWidth(noticeGroup) <= boundedWidth
+      ? alignedSingleRow(engineGroup, noticeGroup, boundedWidth)
       : fit(engineGroup, boundedWidth);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
@@ -781,17 +817,17 @@ export function renderHeaderDeck(
   // line 4; pi's own prompt chrome below closes the visual block — while
   // the internal seams stay dotted ┈ between lines 2 and 3 and between
   // line 3 (spans rows included) and line 4.
-  const chips = extensionStatusCodes(state, theme);
+  const corner = deckCornerRight(state, theme, boundedWidth);
   const alert = statusAlertTile(
     state,
-    Math.max(0, boundedWidth - visibleWidth(chips) - 2),
+    Math.max(0, boundedWidth - visibleWidth(corner) - 2),
     theme,
     lineColor,
   );
   const rows = [
     alignedSingleRow(
       projectDeckLeft(state, theme, boundedWidth),
-      alert ? `${alert} ${chips}` : chips,
+      alert ? `${alert} ${corner}` : corner,
       boundedWidth,
     ),
     solidRule,

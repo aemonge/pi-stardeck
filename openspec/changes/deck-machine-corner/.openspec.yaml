@@ -1,0 +1,4 @@
+schema: ramona-plan
+created: 2026-10-15
+goal: One glanceable status corner on deck line 1; notices never hide metrics
+skip_specs: true
