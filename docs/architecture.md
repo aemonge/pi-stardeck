@@ -6,7 +6,7 @@ The baseline is one Pi package identity with four existing extension factories:
 
 ```text
 root package manifest
-├── Fancy Footer telemetry provider
+├── Footer telemetry provider (`packages/footer`)
 ├── status and focus producer
 ├── Header Deck and telemetry producer
 └── focused zero-row Vim command surface and external-editor consumer
@@ -18,7 +18,7 @@ through the event protocols that already isolate them.
 
 Startup order is intentional:
 
-1. Fancy Footer subscribes to widget snapshots.
+1. Footer telemetry publishes session-cost snapshots for the deck row.
 2. Status registers focus tools and publishes lifecycle/work snapshots.
 3. Context Header consumes status and supplies the Header Deck renderer.
 4. Pi Vim installs the focused editor component, renders that deck with its live mode,
@@ -29,10 +29,13 @@ when present; it is not a dependency of this package.
 
 ## Stable protocol seams
 
-The imported modules currently coordinate through:
+The composed modules currently coordinate through:
 
-- `pi-fancy-footer:widget` — complete protocol-1 widget snapshots;
-- `pi-fancy-footer:ready` — consumer readiness and producer republish;
+- `pi-stardeck:footer-telemetry/v1` — session-cost snapshots from
+  `packages/footer` (plus an optional quota seam);
+- `pi-fancy-footer:widget` — complete protocol-1 widget snapshots (live wire
+  between the deck and the Vim prompt rail; the name predates the footer
+  fork's removal and is slated for renaming);
 - `galactica-status:header` — bounded lifecycle, selection, suggestion, and active-run
   snapshots;
 - `galactica-status:prompt-row` — prompt-rail telemetry;

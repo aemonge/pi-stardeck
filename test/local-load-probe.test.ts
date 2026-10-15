@@ -7,7 +7,6 @@ import {
 } from '../src/local-load-probe.ts';
 
 const EXPECTED_COMMANDS = [
-  'fancy-footer',
   'galactica-status',
   'galactica-status-debug',
   'galactica-status-refresh',
@@ -21,7 +20,7 @@ const EXPECTED_TOOLS = ['openspec_focus', 'stage', 'subject', 'work_focus'];
 test('chrome-only deck composition activates header footer and status', () => {
   assert.equal(COCKPIT_SURFACES.contextHeader, 'deck');
   assert.deepEqual(COCKPIT_COMPOSITION, [
-    'fancy-footer:telemetry',
+    'footer:telemetry',
     'galactica-status:provider',
     'galactica-context-header:deck',
   ]);
@@ -52,10 +51,10 @@ test('composed factories register unique commands and tools', async () => {
   }
 });
 
-test('Fancy Footer publishes readiness during root package composition', async () => {
+test('composition wires the footer telemetry channel end to end', async () => {
   const result = await inspectLocalPackage();
   const composition = result.registrations[0];
 
   assert.equal(composition?.entrypoint, EXPECTED_EXTENSION_ENTRYPOINTS[0]);
-  assert.ok(composition?.emittedChannels.includes('pi-fancy-footer:ready'));
+  assert.ok(composition?.eventChannels.includes('pi-stardeck:footer-telemetry/v1'));
 });

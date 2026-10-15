@@ -21,12 +21,13 @@ Header Deck ◀── bounded lifecycle, work, project, model, and resource cont
 zero-row Vim command surface ── Insert transition ──▶ Neovim prompt.md
                              ◀── :x + auto-submit ───┘
 
-responsive Footer ◀── model, quota, context, cost, Git, and capability telemetry
+deck telemetry row ◀── model, context, and cost from session usage; quota via an empty seam
 ```
 
 The package composes four bounded modules in dependency-safe order:
 
-- **Fancy Footer** — responsive model, quota, context, cost, Git, and resource telemetry;
+- **Footer telemetry** — session usage cost for the deck's telemetry row, with an
+  empty quota seam;
 - **Status provider** — lifecycle, OpenSpec, Session Work, and diagnostic state;
 - **Header Deck** — current activity, focus, project state, and compact telemetry.
   Companion extensions surface as leading telemetry icons:

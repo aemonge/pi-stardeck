@@ -59,7 +59,6 @@ const PACKAGE_VERSION = (
 ).version;
 
 const PACKAGE_COMMANDS = [
-  'fancy-footer',
   'galactica-status',
   'galactica-status-debug',
   'galactica-status-refresh',

@@ -5,12 +5,12 @@
 The baseline was copied from the discovered Galactica root on 2026-09-03. Every authored
 file was copied byte-for-byte; dependency trees and generated state were excluded.
 
-| Imported directory                      | Responsibility                                          | Upstream relationship                 |
-| --------------------------------------- | ------------------------------------------------------- | ------------------------------------- |
-| `packages/status`                       | Focus, lifecycle, OpenSpec, Goal, Taskflow, diagnostics | Galactica-authored                    |
-| `packages/pi-stardeck`                  | Header, Git, MCP, process resources, prompt telemetry   | Galactica-authored                    |
-| `packages/pi-fancy-footer-full-palette` | Footer, layout, quota, cost, widget protocol            | Local fork of `pi-fancy-footer` 3.0.1 |
-| `packages/pi-vim-top-border`            | Vim editor, rails, clipboard, external-editor action    | Local descendant of `pi-vim` 0.14.1   |
+| Imported directory           | Responsibility                                          | Upstream relationship                                        |
+| ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |
+| `packages/status`            | Focus, lifecycle, OpenSpec, Goal, Taskflow, diagnostics | Galactica-authored                                           |
+| `packages/pi-stardeck`       | Header, Git, MCP, process resources, prompt telemetry   | Galactica-authored                                           |
+| `packages/footer`            | Footer telemetry (session cost, quota seam)             | Clean-room (replaced the `pi-fancy-footer` fork, 2026-10-15) |
+| `packages/pi-vim-top-border` | Vim editor, rails, clipboard, external-editor action    | Local descendant of `pi-vim` 0.14.1                          |
 
 Totals at import:
 
@@ -28,7 +28,7 @@ The imported package intentionally does not copy machine integration outside the
 source trees. Relevant read-only references in Galactica include:
 
 - `.pi/agent/settings.json` — current four-package load order and `piVim` settings;
-- `.pi/agent/fancy-footer.json` — accepted footer layout;
+- `.pi/agent/fancy-footer.json` — orphaned by the clean-room footer provider; safe to delete;
 - `.pi/agent/galactica-status.json` — current status-adapter configuration;
 - `.pi/agent/keybindings.json` — direct `app.editor.external` Ctrl-E binding;
 - `.config/nvim/scripts/pi-editor` — configured external editor executable;

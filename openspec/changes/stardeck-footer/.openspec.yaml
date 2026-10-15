@@ -1,0 +1,5 @@
+schema: ramona-idea
+created: 2026-10-15
+goal: One homegrown footer row on Pi SDK primitives; no second renderer, no
+  quota polling
+skip_specs: true

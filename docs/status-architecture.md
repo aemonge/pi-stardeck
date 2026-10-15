@@ -128,7 +128,8 @@ stateless consumers.
 
 During migration the existing channels remain the seams consumers attach to:
 
-- `pi-fancy-footer:widget` and `pi-fancy-footer:ready`
+- `pi-fancy-footer:widget` (live deck → prompt-rail wire; `:ready` was removed
+  with the footer fork)
 - `galactica-status:header` and `galactica-status:prompt-row`
 
 They are fed from the snapshot and retired only when every consumer renders from it.

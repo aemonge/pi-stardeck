@@ -1,0 +1,32 @@
+{
+  "name": "footer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Footer telemetry producer for the pi-stardeck deck",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "telemetry"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}\" --ignore-path .prettierignore",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "check": "npm run format:check && npm run typecheck && npm test"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  }
+}

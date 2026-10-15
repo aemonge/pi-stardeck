@@ -2,7 +2,7 @@
   "name": "status",
   "version": "1.0.0",
   "private": true,
-  "description": "Project status producer for pi-fancy-footer",
+  "description": "Project status producer for the pi-stardeck deck",
   "type": "module",
   "keywords": [
     "pi-package",

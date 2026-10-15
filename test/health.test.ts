@@ -19,7 +19,6 @@ const readyEvidence: StardeckHealthEvidence = {
   neovimTerminal: true,
   externalEditor: 'ready',
   commandNames: [
-    'fancy-footer',
     'galactica-status',
     'galactica-status-debug',
     'galactica-status-refresh',

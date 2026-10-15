@@ -169,8 +169,8 @@ sustained CPU pressure above 80% or unusually high session memory; one resource 
 does not recolor its neighbors. Pink and red are never used in these three telemetry
 groups. In the title, lifecycle and bounded activity are blue; the major boundary is
 purple; real focus and optional Task hierarchy are green; empty focus fallbacks and the
-footer runtime age/state are dim. Persistent cache-hit presentation is disabled, while
-Fancy Footer retains its internal cache accounting. Compaction count is hidden at zero.
+footer runtime age/state are dim. Persistent cache-hit presentation is disabled and no
+module keeps cache accounting since the footer fork's replacement. Compaction count is hidden at zero.
 The first deck row always begins with the compact runtime capsule
 `( children ›  subagents · 00:00'00)`. Each zero count and the settled timer remain
 dim in place; a live count or timer changes color without moving neighboring content.
@@ -182,12 +182,12 @@ Quota is reduced to the most constrained provider-reported percentage with no we
 analysis. Cost is Pi's native estimated session cost in USD, rendered without trailing
 fractional zeros; its preceding `⟩` retains the shared purple major-boundary color while
 the value remains blue. No local daily aggregation or currency conversion is performed.
-No center group or gauges are used. The local Fancy Footer fork expands its widget
-protocol to accept these native theme tokens. The narrative lifecycle header begins with
+No center group or gauges are used. The deck's widget protocol (historically the
+Fancy Footer protocol, `pi-fancy-footer:widget`) accepts these native theme tokens. The narrative lifecycle header begins with
 its active/passive terminal icon; the prompt border keeps only its right-aligned vi-mode
 glyph. Concurrent Git refreshes coalesce without polling.
 
-Agent-environment, context, CPU, RAM, and compaction widgets use the same Fancy Footer
+Agent-environment, context, CPU, RAM, and compaction widgets use the same widget
 protocol, including producer-requested bold text for the PWD. Every three seconds on
 Linux, the extension discovers only Pi descendants through bounded
 `/proc/<pid>/task/<pid>/children` reads, then reads their `stat` and `status` records
@@ -196,7 +196,8 @@ private anonymous resident pages (`RssAnon`) instead of counting shared file-bac
 pages once per process. Individual status-read failures fall back to that process's RSS;
 unavailable `/proc` falls back honestly to current-process CPU and RSS. Sampling,
 smoothing, publication, timers, and resource widgets are session-scoped and cleaned up
-on shutdown. The local Fancy Footer fork owns cache, quota, and session-cost collection.
+on shutdown. Session-cost collection lives in `packages/footer`; cache and quota
+collection were removed with the fork, leaving quota as an empty seam.
 When the footer reports quota windows, the compact telemetry row paints icon-native
 tiles in cost, long-window, coding-window order — `󰜦 $5.21 ⟩ 󰃰 12% ⟩ 󰈸 62% › 󰅐 1:45`.
 The flame is the coding window's permanent icon and always carries the clock

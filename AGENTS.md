@@ -17,7 +17,7 @@ confirm the destination before any mutation.
 The root `package.json` is an umbrella Pi manifest. Its four exact extension entrypoints
 preserve the current startup order:
 
-1. `packages/pi-fancy-footer-full-palette/src/index.ts`
+1. `packages/footer/index.ts`
 2. `packages/status/index.ts`
 3. `packages/pi-stardeck/index.ts`
 4. `packages/pi-vim-top-border/index.ts`
@@ -47,7 +47,7 @@ status surfaces.
 
 Core behavior must fail soft without Git, OpenSpec, Taskflow, Devbox, Nerd Fonts,
 Neovim, tmux, or provider quota data. Pi core is the API authority. Preserve `pi-vim`
-and Fancy Footer licenses and local-change provenance.
+and the pi-vim license and local-change provenance.
 
 ## Required sequence
 
