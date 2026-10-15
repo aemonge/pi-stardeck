@@ -21,10 +21,12 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       `licenses/pi-fancy-footer-LICENSE` (deleted), `README.md`, `AGENTS.md`,
       `licenses/README.md`, `scripts/check-package.mjs`, `docs/*`,
       `packages/pi-stardeck/README.md`, `packages/status/package.json`
-- [-] Step 4 — Baseline refresh + full sandbox gate battery + graphify update
-      · wip-committed 2026-10-15 at the Human's request; resume here:
-      `node scripts/check-baseline.mjs --write`, then the full gate battery,
-      `graphify update .`, flip this step `[x]`
+- [x] Step 4 — Baseline refresh + full sandbox gate battery + graphify update
+      · check: `check-baseline --write` PASS (98 files, import record 87),
+      `npm run check` exit 0 — tooling 24/24, deck 186/186 + 149/149, footer
+      14/14, vim 37/37, composition PASS (1 extension, 7 commands, 4 tools),
+      OpenSpec 7/7; `graphify update .` clean (needs_update cleared) · paths:
+      `baseline/source.sha256`
 - [ ] Step 5 — Human validation — host gates, `just publish 0.6.0`, push,
       reinstall, deck-row spot check
 
@@ -115,3 +117,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
   gate-attributed · tool: bash · paths: — · at 2026-10-15T08:40:42Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T08:41:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T13:18:43Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-15T13:20:11Z
