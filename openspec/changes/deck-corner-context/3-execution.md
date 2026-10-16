@@ -16,3 +16,8 @@
   (yield list re-pinned to 39/20). 150 deck tests green, full battery
   exit 0, baseline + graphify refreshed. Step 4 host-side pending
   (0.8.0 publish).
+- 2026-10-16: Step 4 VALID — Human published 0.8.0 host-side (registry
+  confirms), reinstalled, and spot-checked the live deck (corner carries
+  cpu › mem › ctx; global row is model › thinking with the healthy
+  placeholder; weekly lights up when zai-quota-provider lands). All four
+  steps complete; change closed.

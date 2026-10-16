@@ -17,7 +17,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 - [x] Step 3 — Full sandbox gate battery + baseline refresh + graphify
       update · check: `npm run check` exit 0, `check-baseline --write`
       PASS, `graphify update .` clean paths: `baseline/source.sha256`
-- [-] Step 4 — Human validation — host gates, publish (0.8.0), reinstall,
+- [x] Step 4 — Human validation — host gates, publish (0.8.0), reinstall,
       spot check (corner shows `󰾆 ctx › 󰎞 sums`; line 4 left is model ›
       thinking › weekly)
 
