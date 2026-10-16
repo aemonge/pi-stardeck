@@ -421,7 +421,15 @@ function companionIconColor(text: string | undefined, active: boolean): string {
     : 'accent';
 }
 
-function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
+function identityCluster(
+  state: HeaderDeckState,
+  theme: Theme,
+): { text: string; trailingBare: boolean } {
+  // Line-1 corner identity: devbox lead chip, then the companion chips.
+  // Returns the assembled text plus whether the last chip is bare — bare
+  // chips keep the wide gap to their right (0.7.1 amendment: the major
+  // separator rides double-spaced after a bare trailing chip, matching
+  // the bare→bare chip spacing).
   const texts = new Map<string, string>();
   for (const item of state.piStatus?.nativeStatuses ?? []) {
     if (item.key === 'goal' || texts.has(item.key)) continue;
@@ -452,14 +460,14 @@ function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
       ),
     });
   }
-  let out = '';
-  let previousBare = false;
+  let text = '';
+  let trailingBare = false;
   for (const part of parts) {
-    out +=
-      out === '' ? part.text : `${previousBare && part.bare ? '  ' : ' '}${part.text}`;
-    previousBare = part.bare;
+    text +=
+      text === '' ? part.text : `${trailingBare && part.bare ? '  ' : ' '}${part.text}`;
+    trailingBare = part.bare;
   }
-  return out;
+  return { text, trailingBare };
 }
 
 const BLOCKED_NOTICE = '\u26d4 blocked';
@@ -569,22 +577,26 @@ function deckCornerRight(
   nowMs = Date.now(),
 ): string {
   // Line 1 corner: the identity cluster (devbox lead, companion chips)
-  // split from the machine group by one major separator. Machine segments
-  // yield right-to-left (cost first) before the path truncates below a
-  // 20-column floor; the identity cluster never drops (always-visible
-  // contract).
-  const identity = extensionStatusCodes(state, theme);
+  // split from the machine group by one major separator. A bare trailing
+  // chip keeps the wide gap before the separator (0.7.1 amendment);
+  // machine segments yield right-to-left (cost first) before the path
+  // truncates below a 20-column floor; the identity cluster never drops
+  // (always-visible contract).
+  const identity = identityCluster(state, theme);
   const segments = machineCornerSegments(state, theme, nowMs);
   const pathFloor = 20;
+  const cornerGap = identity.trailingBare ? '  ' : ' ';
   for (let keep = segments.length; keep >= 0; keep -= 1) {
     const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
     const corner =
-      tail === '' ? identity : `${identity} ${semanticSeparator(theme)} ${tail}`;
+      tail === ''
+        ? identity.text
+        : `${identity.text}${cornerGap}${semanticSeparator(theme)} ${tail}`;
     if (keep === 0 || width - visibleWidth(corner) - 1 >= pathFloor) {
       return corner;
     }
   }
-  return identity;
+  return identity.text;
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
@@ -802,12 +814,15 @@ export function renderHeaderDeck(
   // row's left end; the right end is notice-only. The machine group moved
   // to the line-1 corner, so notices can no longer starve machine
   // readings — the old wholesale yield is gone with the group itself.
+  // 0.7.1 amendment: a clean notice slot renders the dim `healthy`
+  // placeholder instead of trailing silence — it yields like a notice
+  // when the engine group needs the width.
   const engineGroup = telemetryRowLeft(state, theme);
   const noticeGroup = noticeTile(state, theme);
+  const rightGroup = noticeGroup !== '' ? noticeGroup : color(theme, 'dim', 'healthy');
   const telemetryRow =
-    noticeGroup !== '' &&
-    visibleWidth(engineGroup) + 1 + visibleWidth(noticeGroup) <= boundedWidth
-      ? alignedSingleRow(engineGroup, noticeGroup, boundedWidth)
+    visibleWidth(engineGroup) + 1 + visibleWidth(rightGroup) <= boundedWidth
+      ? alignedSingleRow(engineGroup, rightGroup, boundedWidth)
       : fit(engineGroup, boundedWidth);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
