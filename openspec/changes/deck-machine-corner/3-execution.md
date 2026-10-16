@@ -25,3 +25,6 @@
   instead of trailing silence (yields like a notice on narrow frames).
   `extensionStatusCodes` renamed `identityCluster` and now reports
   `trailingBare`; deck tests updated, full gate battery green.
+- 2026-10-16: Step 4 VALID — Human published 0.7.0 and 0.7.1 host-side
+  (registry confirms both), reinstalled, and spot-checked the live
+  corner. All five steps complete; the change closes fully delivered.

@@ -19,7 +19,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 - [x] Step 3 — Full sandbox gate battery + baseline refresh + graphify update
       · check: `npm run check` exit 0, `check-baseline --write` PASS,
       `graphify update .` clean paths: `baseline/source.sha256`
-- [-] Step 4 — Human validation — host gates, publish, reinstall, corner
+- [x] Step 4 — Human validation — host gates, publish, reinstall, corner
       spot check (devbox chip, `[↻]`, `⟩` split, icon-led metrics, notice
       row unaffected)
 
@@ -92,3 +92,5 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
   gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-10-16T07:35:13Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-16T07:36:50Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-16T08:26:36Z
