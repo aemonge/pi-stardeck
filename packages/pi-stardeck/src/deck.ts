@@ -440,8 +440,7 @@ function extensionStatusCodes(state: HeaderDeckState, theme: Theme): string {
       .find((text) => text !== undefined);
     for (const key of companion.keys) texts.delete(key);
     const joined = companion.icons.join(' ');
-    const bracketed =
-      companion.bracket === true || companion.icons.length > 1;
+    const bracketed = companion.bracket === true || companion.icons.length > 1;
     const chip = bracketed ? `[${joined}]` : joined;
     parts.push({
       bare: !bracketed,
@@ -548,13 +547,15 @@ export function machineCornerSegments(
       color(theme, resourceColor, `\u{F035B} ${formatDeckCpu(resources.cpuPercent)}`),
     );
     segments.push(
-      color(theme, resourceColor, `\u{F061A} ${formatDeckBytes(resources.memoryBytes)}`),
+      color(
+        theme,
+        resourceColor,
+        `\u{F061A} ${formatDeckBytes(resources.memoryBytes)}`,
+      ),
     );
   }
   if (state.mcp) {
-    segments.push(
-      color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`),
-    );
+    segments.push(color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`));
   }
   const cost = costTile(state, theme);
   if (cost !== '') segments.push(cost);
@@ -578,9 +579,7 @@ function deckCornerRight(
   for (let keep = segments.length; keep >= 0; keep -= 1) {
     const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
     const corner =
-      tail === ''
-        ? identity
-        : `${identity} ${semanticSeparator(theme)} ${tail}`;
+      tail === '' ? identity : `${identity} ${semanticSeparator(theme)} ${tail}`;
     if (keep === 0 || width - visibleWidth(corner) - 1 >= pathFloor) {
       return corner;
     }
