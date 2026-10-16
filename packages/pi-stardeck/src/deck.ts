@@ -529,9 +529,10 @@ function noticeTile(state: HeaderDeckState, theme: Theme): string {
 }
 
 function telemetryRowLeft(state: HeaderDeckState, theme: Theme): string {
-  // Line 4 left (2.4 second amendment): the engine group — engine ›
-  // thinking, then context, compaction, and the calendar quota — owns
-  // the row's left end; the notice slot owns the right end (Task 3).
+  // Line 4 left (deck-corner-context amendment): the global group —
+  // engine › thinking, then the long-horizon quota — owns the row's left
+  // end; the notice slot owns the right end (Task 3). Context and
+  // compaction live in the line-1 corner now.
   return modelGroupLeft(state, theme);
 }
 
@@ -540,10 +541,11 @@ export function machineCornerSegments(
   theme: Theme,
   nowMs = Date.now(),
 ): string[] {
-  // Machine corner (deck-machine-corner): icon-led machine readings for
-  // the line-1 corner — coding quota flame with its countdown, CPU,
-  // memory, MCP availability, global cost — in that frozen order, joined
-  // by minor separators. Segments yield right-to-left on narrow frames.
+  // Machine corner (deck-machine-corner; deck-corner-context): icon-led
+  // machine readings for the line-1 corner — coding quota flame with its
+  // countdown, CPU, memory, MCP availability, context percent, summary
+  // (compaction) count, global cost — in that frozen order, joined by
+  // minor separators. Segments yield right-to-left on narrow frames.
   const segments: string[] = [];
   const flame = windowQuotaTiles(state, theme, nowMs);
   if (flame !== '') segments.push(flame);
@@ -564,6 +566,23 @@ export function machineCornerSegments(
   }
   if (state.mcp) {
     segments.push(color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`));
+  }
+  // deck-corner-context: context and summary counts ride the corner.
+  // Context wears warning at ≥ 85% (the threshold it carried engine-left);
+  // the summary count follows the context color as before.
+  const ctxColor =
+    state.contextPercent !== undefined && state.contextPercent >= 85
+      ? 'warning'
+      : state.contextPercent === undefined
+        ? 'dim'
+        : 'accent';
+  if (state.contextPercent !== undefined) {
+    segments.push(
+      color(theme, ctxColor, `\u{F0F86} ${formatDeckPercent(state.contextPercent)}`),
+    );
+  }
+  if (state.compactionCount > 0) {
+    segments.push(color(theme, ctxColor, `\u{F039E} ${state.compactionCount}`));
   }
   const cost = costTile(state, theme);
   if (cost !== '') segments.push(cost);
@@ -600,30 +619,14 @@ function deckCornerRight(
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
-  const ctxColor =
-    state.contextPercent !== undefined && state.contextPercent >= 85
-      ? 'warning'
-      : state.contextPercent === undefined
-        ? 'dim'
-        : 'accent';
-  const segments: string[] = [];
-  if (state.contextPercent !== undefined) {
-    segments.push(
-      color(theme, 'accent', `󰾆 ${formatDeckPercent(state.contextPercent)}`),
-    );
-  }
-  if (state.compactionCount > 0) {
-    segments.push(color(theme, ctxColor, `󰎞 ${state.compactionCount}`));
-  }
+  // Line 4 left (deck-corner-context): fully global — model › thinking,
+  // then the long-horizon quota (weekly calendar, or whole-session
+  // percent when no windows exist). Context and compaction moved to the
+  // line-1 corner.
   const quota = simpleQuotaTile(state, theme);
-  if (quota) segments.push(quota);
-  return segments.length === 0
-    ? globalLeft(state, theme)
-    : [
-        globalLeft(state, theme),
-        semanticSeparator(theme),
-        segments.join(` ${minorSeparator(theme, ctxColor)} `),
-      ].join(' ');
+  return quota
+    ? [globalLeft(state, theme), semanticSeparator(theme), quota].join(' ')
+    : globalLeft(state, theme);
 }
 
 function simpleQuotaTile(state: HeaderDeckState, theme: Theme): string {

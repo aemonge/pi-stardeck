@@ -122,15 +122,16 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // chip, companion chips, one major separator, icon-led machine group.
   assert.match(
     plain(lines[0] ?? ''),
-    /\[\u{F01A7}\] \[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /\[\u{F01A7}\] \[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
-  // Line 4 (deck-machine-corner amendment): the engine group anchors the
-  // left end and the right end is notice-only — clean renders no glyph.
+  // Line 4 (deck-corner-context amendment): the global group — engine ›
+  // thinking › long-horizon quota — anchors the left; context and
+  // compaction live in the corner now.
   const telemetryRow = plain(lines[6] ?? '');
   assert.ok(telemetryRow.includes('GPT-5.6 Sol'));
   assert.match(
     telemetryRow,
-    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s+healthy$/u,
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%\s+healthy$/u,
   );
   assert.equal(
     telemetryRow.includes('$5.16'),
@@ -156,7 +157,7 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
   assert.match(
     line1,
-    /\[\u{F01A7}\] \[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /\[\u{F01A7}\] \[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'the corner keeps the right end',
   );
   assert.equal(
@@ -287,7 +288,7 @@ test('extension statuses ride the telemetry tail as icons', () => {
   assert.match(telemetry, /^ \u{F07B} ~\//u);
   assert.match(
     telemetry,
-    /\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   assert.ok(telemetry.indexOf('~/') < telemetry.indexOf('\u{232C}'));
   assert.equal(telemetry.includes('engram'), false);
@@ -665,7 +666,7 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
 // --- Line 4 split (second 2.4 amendment) -----------------------------------
 
 test('keeps line 4 engine-only; the machine group anchors the line-1 corner', () => {
-  const engineGroup = '󰚩 GPT-5.6 Sol › high ⟩ 󰾆 38% › 󰎞 2 ›  63%';
+  const engineGroup = '󰚩 GPT-5.6 Sol › high ⟩  63%';
   const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
   // deck-machine-corner: line 4 lost its machine island to the line-1
   // corner — the engine group runs alone and the notice-only right end
@@ -676,7 +677,7 @@ test('keeps line 4 engine-only; the machine group anchors the line-1 corner', ()
   assert.equal(line4.includes('$5.16'), false, 'machine group vacated line 4');
   assert.match(
     lines[0] ?? '',
-    /\[\u{F01A7}\] \[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /\[\u{F01A7}\] \[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'machine group anchors the corner',
   );
 });
@@ -1266,7 +1267,7 @@ test('relocates companion chips to line 1 right and bolds them', () => {
   assert.ok(line1.includes('~/galactica'));
   assert.match(
     line1,
-    /\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   assert.ok(bolded.includes('[\u{21BB}]'), 'chips stay bold');
 });
@@ -1283,12 +1284,12 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
     );
     if (width >= 39) assert.ok(line1.includes('~/'), String(width));
   }
-  // Machine readings yield before the identity cluster ever does: the
-  // full group rides the corner at 79; cost has dropped by 60.
+  // Machine readings yield before the identity cluster ever does: cost
+  // has dropped by 79; by 60 the context and summaries have gone too.
   assert.match(
     plain(renderHeaderDeck(state, 79, plainTheme as never)[0] ?? ''),
-    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
-    'full machine group at 79',
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2$/u,
+    'cost yields first at 79',
   );
   assert.match(
     plain(renderHeaderDeck(state, 60, plainTheme as never)[0] ?? ''),
@@ -1372,7 +1373,7 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
   assert.equal(line4.includes('3/3'), false);
   assert.match(
     lines[0] ?? '',
-    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'machine group rides line 1 beside the alert',
   );
 
@@ -1395,7 +1396,7 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
 
 test('machine corner yields right-to-left in frozen order; identity never drops', () => {
   const state = fixture();
-  const machine = ['48.2%', '268M', '3/3', '$5.16'];
+  const machine = ['48.2%', '268M', '3/3', '38%', '\u{F039E} 2', '$5.16'];
   for (let width = 20; width <= 130; width += 1) {
     const rendered = renderHeaderDeck(state, width, plainTheme as never);
     const line1 = plain(rendered[0] ?? '');
@@ -1405,7 +1406,8 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
       `identity cluster survives at ${width}`,
     );
     // Whatever machine segments survive form a prefix of the frozen order
-    // (cpu › memory › mcp › cost): drops happen right-to-left only.
+    // (cpu › memory › mcp › context › summaries › cost): drops happen
+    // right-to-left only.
     const present = machine.filter((token) => line1.includes(token));
     const lastIndex = machine.reduce(
       (acc, token, index) => (line1.includes(token) ? index : acc),
@@ -1464,12 +1466,12 @@ test('renders the accepted idle mockup at wide widths', () => {
     turn: { tokens: 0, elapsedMs: 0 },
   };
 
-  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   assert.equal(lines.length, 7);
   // Line 1: path/git left; the corner (chips ⟩ machine group) right.
   assert.match(
     lines[0] ?? '',
-    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1482,11 +1484,12 @@ test('renders the accepted idle mockup at wide widths', () => {
   // Line 3: awaiting Human left, the zeroed turn meter right.
   assert.match(lines[4] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
-  // Line 4: engine group alone — the right end is notice-only and renders
-  // nothing when clean (deck-machine-corner amendment).
+  // Line 4: the global group alone — engine › thinking › long-horizon
+  // quota — with the dim healthy placeholder at the clean right end
+  // (deck-corner-context amendment).
   assert.match(
     lines[6] ?? '',
-    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s+healthy$/u,
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%\s+healthy$/u,
   );
 });
 
@@ -1515,7 +1518,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // two modified files ride the git segment.
   assert.match(
     lines[0] ?? '',
-    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0726} \$5\.16$/u,
+    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB}\] \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1529,13 +1532,13 @@ test('renders the accepted mid-work mockup at wide widths', () => {
     lines[4] ?? '',
     /^ editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
-  // Dotted seams inside; line 4 keeps the engine group alone with its
-  // notice-only right end (deck-machine-corner amendment).
+  // Dotted seams inside; line 4 keeps the global group alone with its
+  // notice-only right end (deck-corner-context amendment).
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
   assert.match(
     lines[6] ?? '',
-    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F241} 63%\s+healthy$/u,
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%\s+healthy$/u,
   );
 });
 
@@ -1648,7 +1651,16 @@ test('notices ride the narrow ladder beside the engine group', () => {
       .endsWith('⚠ appa unreachable'),
     'notice fits beside the engine group at 79',
   );
-  for (const width of [60, 39, 20]) {
+  // deck-corner-context: the global group lost context and compaction,
+  // so the notice fits beside it at 60 as well.
+  const sixty = renderHeaderDeck(state, 60, plainTheme as never).map(plain);
+  assert.ok(
+    (sixty.find((line) => line.includes('GPT-5.6 Sol')) ?? '')
+      .trimEnd()
+      .endsWith('⚠ appa unreachable'),
+    'notice fits beside the engine group at 60',
+  );
+  for (const width of [39, 20]) {
     const narrow = renderHeaderDeck(state, width, plainTheme as never);
     assert.match(
       plain(narrow.at(-1) ?? ''),
