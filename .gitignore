@@ -10,3 +10,4 @@ dist/
 !.env.example
 graphify-out/
 .engram/
+.pi-reconcile/
