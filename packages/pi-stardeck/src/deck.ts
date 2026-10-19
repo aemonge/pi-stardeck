@@ -173,7 +173,12 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
   const title = state.header?.title ?? null;
   if (title) {
     const subject = safeText(title.subject ?? '');
-    if (!subject) return [clock];
+    if (!subject) {
+      // Human amendment 2026-10-19: the empty slot renders its dim
+      // placeholder — mirroring the Work side's `— no change owns the
+      // moment` — instead of leaving the clock leading alone.
+      return focusWrapLines('— no subject', clock, width, theme, 'dim');
+    }
     return focusWrapLines(subject, clock, width, theme, 'accent');
   }
   // Pre-title publishers: the legacy selection keeps the band alive.
@@ -182,7 +187,15 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
     .map((value) => safeText(value))
     .filter(Boolean);
   if (!selection || titles.length === 0) {
-    return [clock]; // frozen contract: no selection means no slot, clock stays
+    if (!state.header) {
+      // Frozen contract: a publisher that reports nothing at all keeps
+      // the collapsed frame — clock alone, no placeholder dashes.
+      return [clock];
+    }
+    // Amendment: a live session (header present, Work rendering) that
+    // simply has no subject gets the dim placeholder — the title slot
+    // never renders empty when the session is talking to us.
+    return focusWrapLines('— no subject', clock, width, theme, 'dim');
   }
   const selectionColor = ['accent', 'success'].includes(selection.color)
     ? 'accent'
@@ -480,11 +493,24 @@ function identityCluster(
       ),
     );
   }
-  // Human amendment 2026-10-19 (final spacing): single spaces across the
-  // cluster — SPACE_ICON_SPACE — including before the major separator;
-  // wide nerdfont glyphs carry their own padding. trailingBare stays
-  // false so the caller's corner gap is single too.
-  return { text: parts.join(' '), trailingBare: false };
+  // Human fix 2026-10-19: graphify `⌬` and appa `⛨` render two cells
+  // wide in the base font — when two wide icons adjoin, their glyph
+  // padding is the gap (no space); every other pair keeps one space.
+  let text = '';
+  let previous = '';
+  for (const part of parts) {
+    const bothWide =
+      previous !== '' && isWideChipIcon(previous) && isWideChipIcon(part);
+    text += text === '' || bothWide ? part : ` ${part}`;
+    previous = part;
+  }
+  return { text, trailingBare: false };
+}
+
+const WIDE_CHIP_ICONS = new Set(['\u{232C}', '\u{26E8}']);
+
+function isWideChipIcon(icons: string): boolean {
+  return [...icons].every((glyph) => WIDE_CHIP_ICONS.has(glyph));
 }
 
 const BLOCKED_NOTICE = '\u26d4 blocked';

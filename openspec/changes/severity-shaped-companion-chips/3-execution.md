@@ -68,3 +68,14 @@
   boundaries shifted left with the narrower cluster: full corner fits at
   79, mockup transcription fits at 100 again, the width-20 alert keeps
   both counts. 67 tests, check exit 0.
+- 2026-10-19 (title + wide-icon fixes): (1) The empty title slot renders
+  its dim `— no subject` placeholder now — mirroring Work's hint — for
+  any live session (header present) without a subject; the fully
+  collapsed frame (header null, pre-title publisher) keeps the frozen
+  clock-alone contract. New test pins both placeholder cases.
+  (2) Wide-icon spacing: graphify ⌬ and appa ⛨ render two cells in the
+  base font — when two wide icons adjoin, their glyph padding is the
+  gap (no space between ⌬ and ⛨); all other pairs keep one space.
+  Yield ladder shifted again: context rides at 60 columns now.
+  68 deck tests, check exit 0 (status/active-work waitFor flake on first
+  run, green on retry — timing-sensitive, unrelated).
