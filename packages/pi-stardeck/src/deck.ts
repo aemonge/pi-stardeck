@@ -437,7 +437,10 @@ function renderChip(
         ? `(${icons})`
         : icons;
   if (severity === 'healthy') {
-    return color(theme, healthyColor, chip, true);
+    // Human amendment 2026-10-19: BGs only — every state renders as a
+    // reverse-video block (bold rides inside loud); foreground colors
+    // survive only where bold enough, and the healthy accent is not.
+    return loud(theme, healthyColor, chip);
   }
   // Human amendment 2026-10-19: brackets are red, parens yellow — every
   // enclosure goes loud reverse-video. Off and error read identically
@@ -460,13 +463,19 @@ function identityCluster(
     texts.set(item.key, item.text);
   }
   const parts: Array<{ bare: boolean; text: string }> = [];
-  if (state.devbox) {
-    // Corner lead chip (deck-machine-corner): the devbox marker joins
-    // the identity cluster ahead of the companions, success-colored as
-    // it was as a path prefix — severity-shaped now, bare when present.
+  {
+    // Human amendment 2026-10-19: the devbox chip never appears or
+    // disappears — in-devbox renders bold blue OK (bare 󰆧), outside
+    // renders bold red KO ([󰆧], error-grade). DEVBOX_PROJECT_ROOT at
+    // pi launch decides.
     parts.push({
-      bare: true,
-      text: renderChip(theme, 'healthy', 'success', '\u{F01A7}'),
+      bare: state.devbox === true,
+      text: renderChip(
+        theme,
+        state.devbox ? 'healthy' : 'error',
+        'accent',
+        '\u{F01A7}',
+      ),
     });
   }
   for (const companion of KNOWN_COMPANION_ICONS) {

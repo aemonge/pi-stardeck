@@ -40,3 +40,15 @@
   67 deck tests re-pinned; full battery npm run check exit 0 (18 PASS).
   Also: the change's .openspec.yaml needed goal + skip_specs to pass the
   strict gate (CLI scaffold had created it bare).
+- 2026-10-19 (latest): Human amendment round 2. (1) Devbox chip never
+  appears/disappears anymore: in-devbox = bold blue OK (bare 󰆧, accent
+  BG), outside = bold red KO ([󰆧], error BG) — DEVBOX_PROJECT_ROOT at
+  launch decides; mockups re-pinned for the now-always-present KO chip
+  and the deeper 100-col git truncation (`main…`). (2) BGs only: every
+  chip state renders as a reverse-video block — healthy went loud too
+  (the accent foreground was not bold enough to survive). (3) Temporary
+  preview `scripts/chips-preview.mjs` (not packed): variants A (shapes
+  + BG, current), B (BG only, no enclosures), C (bold fg only, the
+  failed past) across five state mixes — judging whether the enclosures
+  can be dropped entirely. Battery: 67 deck tests, npm run check exit 0
+  (18 PASS), baseline refreshed.

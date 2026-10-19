@@ -1355,6 +1355,36 @@ test('keeps the devbox chip leading the corner off the path', () => {
     /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9}/u,
     'devbox leads the identity cluster into the corner',
   );
+  // Amendment 2026-10-19: the chip never disappears — outside devbox it
+  // renders error-red brackets (KO), inside it is the bare blue OK chip.
+  const seen: Array<{ color: string; text: string }> = [];
+  const spyTheme = {
+    fg: (semantic: string, text: string) => {
+      seen.push({ color: semantic, text });
+      return text;
+    },
+    bold: (text: string) => text,
+  } as never;
+  const outside = fixture();
+  outside.devbox = false;
+  const rawOutside = renderHeaderDeck(outside, 120, spyTheme);
+  assert.ok(
+    seen.some((e) => e.text === '[\u{F01A7}]' && e.color === 'error'),
+    'outside devbox: bold red KO brackets',
+  );
+  assert.match(
+    rawOutside.map(plain)[0] ?? '',
+    /\[\u{F01A7}\] \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9}/u,
+  );
+  const rawInside = renderHeaderDeck(fixture(), 120, spyTheme);
+  assert.ok(
+    seen.some((e) => e.text === '\u{F01A7}' && e.color === 'accent'),
+    'inside devbox: bold blue OK chip',
+  );
+  assert.ok(
+    (rawInside[0] ?? '').includes('\u001b[7m\u{F01A7}'),
+    'BGs only: even the healthy chip is reverse-video',
+  );
 });
 
 test('flame leads the machine group in the corner; line 4 keeps the engine side', () => {
@@ -1519,7 +1549,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   // Line 1: path/git left; the corner (chips ⟩ machine group) right.
   assert.match(
     lines[0] ?? '',
-    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\[\u{F01A7}\] \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1569,13 +1599,14 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // git segment ellipsizes while the corner stays whole.)
   assert.match(
     lines[0] ?? '',
-    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^ \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\[\u{F01A7}\] \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
-  // The new 100-column boundary: the git segment yields, never the corner.
+  // The 100-column boundary (KO-chip amendment): the git segment
+  // truncates to `main…`, never the corner.
   const hundred = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   assert.match(
     hundred[0] ?? '',
-    /main › \u{F040}… \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2%.*\u{F0726} \$5\.16$/u,
+    /main… \[\u{F01A7}\] \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2%.*\u{F0726} \$5\.16$/u,
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
