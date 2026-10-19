@@ -22,9 +22,9 @@ const RED = 31; // error / off
 const MUTED = 90; // bright-black
 
 const DEVBOX = '\u{F01A7}';
-const ENGRAM = '\u{21BB}';
-const GRAPHIFY = '\u{232C}';
-const APPA = '\u{26E8}';
+const ENGRAM = '\u{F04E6}';
+const GRAPHIFY = '\u{E83D}';
+const APPA = '\u{F49C}';
 
 function bg(color, text) {
   return `${REVERSE}${BOLD}\u001b[${color}m${text}${RESET}`;

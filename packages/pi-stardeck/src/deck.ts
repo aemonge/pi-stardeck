@@ -414,10 +414,16 @@ type CompanionSpec = {
   icons: readonly string[];
 };
 
+// Human icon swap 2026-10-19: every chip is a Nerd Font PUA glyph with
+// identical single-cell metrics (verified via font cmap + advance in two
+// NF families) — the base-font symbols (↻ ⌬ ⛨) rendered two cells in
+// some terminals and no spacing rule could compensate. md-sync keeps
+// engram's loop semantics; dev-networkx reads knowledge-graph; oct-
+// shield keeps appa's shield.
 const KNOWN_COMPANION_ICONS: ReadonlyArray<CompanionSpec> = [
-  { keys: ['engram'], icons: ['\u{21BB}'] },
-  { keys: ['graphify'], icons: ['\u{232C}'] },
-  { keys: ['appa', 'openappa'], icons: ['\u{26E8}'] },
+  { keys: ['engram'], icons: ['\u{F04E6}'] },
+  { keys: ['graphify'], icons: ['\u{E83D}'] },
+  { keys: ['appa', 'openappa'], icons: ['\u{F49C}'] },
 ];
 
 // Severity-shaped chips: shape is the grayscale-proof channel — [] wraps
@@ -493,26 +499,9 @@ function identityCluster(
       ),
     );
   }
-  // Human fix 2026-10-19 (round 2): graphify `⌬` and appa `⛨` render
-  // two cells wide but sit tight within them — every wide chip gets an
-  // extra space on its RIGHT (double gap after ⌬ and ⛨, single
-  // everywhere else).
-  let text = '';
-  let previousWide = false;
-  for (const part of parts) {
-    text += text === '' ? part : `${previousWide ? '  ' : ' '}${part}`;
-    previousWide = isWideChipIcon(part);
-  }
-  // trailingBare now means "wide gap after the cluster" — the caller
-  // derives its corner separator gap from it; a wide trailing chip (⛨)
-  // keeps its right-breathing space before the major separator.
-  return { text, trailingBare: previousWide };
-}
-
-const WIDE_CHIP_ICONS = new Set(['\u{232C}', '\u{26E8}']);
-
-function isWideChipIcon(icons: string): boolean {
-  return [...icons].every((glyph) => WIDE_CHIP_ICONS.has(glyph));
+  // Uniform single-cell icons: plain single-space join, single gap
+  // before the major separator (trailingBare false).
+  return { text: parts.join(' '), trailingBare: false };
 }
 
 const BLOCKED_NOTICE = '\u26d4 blocked';

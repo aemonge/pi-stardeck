@@ -122,7 +122,7 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // chip, companion chips, one major separator, icon-led machine group.
   assert.match(
     plain(lines[0] ?? ''),
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Line 4 (deck-corner-context amendment): the global group — engine ›
   // thinking › long-horizon quota — anchors the left; context and
@@ -157,7 +157,7 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
   assert.match(
     line1,
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'the corner keeps the right end',
   );
   assert.equal(
@@ -288,9 +288,9 @@ test('extension statuses ride the telemetry tail as icons', () => {
   assert.match(telemetry, /^\u{F07B} ~\//u);
   assert.match(
     telemetry,
-    /\u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
-  assert.ok(telemetry.indexOf('~/') < telemetry.indexOf('\u{232C}'));
+  assert.ok(telemetry.indexOf('~/') < telemetry.indexOf('\u{E83D}'));
   assert.equal(telemetry.includes('engram'), false);
   assert.equal(telemetry.includes('graphify'), false);
   assert.equal(
@@ -321,9 +321,9 @@ test('companion icon colors encode health severity', () => {
   };
 
   renderHeaderDeck(state, 120, spyTheme);
-  const brain = seen.find((entry) => entry.text === '\u{21BB}');
-  const graph = seen.find((entry) => entry.text === '\u{232C}');
-  const shield = seen.find((entry) => entry.text === '\u{26E8}');
+  const brain = seen.find((entry) => entry.text === '\u{F04E6}');
+  const graph = seen.find((entry) => entry.text === '\u{E83D}');
+  const shield = seen.find((entry) => entry.text === '\u{F49C}');
   assert.equal(brain?.color, 'accent');
   assert.equal(graph?.color, 'warning');
   assert.equal(shield?.color, 'error', 'off renders error-red like error');
@@ -353,13 +353,13 @@ test('chip color encodes severity: blue healthy, yellow degraded, red error and 
   renderHeaderDeck(state, 120, spyTheme);
   // Variant C verdict: bold foreground colors alone — blue healthy,
   // yellow degraded, red error/off; no enclosures anywhere.
-  assert.ok(seen.some((e) => e.text === '\u{21BB}' && e.color === 'accent'));
+  assert.ok(seen.some((e) => e.text === '\u{F04E6}' && e.color === 'accent'));
   assert.ok(
-    seen.some((e) => e.text === '\u{232C}' && e.color === 'warning'),
+    seen.some((e) => e.text === '\u{E83D}' && e.color === 'warning'),
     'degraded renders warning yellow',
   );
   assert.ok(
-    seen.some((e) => e.text === '\u{26E8}' && e.color === 'error'),
+    seen.some((e) => e.text === '\u{F49C}' && e.color === 'error'),
     'error renders error red',
   );
   assert.equal(
@@ -370,7 +370,7 @@ test('chip color encodes severity: blue healthy, yellow degraded, red error and 
   const line1 = renderHeaderDeck(state, 120, plainTheme as never).map(plain)[0] ?? '';
   assert.match(
     line1,
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9}/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9}/u,
     'mixed state: blue devbox KO and red appa, bare icons throughout',
   );
 });
@@ -379,7 +379,7 @@ test('known companion icons are always present', () => {
   const bare = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
   assert.match(
     bare[0] ?? '',
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B}/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B}/u,
   );
 });
 
@@ -395,7 +395,7 @@ test('extension status icons drop on narrow frames and filter the goal key', () 
     ],
   };
   const narrow = renderHeaderDeck(state, 60, plainTheme as never).map(plain);
-  assert.match(narrow[0] ?? '', /\u{232C}/u);
+  assert.match(narrow[0] ?? '', /\u{E83D}/u);
   assert.equal(
     narrow.some((line) => line.includes('/goal-focus')),
     false,
@@ -411,12 +411,12 @@ test('drops the status command before severity counts at narrow widths', () => {
   const compact = plain(renderHeaderDeck(state, 20, plainTheme as never)[0] ?? '');
   assert.match(compact, /\u{F0159} 2/u);
   assert.doesNotMatch(compact, /pi-status/u);
-  assert.match(compact, /\u{232C}/u, 'chips stay visible beside the alert');
+  assert.match(compact, /\u{E83D}/u, 'chips stay visible beside the alert');
 
   // Extreme narrow: the chips own line 1 and the alert yields entirely.
   const narrow = renderHeaderDeck(state, 9, plainTheme as never);
   assert.doesNotMatch(narrow.join(''), /\u{F0159}/u);
-  assert.match(plain(narrow[0] ?? ''), /\u{232C}/u);
+  assert.match(plain(narrow[0] ?? ''), /\u{E83D}/u);
   assert.ok(narrow.every((line) => visibleWidth(line) <= 9));
 });
 test('keeps activity and focus distinct on the title row', () => {
@@ -534,9 +534,9 @@ test('bolds only current control and status anchors', () => {
   renderHeaderDeck(fixture(), 160, theme as never);
 
   assert.ok(bolded.includes('󰆧'));
-  assert.ok(bolded.includes('↻'));
-  assert.ok(bolded.includes('⌬'));
-  assert.ok(bolded.includes('⛨'));
+  assert.ok(bolded.includes('\u{F04E6}'));
+  assert.ok(bolded.includes('\u{E83D}'));
+  assert.ok(bolded.includes('\u{F49C}'));
   assert.ok(bolded.includes('⟩'));
   for (const regular of [
     'awaiting Human',
@@ -725,7 +725,7 @@ test('keeps line 4 engine-only; the machine group anchors the line-1 corner', ()
   assert.equal(line4.includes('$5.16'), false, 'machine group vacated line 4');
   assert.match(
     lines[0] ?? '',
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'machine group anchors the corner',
   );
 });
@@ -1339,9 +1339,9 @@ test('relocates companion chips to line 1 right and bolds them', () => {
   assert.ok(line1.includes('~/galactica'));
   assert.match(
     line1,
-    /\u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
-  assert.ok(bolded.includes('\u{21BB}'), 'chips stay bold');
+  assert.ok(bolded.includes('\u{F04E6}'), 'chips stay bold');
 });
 
 test('keeps companion chips on line 1 right while the path yields first', () => {
@@ -1349,7 +1349,7 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   for (const width of [79, 60, 39, 24, 14]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
     const line1 = lines[0] ?? '';
-    assert.match(line1, /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}/u, String(width));
+    assert.match(line1, /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C}/u, String(width));
     if (width >= 39) assert.ok(line1.includes('~/'), String(width));
   }
   // Machine readings yield before the identity cluster ever does. The
@@ -1374,7 +1374,7 @@ test('keeps the devbox chip leading the corner off the path', () => {
   assert.match(line1, /^\u{F07B} ~\/galactica/u, 'the path carries no devbox prefix');
   assert.match(
     line1,
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9}/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9}/u,
     'devbox leads the identity cluster into the corner',
   );
   // Amendment 2026-10-19: the chip never disappears — outside devbox it
@@ -1396,7 +1396,7 @@ test('keeps the devbox chip leading the corner off the path', () => {
   );
   assert.match(
     rawOutside.map(plain)[0] ?? '',
-    /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9}/u,
+    /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9}/u,
   );
   renderHeaderDeck(fixture(), 120, spyTheme);
   assert.ok(
@@ -1438,7 +1438,7 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   // and memory) before the path truncates; the identity cluster never
   // drops. 62 columns: only the flame and the cpu remain of the tail.
   const narrow1 = plain(renderHeaderDeck(state, 62, plainTheme as never)[0] ?? '');
-  assert.match(narrow1, /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9}/u);
+  assert.match(narrow1, /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9}/u);
   assert.ok(narrow1.includes('82%'), 'flame outlasts the machine tail');
   assert.ok(narrow1.trimEnd().endsWith('48.2%'), 'cpu outlasts the rest of the tail');
   assert.equal(narrow1.includes('$5.16'), false);
@@ -1498,7 +1498,7 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
     const line1 = plain(rendered[0] ?? '');
     assert.match(
       line1,
-      /\u{F01A7} \u{21BB} \u{232C}  \u{26E8}/u,
+      /\u{F01A7} \u{F04E6} \u{E83D} \u{F49C}/u,
       `identity cluster survives at ${width}`,
     );
     // Whatever machine segments survive form a prefix of the frozen order
@@ -1567,7 +1567,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   // Line 1: path/git left; the corner (chips ⟩ machine group) right.
   assert.match(
     lines[0] ?? '',
-    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1617,14 +1617,14 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // git segment ellipsizes while the corner stays whole.)
   assert.match(
     lines[0] ?? '',
-    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // The single-space cluster freed enough columns that the full
   // transcription fits at 100 again (variant-C amendment).
   const hundred = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   assert.match(
     hundred[0] ?? '',
-    /main \u{203A} \u{F040} 2\s+\u{F01A7} \u{21BB} \u{232C}  \u{26E8}  \u{27E9} \u{F035B} 48\.2%.*\u{F0726} \$5\.16$/u,
+    /main \u{203A} \u{F040} 2\s+\u{F01A7} \u{F04E6} \u{E83D} \u{F49C} \u{27E9} \u{F035B} 48\.2%.*\u{F0726} \$5\.16$/u,
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);

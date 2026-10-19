@@ -86,3 +86,12 @@
   Context yields again at 60 cols. (2) The line-1 path no longer starts
   with a space — the leftover devbox-prefix slot is gone; the path opens
   directly with the folder glyph. 68 tests, check exit 0.
+- 2026-10-19 (icon swap): base-font symbols retired for good — spacing
+  compensation cannot fix terminal-dependent metrics. All three companion
+  chips are Nerd Font PUA glyphs with verified identical single-cell
+  advance (font cmap + hmtx across two NF families): engram ↻ → md-sync
+  󰓦 (F04E6), graphify ⌬ → dev-networkx (E83D), appa ⛨ → oct-shield
+  (F49C); devbox 󰆧 (F01A7) unchanged. The wide-chip gap machinery
+  (WIDE_CHIP_ICONS, per-pair double gaps) is deleted — plain single-
+  space join, uniform rhythm, SPACE_ICON_SPACE exactly. 68 tests,
+  check exit 0.
