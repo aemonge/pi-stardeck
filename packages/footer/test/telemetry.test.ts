@@ -64,3 +64,43 @@ test('buildFooterTelemetryMessage sanitizes non-finite cost input', () => {
   assert.equal(buildFooterTelemetryMessage(Number.NaN).totalCost, 0);
   assert.equal(buildFooterTelemetryMessage(-1).totalCost, 0);
 });
+
+test('buildFooterTelemetryMessage passes bounded windows through', () => {
+  const message = buildFooterTelemetryMessage(1, {
+    percent: 41,
+    windows: [
+      { label: '5h', percent: 82, resetAt: 1_761_000_000 },
+      { label: '7d', percent: 12 },
+    ],
+  });
+  assert.deepEqual(message.quotaWindows, [
+    { label: '5h', percent: 82, resetAt: 1_761_000_000 },
+    { label: '7d', percent: 12 },
+  ]);
+  assert.equal(message.quotaPercent, 41);
+});
+
+test('buildFooterTelemetryMessage clamps window percents and drops invalid windows', () => {
+  const message = buildFooterTelemetryMessage(1, {
+    percent: 10,
+    windows: [
+      { label: '5h', percent: 130, resetAt: 1_761_000_000.7 },
+      { label: '', percent: 5 },
+      { label: '7d', percent: Number.NaN, resetAt: 1_761_000_000 },
+      { label: '7d', percent: -3 },
+    ],
+  });
+  assert.deepEqual(message.quotaWindows, [
+    { label: '5h', percent: 100, resetAt: 1_761_000_000 },
+    { label: '7d', percent: 0 },
+  ]);
+});
+
+test('buildFooterTelemetryMessage omits windows when none survive sanitizing', () => {
+  const message = buildFooterTelemetryMessage(1, {
+    percent: 10,
+    windows: [{ label: 'x', percent: Number.POSITIVE_INFINITY }],
+  });
+  assert.equal('quotaWindows' in message, false);
+  assert.equal(message.quotaPercent, 10);
+});

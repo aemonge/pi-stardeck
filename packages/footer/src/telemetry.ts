@@ -1,6 +1,6 @@
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 
-import type { QuotaSnapshot } from './quota.ts';
+import type { QuotaSnapshot, QuotaWindow } from './quota.ts';
 import {
   FOOTER_TELEMETRY_PROTOCOL_VERSION,
   type FooterTelemetryMessage,
@@ -36,6 +36,31 @@ export function collectTotalCost(ctx: ExtensionContext): number {
   return totalCostFromEntries(ctx.sessionManager.getBranch());
 }
 
+function boundedPercent(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(100, Math.max(0, value))
+    : undefined;
+}
+
+function sanitizeWindow(value: unknown): QuotaWindow | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const { label, percent, resetAt } = value as {
+    label?: unknown;
+    percent?: unknown;
+    resetAt?: unknown;
+  };
+  if (typeof label !== 'string' || label.length === 0) return undefined;
+  const bounded = boundedPercent(percent);
+  if (bounded === undefined) return undefined;
+  const deadline =
+    typeof resetAt === 'number' && Number.isFinite(resetAt) && resetAt > 0
+      ? Math.floor(resetAt)
+      : undefined;
+  return deadline === undefined
+    ? { label, percent: bounded }
+    : { label, percent: bounded, resetAt: deadline };
+}
+
 export function buildFooterTelemetryMessage(
   totalCost: number,
   quota?: QuotaSnapshot,
@@ -44,16 +69,15 @@ export function buildFooterTelemetryMessage(
     typeof totalCost === 'number' && Number.isFinite(totalCost)
       ? Math.max(0, totalCost)
       : 0;
-  const percent =
-    quota !== undefined &&
-    typeof quota.percent === 'number' &&
-    Number.isFinite(quota.percent)
-      ? Math.min(100, Math.max(0, quota.percent))
-      : undefined;
+  const percent = quota === undefined ? undefined : boundedPercent(quota.percent);
+  const windows = quota?.windows
+    ?.map(sanitizeWindow)
+    .filter((window): window is QuotaWindow => window !== undefined);
   return {
     protocol: FOOTER_TELEMETRY_PROTOCOL_VERSION,
     type: 'snapshot',
     totalCost: cost,
     ...(percent !== undefined ? { quotaPercent: percent } : {}),
+    ...(windows !== undefined && windows.length > 0 ? { quotaWindows: windows } : {}),
   };
 }
