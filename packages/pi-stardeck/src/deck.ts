@@ -436,12 +436,13 @@ function renderChip(
       : severity === 'degraded'
         ? `(${icons})`
         : icons;
-  if (severity === 'degraded' || severity === 'error') {
-    // Stronger pass: reverse-video makes the enclosure impossible to
-    // miss even where accent/muted blur together on dim panels.
-    return loud(theme, severity === 'error' ? 'error' : 'warning', chip);
+  if (severity === 'healthy') {
+    return color(theme, healthyColor, chip, true);
   }
-  return color(theme, severity === 'off' ? 'muted' : healthyColor, chip, true);
+  // Human amendment 2026-10-19: brackets are red, parens yellow — every
+  // enclosure goes loud reverse-video. Off and error read identically
+  // by design; the notice slot carries the distinction.
+  return loud(theme, severity === 'degraded' ? 'warning' : 'error', chip);
 }
 
 function identityCluster(
@@ -482,8 +483,11 @@ function identityCluster(
   let text = '';
   let trailingBare = false;
   for (const part of parts) {
+    // Amendment: enclosures breathe — the gap goes wide whenever either
+    // neighbor is bare (bare↔bare kept its wide gap; bracket↔bracket
+    // rows stay compact).
     text +=
-      text === '' ? part.text : `${trailingBare && part.bare ? '  ' : ' '}${part.text}`;
+      text === '' ? part.text : `${trailingBare || part.bare ? '  ' : ' '}${part.text}`;
     trailingBare = part.bare;
   }
   return { text, trailingBare };

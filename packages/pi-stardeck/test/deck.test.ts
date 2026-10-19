@@ -122,7 +122,7 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // chip, companion chips, one major separator, icon-led machine group.
   assert.match(
     plain(lines[0] ?? ''),
-    /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Line 4 (deck-corner-context amendment): the global group — engine ›
   // thinking › long-horizon quota — anchors the left; context and
@@ -157,7 +157,7 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
   assert.match(
     line1,
-    /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'the corner keeps the right end',
   );
   assert.equal(
@@ -288,7 +288,7 @@ test('extension statuses ride the telemetry tail as icons', () => {
   assert.match(telemetry, /^ \u{F07B} ~\//u);
   assert.match(
     telemetry,
-    /\u{21BB}  \u{232C} \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{21BB}  \u{232C}  \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   assert.ok(telemetry.indexOf('~/') < telemetry.indexOf('\u{232C}'));
   assert.equal(telemetry.includes('engram'), false);
@@ -326,7 +326,7 @@ test('companion icon colors encode health severity', () => {
   const shield = seen.find((entry) => entry.text === '[\u{26E8}]');
   assert.equal(brain?.color, 'accent');
   assert.equal(graph?.color, 'warning');
-  assert.equal(shield?.color, 'muted');
+  assert.equal(shield?.color, 'error', 'off renders error-red like error');
 });
 
 test('chip shape encodes severity: bare healthy, parens degraded, brackets error and off', () => {
@@ -369,7 +369,7 @@ test('chip shape encodes severity: bare healthy, parens degraded, brackets error
   const line1 = lines.map(plain)[0] ?? '';
   assert.match(
     line1,
-    /\u{F01A7}  \u{21BB} \(\u{232C}\) \[\u{26E8}\] \u{27E9}/u,
+    /\u{F01A7}  \u{21BB}  \(\u{232C}\) \[\u{26E8}\] \u{27E9}/u,
     'mixed state: bare devbox and engram, parens graphify, brackets appa',
   );
 });
@@ -378,7 +378,7 @@ test('known companion icons are always present', () => {
   const bare = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
   assert.match(
     bare[0] ?? '',
-    /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B}/u,
+    /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B}/u,
   );
 });
 
@@ -725,7 +725,7 @@ test('keeps line 4 engine-only; the machine group anchors the line-1 corner', ()
   assert.equal(line4.includes('$5.16'), false, 'machine group vacated line 4');
   assert.match(
     lines[0] ?? '',
-    /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'machine group anchors the corner',
   );
 });
@@ -1315,7 +1315,7 @@ test('relocates companion chips to line 1 right and bolds them', () => {
   assert.ok(line1.includes('~/galactica'));
   assert.match(
     line1,
-    /\u{21BB} \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{21BB}  \[\u{232C}\] \[\u{26E8}\] \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   assert.ok(bolded.includes('\u{21BB}'), 'chips stay bold');
 });
@@ -1327,7 +1327,7 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
     const line1 = lines[0] ?? '';
     assert.match(
       line1,
-      /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\]/u,
+      /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\]/u,
       String(width),
     );
     if (width >= 39) assert.ok(line1.includes('~/'), String(width));
@@ -1352,7 +1352,7 @@ test('keeps the devbox chip leading the corner off the path', () => {
   assert.match(line1, /^ \u{F07B} ~\/galactica/u, 'the path carries no devbox prefix');
   assert.match(
     line1,
-    /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9}/u,
+    /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9}/u,
     'devbox leads the identity cluster into the corner',
   );
 });
@@ -1390,7 +1390,7 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   // and memory) before the path truncates; the identity cluster never
   // drops. 62 columns: only the flame and the cpu remain of the tail.
   const narrow1 = plain(renderHeaderDeck(state, 62, plainTheme as never)[0] ?? '');
-  assert.match(narrow1, /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9}/u);
+  assert.match(narrow1, /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\] \u{27E9}/u);
   assert.ok(narrow1.includes('82%'), 'flame outlasts the machine tail');
   assert.ok(narrow1.trimEnd().endsWith('48.2%'), 'cpu outlasts the rest of the tail');
   assert.equal(narrow1.includes('$5.16'), false);
@@ -1450,7 +1450,7 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
     const line1 = plain(rendered[0] ?? '');
     assert.match(
       line1,
-      /\u{F01A7} \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\]/u,
+      /\u{F01A7}  \[\u{21BB}\] \[\u{232C}\] \[\u{26E8}\]/u,
       `identity cluster survives at ${width}`,
     );
     // Whatever machine segments survive form a prefix of the frozen order

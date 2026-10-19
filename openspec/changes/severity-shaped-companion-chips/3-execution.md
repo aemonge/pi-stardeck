@@ -27,3 +27,16 @@
   (67 deck), package load PASS (70 files), baseline refreshed to
   98 files (deck.ts entry), import record 87 PASS, `npm run check`
   exit 0. Step 4 (publish 0.9.0 + host spot-check) pending Human.
+- 2026-10-19 (later): Human live-review amendment after local install
+  (pi install <repo-dir>, the local-tgz loader path being broken in pi —
+  registry tarball included). (1) Off joins error visually: brackets are
+  red reverse-video always — the muted undercolor is gone; off and error
+  read identically by design, the notice slot carries the distinction.
+  (2) Enclosures breathe: the gap between chips goes wide whenever
+  either neighbor is bare (bare↔enclosure was single and read tight);
+  enclosure↔enclosure stays single. (3) The "missing devbox icon" report
+  was env, not code: the chip renders iff DEVBOX_PROJECT_ROOT is set at
+  pi launch — a session started outside devbox shows no chip, by design.
+  67 deck tests re-pinned; full battery npm run check exit 0 (18 PASS).
+  Also: the change's .openspec.yaml needed goal + skip_specs to pass the
+  strict gate (CLI scaffold had created it bare).
