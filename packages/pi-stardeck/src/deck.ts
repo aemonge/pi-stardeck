@@ -398,15 +398,20 @@ function globalLeft(state: HeaderDeckState, theme: Theme): string {
   return `${color(theme, 'accent', `󰚩 ${safeText(state.model, 80)}`)} ${minorSeparator(theme)} ${color(theme, state.thinking ? 'thinkingHigh' : 'dim', safeText(state.thinking || 'off', 16))}`;
 }
 
-function projectDeckLeft(state: HeaderDeckState, theme: Theme, width: number): string {
-  // Line 1 left: the path; the git segment yields below 79 columns before
-  // the path does. The devbox marker moved to the line-1 corner with the
-  // companion chips (deck-machine-corner); the identity cluster never
-  // drops, so the path never carries it again.
+function projectDeckLeft(
+  state: HeaderDeckState,
+  theme: Theme,
+  width: number,
+  identity: { text: string; trailingBare: boolean },
+): string {
+  // Line 1 left (deck-reshape): the identity cluster LEADS —
+  // `identity ⟩ path › git` — never the reverse; the cluster never
+  // drops, so truncation eats the git segment first, then the path.
   const path = color(theme, 'success', `\u{F07B} ${safeText(state.cwd)}`);
   const gitSegment =
     width >= 79 ? truncateToWidth(gitRight(state, theme), 52, '…') : '';
-  return gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
+  const left = gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
+  return `${identity.text} ${semanticSeparator(theme)} ${left}`;
 }
 
 type CompanionSpec = {
@@ -563,14 +568,6 @@ function noticeTile(state: HeaderDeckState, theme: Theme): string {
   return color(theme, semantic, `⚠ ${notices.join(' · ')}`);
 }
 
-function telemetryRowLeft(state: HeaderDeckState, theme: Theme): string {
-  // Line 4 left (deck-corner-context amendment): the global group —
-  // engine › thinking, then the long-horizon quota — owns the row's left
-  // end; the notice slot owns the right end (Task 3). Context and
-  // compaction live in the line-1 corner now.
-  return modelGroupLeft(state, theme);
-}
-
 export function machineCornerSegments(
   state: HeaderDeckState,
   theme: Theme,
@@ -630,27 +627,28 @@ function deckCornerRight(
   width: number,
   nowMs = Date.now(),
 ): string {
-  // Line 1 corner: the identity cluster (devbox lead, companion chips)
-  // split from the machine group by one major separator. A bare trailing
-  // chip keeps the wide gap before the separator (0.7.1 amendment);
-  // machine segments yield right-to-left (cost first) before the path
-  // truncates below a 20-column floor; the identity cluster never drops
-  // (always-visible contract).
-  const identity = identityCluster(state, theme);
+  // Line 1 right corner (deck-reshape): the engine group
+  // (`󰚩 model › thinking › weekly?`) leads, one major separator, then
+  // the machine tail. Yield: the tail drops right-to-left (cost first),
+  // then the engine group goes — a narrow deck shows neither. The
+  // identity cluster lives on line 1 LEFT now.
+  const engine = modelGroupLeft(state, theme);
   const segments = machineCornerSegments(state, theme, nowMs);
   const pathFloor = 20;
-  const cornerGap = identity.trailingBare ? '  ' : ' ';
   for (let keep = segments.length; keep >= 0; keep -= 1) {
     const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
-    const corner =
-      tail === ''
-        ? identity.text
-        : `${identity.text}${cornerGap}${semanticSeparator(theme)} ${tail}`;
-    if (keep === 0 || width - visibleWidth(corner) - 1 >= pathFloor) {
-      return corner;
+    if (keep > 0 || engine === '') {
+      if (tail === '') break;
+      const corner =
+        engine === '' ? tail : `${engine} ${semanticSeparator(theme)} ${tail}`;
+      if (width - visibleWidth(corner) - 1 >= pathFloor) return corner;
+      continue;
     }
+    // tail exhausted: the engine group alone may still fit
+    if (width - visibleWidth(engine) - 1 >= pathFloor) return engine;
+    break;
   }
-  return identity.text;
+  return engine === '' || width - visibleWidth(engine) - 1 >= pathFloor ? engine : '';
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
@@ -852,23 +850,17 @@ export function renderHeaderDeck(
   // row's left end; the right end is notice-only. The machine group moved
   // to the line-1 corner, so notices can no longer starve machine
   // readings — the old wholesale yield is gone with the group itself.
-  // 0.7.1 amendment: a clean notice slot renders the dim `healthy`
-  // placeholder instead of trailing silence — it yields like a notice
-  // when the engine group needs the width.
-  const engineGroup = telemetryRowLeft(state, theme);
+  // deck-reshape: line 4 is now the STATUS row — it renders only when
+  // the notice ladder has something to say; healthy means no row (and
+  // no seam) at all. The engine strip that lived here joined the
+  // line-1 corner.
   const noticeGroup = noticeTile(state, theme);
-  const rightGroup = noticeGroup !== '' ? noticeGroup : color(theme, 'dim', 'healthy');
-  const telemetryRow =
-    visibleWidth(engineGroup) + 1 + visibleWidth(rightGroup) <= boundedWidth
-      ? alignedSingleRow(engineGroup, rightGroup, boundedWidth)
-      : fit(engineGroup, boundedWidth);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
   // amendment): the deck opens with a full ─ rule directly beneath the
-  // line-1 strip and ends at the telemetry row — nothing renders beneath
-  // line 4; pi's own prompt chrome below closes the visual block — while
-  // the internal seams stay dotted ┈ between lines 2 and 3 and between
-  // line 3 (spans rows included) and line 4.
+  // line-1 strip; the internal seams stay dotted ┈ between lines 2 and
+  // 3 and between line 3 (spans rows included) and the status row.
+  const identity = identityCluster(state, theme);
   const corner = deckCornerRight(state, theme, boundedWidth);
   const alert = statusAlertTile(
     state,
@@ -878,7 +870,7 @@ export function renderHeaderDeck(
   );
   const rows = [
     alignedSingleRow(
-      projectDeckLeft(state, theme, boundedWidth),
+      projectDeckLeft(state, theme, boundedWidth, identity),
       alert ? `${alert} ${corner}` : corner,
       boundedWidth,
     ),
@@ -888,8 +880,7 @@ export function renderHeaderDeck(
     dottedRule,
     activityRow,
     ...spanTreeRows(state, boundedWidth, theme),
-    dottedRule,
-    telemetryRow,
+    ...(noticeGroup !== '' ? [dottedRule, noticeGroup] : []),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }
