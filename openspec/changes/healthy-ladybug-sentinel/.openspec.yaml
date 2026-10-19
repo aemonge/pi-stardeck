@@ -1,0 +1,9 @@
+schema: ramona-plan
+created: 2026-10-19
+goal: The dim ladybug sentinel owns the status slot when no notices speak
+skip_specs: true
+
+status: approved
+created_by: assistant
+
+approved_at: 2026-10-19T13:56:17Z

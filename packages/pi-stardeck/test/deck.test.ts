@@ -157,12 +157,14 @@ test('renders the approved rich wide header without side borders or spacer rows'
     /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
   );
   // deck-reshape: the engine group anchors line 1's right end beside
-  // the machine corner; no line 4 exists when clean.
+  // the machine corner; the clean status row carries only the sentinel.
   assert.equal(lines.join('\n').includes('32K/128K'), false);
   assert.equal(lines.join('\n').includes('healthy'), false, 'placeholder retired');
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
-  assert.equal(lines.join('').split('󰠭').length - 1, 1);
+  // Ladybug census (sentinel amendment): exactly two — the line-2 clock
+  // anchor and the line-4 healthy sentinel.
+  assert.equal(lines.join('').split('󰠭').length - 1, 2);
   assert.equal(lines.join('').includes('󱒋 LSP'), false);
 });
 
@@ -752,7 +754,7 @@ test('the engine group rides line 1 right; the machine tail anchors the bottom r
   );
   assert.match(
     lines.at(-1) ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
     'the full machine tail rides the bottom row',
   );
   assert.equal(lines.length, 7, 'seven-row clean deck');
@@ -827,7 +829,8 @@ test('preserves width and essential deck structure through responsive collapse',
       lines.some((line) => plain(line).includes("󰠭 000:07'00")),
       String(width),
     );
-    assert.equal(lines.join('').split('󰠭').length - 1, 1, String(width));
+    // Clock anchor + healthy sentinel — the ladybug census is two.
+    assert.equal(lines.join('').split('󰠭').length - 1, 2, String(width));
     assert.match(lines.join('\n'), /000:07'00/u, String(width));
     if (width >= 100) {
       // deck-reshape: the engine joined the corner — context survives
@@ -1384,8 +1387,8 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   );
   assert.match(
     plain(renderHeaderDeck(state, 60, plainTheme as never).at(-1) ?? ''),
-    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
-    'the full machine tail rides the bottom row at 60',
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
+    'the full machine tail rides the bottom row at 60 beside the sentinel',
   );
 });
 
@@ -1459,7 +1462,7 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   assert.ok(flameAt >= 0 && machineAt > flameAt, 'quota flame leads the machine tail');
   assert.ok(mcpAt > machineAt, 'mcp rides the machine tail');
   assert.ok(costAt > mcpAt, 'global cost anchors the row');
-  assert.ok(line4.trimEnd().endsWith('$5.16'));
+  assert.ok(line4.trimEnd().endsWith('󰠭'), 'the sentinel closes the clean row');
   const engineAt = line1.indexOf('GPT-5.6 Sol');
   const calendarAt = line1.indexOf('12%');
   assert.ok(
@@ -1611,10 +1614,10 @@ test('renders the accepted idle mockup at wide widths', () => {
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   // Line 3: awaiting Human left, the zeroed turn meter right.
   assert.match(lines[4] ?? '', /^awaiting Human\s+\u2014 \u00b7 0 tok$/u);
-  // The machine tail anchors the bottom row; status stays silent clean.
+  // The machine tail anchors the bottom row; the sentinel closes it.
   assert.match(
     lines[6] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
   );
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
@@ -1663,12 +1666,12 @@ test('renders the accepted mid-work mockup at wide widths', () => {
     lines[4] ?? '',
     /^editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
-  // Dotted seams inside; the engine row closes the deck.
+  // Dotted seams inside; the engine row closes the deck with the sentinel.
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
   assert.match(
     lines[6] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
   );
 });
 
@@ -1685,6 +1688,52 @@ test('renders both mockups identically at 100 and 120 columns', () => {
     assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
     assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
   }
+});
+
+test('the dim ladybug sentinel yields to notices and survives bare states', () => {
+  // Sentinel amendment (healthy-ladybug-sentinel): the status right end
+  // always speaks. Clean -> dim 󰠭; any notice replaces it wholesale; a
+  // zero-telemetry deck still closes with the sentinel row.
+  const clean = titleFixture({ title: IDLE_TITLE });
+  const cleanLines = renderHeaderDeck(clean, 120, plainTheme as never).map(plain);
+  assert.ok(
+    (cleanLines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
+    'clean ends with the sentinel',
+  );
+
+  const warned = titleFixture({ title: IDLE_TITLE });
+  warned.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 1,
+    nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
+  };
+  const warnedLines = renderHeaderDeck(warned, 120, plainTheme as never).map(plain);
+  assert.ok(
+    (warnedLines.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
+    'a notice displaces the sentinel',
+  );
+  assert.equal(
+    (warnedLines.at(-1) ?? '').includes('󰠭'),
+    false,
+    'no sentinel beside a notice',
+  );
+
+  const bare: HeaderDeckState = {
+    ...titleFixture({ title: IDLE_TITLE }),
+    resources: undefined,
+    footerTelemetry: undefined,
+    contextPercent: undefined,
+    contextTokens: undefined,
+    contextWindow: undefined,
+    mcp: null,
+    lsp: null,
+  };
+  const bareLines = renderHeaderDeck(bare, 120, plainTheme as never).map(plain);
+  assert.ok(
+    (bareLines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
+    'a bare deck still closes with the sentinel row',
+  );
 });
 
 // --- Step 3.1: the unified notice slot --------------------------------------
@@ -1801,7 +1850,7 @@ test('notices ride the narrow ladder beside the engine group', () => {
   }
 });
 
-test('keeps the notice slot empty and silent when clean', () => {
+test('keeps the notice slot sentinel-only when clean', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
@@ -1821,11 +1870,15 @@ test('keeps the notice slot empty and silent when clean', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // Clean: no glyph, no row — the status row does not exist and the
-  // calendar rides the engine on line 1.
+  // Clean: no ⚠ glyph — the dim ladybug sentinel owns the status right
+  // end while the calendar rides the engine on line 1.
   assert.equal(lines.join('\n').includes('⚠'), false);
   assert.equal(lines.length, 7, 'engine row stays when clean');
   assert.ok((lines[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
+  assert.ok(
+    (lines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
+    'the sentinel owns the clean right end',
+  );
   const colors: string[] = [];
   renderHeaderDeck(state, 120, {
     fg: (name: string, text: string) => {
@@ -1834,7 +1887,8 @@ test('keeps the notice slot empty and silent when clean', () => {
     },
     bold: (text: string) => text,
   } as never);
-  assert.equal(colors.includes('dim:healthy'), false, 'placeholder is retired');
+  assert.equal(colors.includes('dim:healthy'), false, 'text placeholder stays retired');
+  assert.ok(colors.includes('dim:󰠭'), 'the sentinel renders dim');
   assert.ok(
     (lines.at(-1) ?? '').includes('48.2%'),
     'machine readings stay on the bottom row',

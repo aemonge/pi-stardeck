@@ -561,7 +561,12 @@ export function collectDeckNotices(state: HeaderDeckState): string[] {
 
 function noticeTile(state: HeaderDeckState, theme: Theme): string {
   const notices = collectDeckNotices(state);
-  if (notices.length === 0) return '';
+  // Healthy sentinel (Human-directed 2026-10-19, reversing the retirement):
+  // when the ladder is silent the dim ladybug holds the right end — the
+  // deck's signature glyph and a reserved one (safeText strips 󰠭 from
+  // published text), so the status row always speaks: ⚠ with notices,
+  // the quiet ladybug when all is well.
+  if (notices.length === 0) return color(theme, 'dim', '󰠭');
   // Blocked carries the error severity it wore on the deleted lifecycle
   // tile; every other notice renders at warning.
   const semantic = notices.includes(BLOCKED_NOTICE) ? 'error' : 'warning';
@@ -857,9 +862,9 @@ export function renderHeaderDeck(
   );
   // deck-reshape, swap amendment: the bottom row carries the MACHINE
   // tail on the left (yielding right-to-left into whatever width the
-  // status leaves) and the status on the right — present only when the
-  // ladder speaks (healthy means the right end is empty; the dim
-  // placeholder stays retired). The engine group moved to line 1 right.
+  // status leaves) and the status on the right — which always speaks
+  // now: ⚠ notices or the dim ladybug sentinel when clean. The engine
+  // group moved to line 1 right.
   const statusRight = noticeTile(state, theme);
   const machineRow = machineCornerLadder(
     state,
