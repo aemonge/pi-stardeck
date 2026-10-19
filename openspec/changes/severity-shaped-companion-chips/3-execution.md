@@ -60,3 +60,11 @@
   notice slot. The shape law is repealed; severity classification
   stays (it drives color). Cluster is the narrowest form yet — the
   100-col git truncation restored `main ›  …`. 67 tests, check exit 0.
+- 2026-10-19 (spacing verdict): Human read the live cluster correctly
+  (appa red, engram/graphify blue, devbox red = outside) — the color law
+  lands. Final spacing: single spaces across the cluster and before the
+  major separator (SPACE_ICON_SPACE); wide glyphs carry their own
+  padding. The 0.7.1 wide-gap rule is repealed for the cluster. Yield
+  boundaries shifted left with the narrower cluster: full corner fits at
+  79, mockup transcription fits at 100 again, the width-20 alert keeps
+  both counts. 67 tests, check exit 0.

@@ -480,10 +480,11 @@ function identityCluster(
       ),
     );
   }
-  // Variant C: every chip is bare, so the 0.7.1 wide-gap rule holds
-  // across the cluster (double space between chips, double before the
-  // major separator — trailingBare stays true for the caller).
-  return { text: parts.join('  '), trailingBare: true };
+  // Human amendment 2026-10-19 (final spacing): single spaces across the
+  // cluster — SPACE_ICON_SPACE — including before the major separator;
+  // wide nerdfont glyphs carry their own padding. trailingBare stays
+  // false so the caller's corner gap is single too.
+  return { text: parts.join(' '), trailingBare: false };
 }
 
 const BLOCKED_NOTICE = '\u26d4 blocked';
