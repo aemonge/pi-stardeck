@@ -752,7 +752,7 @@ test('the engine group rides line 1 right; the machine tail anchors the bottom r
   );
   assert.match(
     lines.at(-1) ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
     'the full machine tail rides the bottom row',
   );
   assert.equal(lines.length, 7, 'seven-row clean deck');
@@ -931,7 +931,7 @@ test('paints icon-native quota tiles in cost, calendar, flame order', () => {
 
   // Relocation phase: the calendar rides the model group; flame and cost
   // keep the telemetry row's far end.
-  const calendarAt = statusLine.indexOf(`${CAL_ICON} 12%`);
+  const calendarAt = statusLine.indexOf(`${CAL_ICON} 7d 12%`);
   const flameAt = telemetryLine.indexOf(`${FLAME_ICON} 82%`);
   const costAt = telemetryLine.indexOf('$5.16');
   assert.ok(calendarAt >= 0, 'calendar tile renders');
@@ -964,7 +964,7 @@ test('classifies minute and day labels and always counts down the coding window'
     lines.find((line: string) => line.includes('GPT-5.6 Sol')) ?? '',
   );
 
-  assert.ok(statusLine.includes(`${CAL_ICON} 40%`), 'day label is calendar');
+  assert.ok(statusLine.includes(`${CAL_ICON} 30d 40%`), 'day label is calendar');
   assert.ok(
     telemetryLine.includes(`${FLAME_ICON} 52% › ${CLOCK_ICON} 0:45`),
     'cool coding window still counts down',
@@ -1004,7 +1004,7 @@ test('weekly-only telemetry paints the calendar tile alone', () => {
   );
 
   const tail = statusLine.slice(statusLine.indexOf(CAL_ICON));
-  assert.ok(tail.startsWith(`${CAL_ICON} 33%`));
+  assert.ok(tail.startsWith(`${CAL_ICON} 7d 33%`));
   assert.ok(!tail.includes(FLAME_ICON));
   assert.ok(!tail.includes(CLOCK_ICON), 'calendar never carries a countdown');
 });
@@ -1384,7 +1384,7 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   );
   assert.match(
     plain(renderHeaderDeck(state, 60, plainTheme as never).at(-1) ?? ''),
-    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
     'the full machine tail rides the bottom row at 60',
   );
 });
@@ -1614,7 +1614,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   // The machine tail anchors the bottom row; status stays silent clean.
   assert.match(
     lines[6] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
   );
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
@@ -1668,7 +1668,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   assert.match(lines[5] ?? '', /^\u2508+$/u);
   assert.match(
     lines[6] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
   );
 });
 

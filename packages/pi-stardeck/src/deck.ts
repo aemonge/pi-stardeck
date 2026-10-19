@@ -572,23 +572,24 @@ export function machineCornerSegments(
   state: HeaderDeckState,
   theme: Theme,
   nowMs = Date.now(),
-): string[] {
-  // Machine corner (deck-machine-corner; deck-corner-context): icon-led
-  // machine readings for the line-1 corner — coding quota flame with its
-  // countdown, CPU, memory, MCP availability, context percent, summary
-  // (compaction) count, global cost — in that frozen order, joined by
-  // minor separators. Segments yield right-to-left on narrow frames.
-  const segments: string[] = [];
+): string[][] {
+  // Machine tail (deck-machine-corner; deck-corner-context; swap
+  // amendment): GROUPED icon-led readings — quota (flame + countdown),
+  // process (cpu › mem › mcp), context (ctx › sums), cost — minor
+  // separators inside a group, big separators between groups; groups
+  // yield right-to-left on narrow frames.
+  const quotaGroup: string[] = [];
   const flame = windowQuotaTiles(state, theme, nowMs);
-  if (flame !== '') segments.push(flame);
+  if (flame !== '') quotaGroup.push(flame);
+  const processGroup: string[] = [];
   const resources = state.resources;
   if (resources) {
     const resourceColor =
       resources.cpuWarning || resources.memoryWarning ? 'warning' : 'accent';
-    segments.push(
+    processGroup.push(
       color(theme, resourceColor, `\u{F035B} ${formatDeckCpu(resources.cpuPercent)}`),
     );
-    segments.push(
+    processGroup.push(
       color(
         theme,
         resourceColor,
@@ -597,9 +598,12 @@ export function machineCornerSegments(
     );
   }
   if (state.mcp) {
-    segments.push(color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`));
+    processGroup.push(
+      color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`),
+    );
   }
-  // deck-corner-context: context and summary counts ride the corner.
+  const contextGroup: string[] = [];
+  // deck-corner-context: context and summary counts ride together.
   // Context wears warning at ≥ 85% (the threshold it carried engine-left);
   // the summary count follows the context color as before.
   const ctxColor =
@@ -609,16 +613,19 @@ export function machineCornerSegments(
         ? 'dim'
         : 'accent';
   if (state.contextPercent !== undefined) {
-    segments.push(
+    contextGroup.push(
       color(theme, ctxColor, `\u{F0F86} ${formatDeckPercent(state.contextPercent)}`),
     );
   }
   if (state.compactionCount > 0) {
-    segments.push(color(theme, ctxColor, `\u{F039E} ${state.compactionCount}`));
+    contextGroup.push(color(theme, ctxColor, `\u{F039E} ${state.compactionCount}`));
   }
+  const costGroup: string[] = [];
   const cost = costTile(state, theme);
-  if (cost !== '') segments.push(cost);
-  return segments;
+  if (cost !== '') costGroup.push(cost);
+  return [quotaGroup, processGroup, contextGroup, costGroup].filter(
+    (group) => group.length > 0,
+  );
 }
 
 function deckCornerRight(state: HeaderDeckState, theme: Theme, width: number): string {
@@ -642,9 +649,12 @@ function machineCornerLadder(
   // Bottom row left (deck-reshape, swap amendment): the machine tail
   // yields right-to-left (cost first) into whatever width remains
   // beside the status right end.
-  const segments = machineCornerSegments(state, theme, nowMs);
-  for (let keep = segments.length; keep >= 1; keep -= 1) {
-    const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
+  const groups = machineCornerSegments(state, theme, nowMs);
+  for (let keep = groups.length; keep >= 1; keep -= 1) {
+    const tail = groups
+      .slice(0, keep)
+      .map((group) => group.join(` ${minorSeparator(theme)} `))
+      .join(` ${semanticSeparator(theme)} `);
     if (visibleWidth(tail) <= width) return tail;
   }
   return '';
@@ -678,7 +688,7 @@ function simpleQuotaTile(state: HeaderDeckState, theme: Theme): string {
   return color(
     theme,
     calendar.percent >= 80 ? 'error' : calendar.percent >= 60 ? 'warning' : 'accent',
-    `󰃰 ${formatDeckPercent(calendar.percent)}`,
+    `󰃰 ${calendar.label} ${formatDeckPercent(calendar.percent)}`,
   );
 }
 

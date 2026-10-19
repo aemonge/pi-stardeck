@@ -47,3 +47,9 @@
   (Human): PWD and branch grow unpredictably — they must never fight the
   machine tail for line-1 width. Machine corner ladder preserved as
   machineCornerLadder for the bottom row. 68 tests, battery exit 0.
+- 2026-10-19 (gold polish): (1) The weekly calendar carries its window
+  label — `󰃰 7d 10%` (labels were rendered percent-only). (2) The
+  machine tail renders GROUPED with big separators between groups and
+  minor inside: quota (flame › countdown) ⟩ process (cpu › mem › mcp) ⟩
+  context (ctx › sums) ⟫ cost; machineCornerSegments now returns
+  groups and the ladder yields per group. 68 tests, battery exit 0.
