@@ -418,12 +418,12 @@ type CompanionSpec = {
 // identical single-cell metrics (verified via font cmap + advance in two
 // NF families) — the base-font symbols (↻ ⌬ ⛨) rendered two cells in
 // some terminals and no spacing rule could compensate. md-sync keeps
-// engram's loop semantics; dev-networkx reads knowledge-graph; oct-
-// shield keeps appa's shield.
+// engram's loop semantics; md-graph reads knowledge-graph; md-shield
+// keeps appa's shield — all md- family, matching visual weight.
 const KNOWN_COMPANION_ICONS: ReadonlyArray<CompanionSpec> = [
   { keys: ['engram'], icons: ['\u{F04E6}'] },
-  { keys: ['graphify'], icons: ['\u{E83D}'] },
-  { keys: ['appa', 'openappa'], icons: ['\u{F49C}'] },
+  { keys: ['graphify'], icons: ['\u{F1049}'] },
+  { keys: ['appa', 'openappa'], icons: ['\u{F0498}'] },
 ];
 
 // Severity-shaped chips: shape is the grayscale-proof channel — [] wraps

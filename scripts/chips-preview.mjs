@@ -23,8 +23,8 @@ const MUTED = 90; // bright-black
 
 const DEVBOX = '\u{F01A7}';
 const ENGRAM = '\u{F04E6}';
-const GRAPHIFY = '\u{E83D}';
-const APPA = '\u{F49C}';
+const GRAPHIFY = '\u{F1049}';
+const APPA = '\u{F0498}';
 
 function bg(color, text) {
   return `${REVERSE}${BOLD}\u001b[${color}m${text}${RESET}`;

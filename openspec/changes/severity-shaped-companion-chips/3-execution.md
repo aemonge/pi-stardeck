@@ -95,3 +95,8 @@
   (WIDE_CHIP_ICONS, per-pair double gaps) is deleted — plain single-
   space join, uniform rhythm, SPACE_ICON_SPACE exactly. 68 tests,
   check exit 0.
+- 2026-10-19 (icon weight): dev-/oct- sets render visually lighter than
+  md- inside the same cell — graphify → md-graph (F1049), appa →
+  md-shield (F0498), both verified single-cell in two NF families; the
+  whole cluster now shares the md- family weight with devbox and
+  md-sync. 68 tests, check exit 0.
