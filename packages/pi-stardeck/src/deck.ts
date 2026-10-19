@@ -627,28 +627,19 @@ function deckCornerRight(
   width: number,
   nowMs = Date.now(),
 ): string {
-  // Line 1 right corner (deck-reshape): the engine group
-  // (`󰚩 model › thinking › weekly?`) leads, one major separator, then
-  // the machine tail. Yield: the tail drops right-to-left (cost first),
-  // then the engine group goes — a narrow deck shows neither. The
-  // identity cluster lives on line 1 LEFT now.
-  const engine = modelGroupLeft(state, theme);
+  // Line 1 right corner (deck-reshape, amended same day): machine
+  // readings only — the engine group moved back to the bottom row's
+  // left end after the live deck showed the merged corner overloading
+  // line 1. Yield: the tail drops right-to-left (cost first) before the
+  // path truncates; the identity cluster lives on line 1 LEFT and never
+  // yields.
   const segments = machineCornerSegments(state, theme, nowMs);
   const pathFloor = 20;
-  for (let keep = segments.length; keep >= 0; keep -= 1) {
+  for (let keep = segments.length; keep >= 1; keep -= 1) {
     const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
-    if (keep > 0 || engine === '') {
-      if (tail === '') break;
-      const corner =
-        engine === '' ? tail : `${engine} ${semanticSeparator(theme)} ${tail}`;
-      if (width - visibleWidth(corner) - 1 >= pathFloor) return corner;
-      continue;
-    }
-    // tail exhausted: the engine group alone may still fit
-    if (width - visibleWidth(engine) - 1 >= pathFloor) return engine;
-    break;
+    if (width - visibleWidth(tail) - 1 >= pathFloor) return tail;
   }
-  return engine === '' || width - visibleWidth(engine) - 1 >= pathFloor ? engine : '';
+  return '';
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
@@ -846,11 +837,17 @@ export function renderHeaderDeck(
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // deck-reshape: line 4 is now the STATUS row — it renders only when
-  // the notice ladder has something to say; healthy means no row (and
-  // no seam) at all. The engine strip that lived here joined the
-  // line-1 corner.
-  const noticeGroup = noticeTile(state, theme);
+  // deck-reshape, same-day amendment: the bottom row is BACK — engine
+  // group on the left (`󰚩 model › thinking › weekly?`), status on the
+  // right. The merged corner overloaded line 1 in the live deck, so
+  // the engine came home; the status stays a real status thingi —
+  // right-aligned, present only when the ladder speaks (healthy means
+  // the right end is simply empty; the dim placeholder stays retired).
+  const engineRow = alignedSingleRow(
+    modelGroupLeft(state, theme),
+    noticeTile(state, theme),
+    boundedWidth,
+  );
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
   // amendment): the deck opens with a full ─ rule directly beneath the
@@ -876,7 +873,7 @@ export function renderHeaderDeck(
     dottedRule,
     activityRow,
     ...spanTreeRows(state, boundedWidth, theme),
-    ...(noticeGroup !== '' ? [dottedRule, noticeGroup] : []),
+    ...(engineRow.trim() !== '' ? [dottedRule, engineRow] : []),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }

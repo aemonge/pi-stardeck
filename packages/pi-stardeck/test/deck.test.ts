@@ -104,9 +104,9 @@ test('renders the approved rich wide header without side borders or spacer rows'
 
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  // deck-reshape: five rows clean — L1, ─, L2, ┈, L3 — the status row
-  // exists only when it has something to say (healthy = silent).
-  assert.equal(lines.length, 5);
+  // deck-reshape (amended): seven rows — L1, ─, L2, ┈, L3, ┈, L4
+  // (engine left, status right when it speaks).
+  assert.equal(lines.length, 7);
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
   assert.match(plain(lines[1] ?? ''), /^─+$/u);
   const titleRow = plain(lines[2] ?? '');
@@ -133,7 +133,7 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // chip, companion chips, one major separator, icon-led machine group.
   assert.match(
     plain(lines[0] ?? ''),
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // deck-reshape: the engine group anchors line 1's right end beside
   // the machine corner; no line 4 exists when clean.
@@ -155,13 +155,13 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
   assert.match(
     line1,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'the corner keeps the right end',
   );
   assert.equal(
     line1.split('⟩').length - 1,
-    5,
-    'identity sep + path sep + quota sep + engine sep + alert',
+    3,
+    'identity sep + path sep + alert command',
   );
   assert.doesNotMatch(line1, /\u{F082D}/u);
   assert.ok((lines[0] ?? '').includes('\u001b[7m'), 'counts stay reverse-video');
@@ -202,9 +202,8 @@ test('drops the footer count; the strong rule opens the deck', () => {
   const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
   assert.equal(solidRules.length, 1, 'the lone strong rule opens the deck');
   const dottedSeams = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
-  // deck-reshape: one internal seam (L2/L3); the status-row seam is
-  // conditional and absent when clean.
-  assert.equal(dottedSeams.length, 1, 'dotted seams inside the deck');
+  // Both internal seams are back (engine row closes the deck).
+  assert.equal(dottedSeams.length, 2, 'dotted seams inside the deck');
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
@@ -291,7 +290,7 @@ test('extension statuses ride the telemetry tail as icons', () => {
   );
   assert.match(
     telemetry,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   assert.ok(
     telemetry.indexOf('~/') > telemetry.indexOf('\u{F1049}'),
@@ -383,10 +382,7 @@ test('chip color encodes severity: blue healthy, yellow degraded, red error and 
 
 test('known companion icons are always present', () => {
   const bare = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
-  assert.match(
-    bare[0] ?? '',
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B}/u,
-  );
+  assert.match(bare[0] ?? '', /\u{F035B}/u);
 });
 
 test('extension status icons drop on narrow frames and filter the goal key', () => {
@@ -728,15 +724,15 @@ test('the engine group anchors the merged line-1 corner; no line 4 when clean', 
   const line1 = lines[0] ?? '';
   assert.match(
     line1,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
     'engine group anchors the merged corner',
   );
   assert.equal(
     lines.filter((line) => line.includes('GPT-5.6 Sol')).length,
     1,
-    'the engine group lives on line 1 only',
+    'the engine group lives on the bottom row only',
   );
-  assert.equal(lines.length, 5, 'clean deck is five rows — no status row');
+  assert.ok((lines.at(-1) ?? '').startsWith('󰚩'), 'engine leads the bottom row');
 });
 
 test('renders no task, stps, or run-counter tiles in any state', () => {
@@ -1315,13 +1311,10 @@ test('spans rows keep their home directly beneath line 3', () => {
   const activityIndex = lines.findIndex((line) => line.includes('awaiting Human'));
   assert.ok(activityIndex >= 0);
   assert.match(lines[activityIndex + 1] ?? '', /└ \(00'41\) reviewer assuring/u);
-  // deck-reshape: the spans rows close the deck when clean — the status
-  // row (seam + notices) exists only when something needs saying.
-  assert.equal(
-    lines.length,
-    activityIndex + 2,
-    'nothing renders beneath the telemetry row',
-  );
+  // A ┈ seam follows the spans rows, then the engine row closes the deck.
+  assert.match(lines[activityIndex + 2] ?? '', /^┈+$/u);
+  assert.ok(lines[activityIndex + 3]?.includes('GPT-5.6 Sol'));
+  assert.equal(lines.length, activityIndex + 4, 'the engine row closes the deck');
 });
 
 // --- Step 2.3: line 1 right relocation and line 4 ---------------------------
@@ -1348,7 +1341,7 @@ test('relocates companion chips to line 1 right and bolds them', () => {
   assert.ok(line1.includes('~/galactica'));
   assert.match(
     line1,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   assert.ok(bolded.includes('\u{F04E6}'), 'chips stay bold');
 });
@@ -1367,13 +1360,13 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   // at 60 the whole corner has yielded to the path.
   assert.match(
     plain(renderHeaderDeck(state, 79, plainTheme as never)[0] ?? ''),
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3$/u,
-    'engine and machine ride at 79',
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    'the full machine corner fits at 79',
   );
   assert.match(
     plain(renderHeaderDeck(state, 60, plainTheme as never)[0] ?? ''),
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2%$/u,
-    'engine, calendar, and cpu ride at 60',
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2$/u,
+    'only cost yields at 60',
   );
 });
 
@@ -1441,25 +1434,22 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   assert.ok(mcpAt > machineAt, 'mcp rides the machine group');
   assert.ok(costAt > mcpAt, 'global cost anchors the corner');
   assert.ok(line1.trimEnd().endsWith('$5.16'));
-  // deck-reshape: the engine group anchors line 1's right end ahead of
-  // the machine corner; the calendar rides inside it; no line 4 exists.
-  const engineAt = line1.indexOf('GPT-5.6 Sol');
-  const calendarAt = line1.indexOf('12%');
-  const flamePos = flameAt;
+  // deck-reshape (amended): the engine group is back on the bottom row,
+  // calendar riding inside it; the corner is machine-only again.
+  const line4 = lines.at(-1) ?? '';
+  assert.ok(line4.startsWith('󰚩'), 'engine group anchors the bottom row');
+  const engineAt = line4.indexOf('GPT-5.6 Sol');
+  const calendarAt = line4.indexOf('12%');
   assert.ok(engineAt >= 0 && calendarAt > engineAt, 'calendar rides the engine group');
-  assert.ok(engineAt < flamePos, 'engine group leads the machine corner');
-  assert.equal(lines.length, 5, 'clean five-row deck');
-  void flamePos;
-  // Narrow ladder (deck-reshape): the merged corner yields right-to-left
-  // — the whole machine tail (flame included) goes before the engine
-  // group. 62 columns: identity leads the path, engine + calendar ride.
+  assert.equal(line4.includes('$5.16'), false, 'machine group is gone from line 4');
+  assert.equal(lines.length, 7, 'clean seven-row deck');
+  // Narrow ladder (deck-reshape amended): the machine-only corner is
+  // compact — at 62 the flame, countdown, cpu, mem, and mcp all ride.
   const narrow1 = plain(renderHeaderDeck(state, 62, plainTheme as never)[0] ?? '');
   assert.match(narrow1, /\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9}/u);
-  assert.ok(narrow1.includes('GPT-5.6 Sol'), 'engine outlasts the machine tail');
-  assert.ok(narrow1.trimEnd().endsWith('12%'), 'the weekly calendar rides the engine');
-  assert.equal(narrow1.includes('82%'), false, 'flame yields with the tail');
+  assert.ok(narrow1.includes('82%'), 'the flame rides the narrow corner');
+  assert.ok(narrow1.trimEnd().endsWith('3/3'), 'cpu, mem, and mcp ride at 62');
   assert.equal(narrow1.includes('$5.16'), false);
-  assert.equal(narrow1.includes('48.2%'), false);
 });
 
 test('line 4 right is notice-only; machine readings never leave line 1', () => {
@@ -1479,7 +1469,7 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
     line4.trimEnd().endsWith('⚠ graphify stale · update recommended'),
     'notice anchors the right end',
   );
-  assert.ok(line4.startsWith('⚠'), 'the status row leads with the warning glyph');
+  assert.ok(line4.startsWith('󰚩'), 'engine group anchors the row left');
   assert.equal(line4.includes('$5.16'), false);
   assert.equal(line4.includes('48.2%'), false);
   assert.equal(line4.includes('3/3'), false);
@@ -1491,12 +1481,11 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
 
   state.piStatus = { errors: 2, warnings: 1, nativeStatusCount: 0 };
   const clean = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  // deck-reshape: clean means NO status row at all — five rows, the
-  // calendar and machine readings all live on line 1, and the ⚠ glyph
-  // never renders.
-  assert.equal(clean.length, 5, 'clean deck has no status row');
+  // deck-reshape (amended): the engine row stays when clean — status is
+  // silent, no ⚠ glyph, calendar on the bottom row.
+  assert.equal(clean.length, 7, 'engine row stays when clean');
   assert.equal(clean.join('\n').includes('⚠'), false);
-  assert.ok((clean[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
+  assert.ok((clean.at(-1) ?? '').includes('63%'), 'calendar rides the engine row');
   // Severity counts (line 1) and notices stay distinct surfaces.
   assert.match(plain(clean[0] ?? ''), /⟩ \/pi-status/u);
 });
@@ -1532,18 +1521,19 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
 });
 
 test('opens the deck with a strong rule and dotted internal seams', () => {
-  // Single-line subject at this width so the band count is fixed at five.
+  // Single-line subject at this width so the band count is fixed at seven.
   const lines = renderHeaderDeck(
     titleFixture({ title: IDLE_TITLE }),
     100,
     plainTheme as never,
   ).map(plain);
-  // deck-reshape: clean deck ends at line 3 — the status row is gone.
-  assert.equal(lines.length, 5);
+  // deck-reshape (amended): the engine row closes the deck again.
+  assert.equal(lines.length, 7);
   assert.match(lines[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
   assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam beneath line 2');
-  assert.ok((lines[0] ?? '').includes('GPT-5.6 Sol'));
-  assert.equal(lines[4], lines.at(-1));
+  assert.match(lines[5] ?? '', /^┈+$/u, 'dotted seam beneath line 3');
+  assert.ok((lines[6] ?? '').includes('GPT-5.6 Sol'));
+  assert.equal(lines[6], lines.at(-1));
 });
 
 // --- Step 2.4: the two accepted mockups as lockstep fixtures ----------------
@@ -1574,11 +1564,11 @@ test('renders the accepted idle mockup at wide widths', () => {
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   // deck-reshape: clean mockup is five rows — no status row.
-  assert.equal(lines.length, 5);
+  assert.equal(lines.length, 7);
   // Line 1: identity leads the path; the engine anchors the corner right.
   assert.match(
     lines[0] ?? '',
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} ma… \u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1590,7 +1580,11 @@ test('renders the accepted idle mockup at wide widths', () => {
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   // Line 3: awaiting Human left, the zeroed turn meter right.
   assert.match(lines[4] ?? '', /^awaiting Human\s+\u2014 \u00b7 0 tok$/u);
-  // The engine strip lives on line 1 now; healthy means no status row.
+  // The engine row is back with its calendar; status stays silent clean.
+  assert.match(
+    lines[6] ?? '',
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
+  );
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
 
@@ -1618,13 +1612,13 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // git segment yields its width (`ma…`).
   assert.match(
     lines[0] ?? '',
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} ma…\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
+    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{203A} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{203A} \u{F0726} \$5\.16$/u,
   );
   // At 100 the path truncates (`~/project…`) while the corner rides.
   const hundred = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   assert.match(
     hundred[0] ?? '',
-    /~\/project….*\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63% \u{27E9} \u{F035B} 48\.2%/u,
+    /main \u{203A} \u{F040} 2\s+\u{F035B} 48\.2%.*\u{F0726} \$5\.16$/u,
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
@@ -1638,10 +1632,13 @@ test('renders the accepted mid-work mockup at wide widths', () => {
     lines[4] ?? '',
     /^editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
-  // Dotted seam between lines 2 and 3; the deck ends at line 3 when
-  // clean (deck-reshape).
+  // Dotted seams inside; the engine row closes the deck.
   assert.match(lines[3] ?? '', /^\u2508+$/u);
-  assert.equal(lines.length, 5);
+  assert.match(lines[5] ?? '', /^\u2508+$/u);
+  assert.match(
+    lines[6] ?? '',
+    /^\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
+  );
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {
@@ -1796,8 +1793,8 @@ test('keeps the notice slot empty and silent when clean', () => {
   // Clean: no glyph, no row — the status row does not exist and the
   // calendar rides the engine on line 1.
   assert.equal(lines.join('\n').includes('⚠'), false);
-  assert.equal(lines.length, 5, 'no status row when clean');
-  assert.ok((lines[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
+  assert.equal(lines.length, 7, 'engine row stays when clean');
+  assert.ok((lines.at(-1) ?? '').includes('63%'), 'calendar rides the engine row');
   const colors: string[] = [];
   renderHeaderDeck(state, 120, {
     fg: (name: string, text: string) => {
@@ -1906,6 +1903,6 @@ test('a waiver can suppress the open-goal hint by its exact text', () => {
     false,
     'sole notice waived removes the row',
   );
-  assert.equal(lines.length, 5, 'clean deck has no status row');
+  assert.equal(lines.length, 7, 'clean deck keeps the engine row');
   assert.ok((lines[0] ?? '').includes('$5.16'), 'machine group stays on line 1');
 });

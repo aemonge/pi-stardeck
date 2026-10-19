@@ -30,3 +30,12 @@
   converts anything above 1e11 to seconds; live snapshot now reads
   5h 36% + 7d 7%, which lights the corner flame and the 7d calendar on
   restart. Battery exit 0 (19 gates), footer 11/11, deck 68/68.
+- 2026-10-19 (same-day amendment, live review): the merged corner
+  overloaded line 1 — the engine group (model › thinking › weekly) moved
+  BACK to a bottom row's left end, status right-aligned on the same row
+  (present only when the ladder speaks; the dim placeholder stays
+  retired). Line 1 right is machine-only again; the machine-only corner
+  is compact — the full tail fits at 79, only cost yields at 60, and at
+  62 in the flame state the flame+countdown+cpu+mem+mcp all ride.
+  Kept from the reshape: identity leads line 1 left, flush left edges,
+  real conditional status, no placeholder. 68 tests, battery exit 0.
