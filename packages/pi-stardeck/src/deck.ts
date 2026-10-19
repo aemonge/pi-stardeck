@@ -430,22 +430,17 @@ function renderChip(
   healthyColor: string,
   icons: string,
 ): string {
-  const chip =
-    severity === 'error' || severity === 'off'
-      ? `[${icons}]`
+  // Human verdict 2026-10-19 — variant C of scripts/chips-preview.mjs:
+  // bold foreground colors alone. No enclosures, no reverse-video.
+  // Blue = healthy/OK, yellow = degraded, red = error/off/KO; the
+  // notice slot carries the why (off vs error read identically here).
+  const name =
+    severity === 'healthy'
+      ? healthyColor
       : severity === 'degraded'
-        ? `(${icons})`
-        : icons;
-  if (severity === 'healthy') {
-    // Human amendment 2026-10-19: BGs only — every state renders as a
-    // reverse-video block (bold rides inside loud); foreground colors
-    // survive only where bold enough, and the healthy accent is not.
-    return loud(theme, healthyColor, chip);
-  }
-  // Human amendment 2026-10-19: brackets are red, parens yellow — every
-  // enclosure goes loud reverse-video. Off and error read identically
-  // by design; the notice slot carries the distinction.
-  return loud(theme, severity === 'degraded' ? 'warning' : 'error', chip);
+        ? 'warning'
+        : 'error';
+  return color(theme, name, icons, true);
 }
 
 function identityCluster(
@@ -462,44 +457,33 @@ function identityCluster(
     if (item.key === 'goal' || texts.has(item.key)) continue;
     texts.set(item.key, item.text);
   }
-  const parts: Array<{ bare: boolean; text: string }> = [];
+  const parts: string[] = [];
   {
     // Human amendment 2026-10-19: the devbox chip never appears or
-    // disappears — in-devbox renders bold blue OK (bare 󰆧), outside
-    // renders bold red KO ([󰆧], error-grade). DEVBOX_PROJECT_ROOT at
-    // pi launch decides.
-    parts.push({
-      bare: state.devbox === true,
-      text: renderChip(
-        theme,
-        state.devbox ? 'healthy' : 'error',
-        'accent',
-        '\u{F01A7}',
-      ),
-    });
+    // disappears — in-devbox renders bold blue OK, outside renders
+    // bold red KO. DEVBOX_PROJECT_ROOT at pi launch decides.
+    parts.push(
+      renderChip(theme, state.devbox ? 'healthy' : 'error', 'accent', '\u{F01A7}'),
+    );
   }
   for (const companion of KNOWN_COMPANION_ICONS) {
     const published = companion.keys
       .map((key) => texts.get(key))
       .find((text) => text !== undefined);
     for (const key of companion.keys) texts.delete(key);
-    const severity = companionSeverity(published);
-    parts.push({
-      bare: severity === 'healthy',
-      text: renderChip(theme, severity, 'accent', companion.icons.join(' ')),
-    });
+    parts.push(
+      renderChip(
+        theme,
+        companionSeverity(published),
+        'accent',
+        companion.icons.join(' '),
+      ),
+    );
   }
-  let text = '';
-  let trailingBare = false;
-  for (const part of parts) {
-    // Amendment: enclosures breathe — the gap goes wide whenever either
-    // neighbor is bare (bare↔bare kept its wide gap; bracket↔bracket
-    // rows stay compact).
-    text +=
-      text === '' ? part.text : `${trailingBare || part.bare ? '  ' : ' '}${part.text}`;
-    trailingBare = part.bare;
-  }
-  return { text, trailingBare };
+  // Variant C: every chip is bare, so the 0.7.1 wide-gap rule holds
+  // across the cluster (double space between chips, double before the
+  // major separator — trailingBare stays true for the caller).
+  return { text: parts.join('  '), trailingBare: true };
 }
 
 const BLOCKED_NOTICE = '\u26d4 blocked';

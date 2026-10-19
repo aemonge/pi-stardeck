@@ -52,3 +52,11 @@
   failed past) across five state mixes — judging whether the enclosures
   can be dropped entirely. Battery: 67 deck tests, npm run check exit 0
   (18 PASS), baseline refreshed.
+- 2026-10-19 (final): Human verdict on the preview — Variant C: bold
+  foreground colors alone. Enclosures and reverse-video are gone from
+  the chips entirely: blue = healthy/devbox OK, yellow = degraded,
+  red = error/off/devbox KO, all bold, all bare icons, wide gaps
+  throughout (the 0.7.1 rule generalized), off vs error left to the
+  notice slot. The shape law is repealed; severity classification
+  stays (it drives color). Cluster is the narrowest form yet — the
+  100-col git truncation restored `main ›  …`. 67 tests, check exit 0.
