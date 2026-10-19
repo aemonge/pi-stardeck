@@ -22,7 +22,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 - [ ] Step 4 — Full sandbox gate battery + baseline refresh + graphify
       update · check: `npm run check` exit 0, `check-baseline --write`
       PASS, `graphify update .` clean paths: `baseline/source.sha256`
-- [ ] Step 5 — Human validation — host gates with a real key (corner
+- [x] Step 5 — Human validation — host gates with a real key (corner
       flame + countdown, line-4 `7d` calendar, no error spam), publish,
       reinstall
 

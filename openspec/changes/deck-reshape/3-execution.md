@@ -53,3 +53,8 @@
   minor inside: quota (flame › countdown) ⟩ process (cpu › mem › mcp) ⟩
   context (ctx › sums) ⟫ cost; machineCornerSegments now returns
   groups and the ladder yields per group. 68 tests, battery exit 0.
+- 2026-10-19: Step 4 VALID — Human live-checked the reshaped deck
+  ("the rest is now PEFECT!"): identity leads, engine + labeled 7d
+  calendar top-right, grouped machine tail bottom-left, conditional
+  status right, subject slot verified live (placeholder → set subject).
+  Change complete pending the 0.9.0 release.

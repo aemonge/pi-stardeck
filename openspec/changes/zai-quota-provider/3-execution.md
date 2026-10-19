@@ -32,3 +32,6 @@
   two CREDIT_LIMIT rows (unit 3 = 5h coding window, unit 6 = weekly),
   usage as percentage AND currentValue/usage agreeing. Live snapshot:
   5h 36% / 7d 7% — flame + calendar light on restart.
+- 2026-10-19: Step 5 VALID — live deck (Human's own paste) shows the
+  flame 󰈸 58% with countdown 󰅐 1:36 and the 󰃰 7d 11% calendar lit from
+  the real key, zero error spam. Change complete pending the release.

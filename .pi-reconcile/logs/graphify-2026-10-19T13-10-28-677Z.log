@@ -1,0 +1,12 @@
+  warning: skill is from graphify 0.9.85, but the package is 0.9.76 (older). Upgrade the package (e.g. 'uv tool upgrade graphifyy' or 'pip install -U graphifyy'); running 'graphify install' would downgrade the skill.
+Re-extracting code files in . (no LLM needed)...
+[graphify watch] 17 file(s) not classified (no supported extension or shebang), skipped: .gitignore, .markdownlint-cli2.jsonc, .npmignore, .prettierignore, LICENSE, engram-2026-10-19T13-10-22-487Z.log (+11 more)
+  AST extraction: 100/113 uncached files (88%) [14 workers]
+  AST extraction: 113/113 uncached files (100%) [14 workers]
+  warning: 93 .ts file(s) contributed nothing to the graph because a dependency is missing: tree_sitter_typescript not installed. (#1745)
+  warning: 13 .json file(s) contributed nothing to the graph because a dependency is missing: tree-sitter-json not installed. (#1745)
+  warning: 4 .mjs file(s) contributed nothing to the graph because a dependency is missing: tree_sitter_javascript not installed. (#1745)
+  warning: 1 .js file(s) contributed nothing to the graph because a dependency is missing: tree_sitter_javascript not installed. (#1745)
+  warning: 1 code file(s) yielded no symbols (0.00 MB) — a data file, or source this extractor models no symbols for: openspec/changes/rename-header-to-pi-stardeck/1-idea.md
+[graphify watch] No code-graph topology changes detected; outputs left untouched.
+Code graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.

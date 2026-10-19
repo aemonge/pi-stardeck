@@ -7,7 +7,7 @@
 - [x] Step 3 — Execution: projectDeckLeft identity lead; deckCornerRight
       engine merge; line-4 retirement + conditional status row;
       placeholder deleted; ~30 pins re-baselined; battery exit 0.
-- [ ] Step 4 — Human validation: restart host pi, live check of the
+- [x] Step 4 — Human validation: restart host pi, live check of the
       reshaped deck (identity left, engine right, status row appearing
       only when unclean), then publish 0.9.0 with the bundle and archive.
 
@@ -198,3 +198,5 @@
   gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/~/projects/pi-stardeck/packages/pi-stardeck/src/deck.ts · at 2026-10-19T13:02:32Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-19T13:04:48Z
+
+  gate-attributed · tool: mem_save · paths: — · at 2026-10-19T13:06:46Z
