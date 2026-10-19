@@ -399,26 +399,49 @@ function projectDeckLeft(state: HeaderDeckState, theme: Theme, width: number): s
 type CompanionSpec = {
   keys: readonly string[];
   icons: readonly string[];
-  /** Render the chip bracketed even at one icon (engram identity). */
-  bracket?: boolean;
 };
 
 const KNOWN_COMPANION_ICONS: ReadonlyArray<CompanionSpec> = [
-  { keys: ['engram'], icons: ['\u{21BB}'], bracket: true },
+  { keys: ['engram'], icons: ['\u{21BB}'] },
   { keys: ['graphify'], icons: ['\u{232C}'] },
   { keys: ['appa', 'openappa'], icons: ['\u{26E8}'] },
 ];
 
-const COMPANION_WARNING_PATTERN =
-  /(warn|error|stale|unreachable|down|fail|update recommended|needs attention|unhealthy)/iu;
+// Severity-shaped chips: shape is the grayscale-proof channel — [] wraps
+// error-or-off, () wraps degraded, bare is healthy — while color keeps the
+// fine grain underneath (off muted, degraded warning, error error,
+// healthy accent/success). Mnemonic: the more enclosed, the worse.
+const COMPANION_DEGRADE_PATTERN = /(warn|stale|update recommended|needs attention)/iu;
+const COMPANION_ERROR_PATTERN = /(error|fail|down|unreachable|unhealthy)/iu;
 
-function companionIconColor(text: string | undefined, active: boolean): string {
-  // Color is the only state signal: symbols never hide.
-  // On = accent, warn/error = warning, off = muted (visible gray).
-  if (!active) return 'muted';
-  return text !== undefined && COMPANION_WARNING_PATTERN.test(text)
-    ? 'warning'
-    : 'accent';
+type ChipSeverity = 'healthy' | 'degraded' | 'error' | 'off';
+
+function companionSeverity(text: string | undefined): ChipSeverity {
+  // Error-grade words outrank degrade-grade when both appear.
+  if (text === undefined) return 'off';
+  if (COMPANION_ERROR_PATTERN.test(text)) return 'error';
+  if (COMPANION_DEGRADE_PATTERN.test(text)) return 'degraded';
+  return 'healthy';
+}
+
+function renderChip(
+  theme: Theme,
+  severity: ChipSeverity,
+  healthyColor: string,
+  icons: string,
+): string {
+  const chip =
+    severity === 'error' || severity === 'off'
+      ? `[${icons}]`
+      : severity === 'degraded'
+        ? `(${icons})`
+        : icons;
+  if (severity === 'degraded' || severity === 'error') {
+    // Stronger pass: reverse-video makes the enclosure impossible to
+    // miss even where accent/muted blur together on dim panels.
+    return loud(theme, severity === 'error' ? 'error' : 'warning', chip);
+  }
+  return color(theme, severity === 'off' ? 'muted' : healthyColor, chip, true);
 }
 
 function identityCluster(
@@ -439,25 +462,21 @@ function identityCluster(
   if (state.devbox) {
     // Corner lead chip (deck-machine-corner): the devbox marker joins
     // the identity cluster ahead of the companions, success-colored as
-    // it was as a path prefix.
-    parts.push({ bare: false, text: color(theme, 'success', '[\u{F01A7}]', true) });
+    // it was as a path prefix — severity-shaped now, bare when present.
+    parts.push({
+      bare: true,
+      text: renderChip(theme, 'healthy', 'success', '\u{F01A7}'),
+    });
   }
   for (const companion of KNOWN_COMPANION_ICONS) {
     const published = companion.keys
       .map((key) => texts.get(key))
       .find((text) => text !== undefined);
     for (const key of companion.keys) texts.delete(key);
-    const joined = companion.icons.join(' ');
-    const bracketed = companion.bracket === true || companion.icons.length > 1;
-    const chip = bracketed ? `[${joined}]` : joined;
+    const severity = companionSeverity(published);
     parts.push({
-      bare: !bracketed,
-      text: color(
-        theme,
-        companionIconColor(published, published !== undefined),
-        chip,
-        true,
-      ),
+      bare: severity === 'healthy',
+      text: renderChip(theme, severity, 'accent', companion.icons.join(' ')),
     });
   }
   let text = '';
@@ -486,7 +505,8 @@ function companionWarningTexts(state: HeaderDeckState): string[] {
     const published = companion.keys
       .map((key) => texts.get(key))
       .find((text) => text !== undefined);
-    if (published !== undefined && COMPANION_WARNING_PATTERN.test(published)) {
+    const severity = companionSeverity(published);
+    if (published !== undefined && (severity === 'degraded' || severity === 'error')) {
       warnings.push(safeText(published, 180));
     }
   }
