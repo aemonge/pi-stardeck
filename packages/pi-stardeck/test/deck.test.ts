@@ -876,7 +876,7 @@ test('renders unavailable optional telemetry honestly', () => {
   assert.equal(all.includes('stps'), false);
   // Line 3 idle reads `awaiting Human`; without a published turn meter the
   // cost slot stays silent rather than narrating zeros it cannot know.
-  assert.equal(plain(lines[4] ?? '').trimEnd(), ' awaiting Human');
+  assert.equal(plain(lines[4] ?? '').trimEnd(), 'awaiting Human');
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
 });
@@ -1196,7 +1196,7 @@ test('renders line 3 idle as awaiting Human with the zeroed turn meter', () => {
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
-  assert.ok(activityRow.startsWith(' awaiting Human'));
+  assert.ok(activityRow.startsWith('awaiting Human'));
   assert.ok(activityRow.trimEnd().endsWith('— · 0 tok'));
 });
 
@@ -1220,7 +1220,7 @@ test('renders line 3 mid-work as editing target with this-turn cost', () => {
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('editing')) ?? '';
-  assert.ok(activityRow.includes(' editing packages/pi-stardeck/src/deck.ts'));
+  assert.ok(activityRow.includes('editing packages/pi-stardeck/src/deck.ts'));
   assert.ok(activityRow.trimEnd().endsWith('this turn 4.2k · 0:38'));
 });
 
@@ -1253,7 +1253,7 @@ test('renders every observed activity class with its target', () => {
     const activityRow =
       lines.find((line) => line.includes('awaiting Human') || line.includes(class_)) ??
       '';
-    assert.ok(activityRow.includes(` ${expected}`), expected);
+    assert.ok(activityRow.includes(expected), expected);
   }
 });
 
@@ -1589,7 +1589,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   );
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   // Line 3: awaiting Human left, the zeroed turn meter right.
-  assert.match(lines[4] ?? '', /^ awaiting Human\s+\u2014 \u00b7 0 tok$/u);
+  assert.match(lines[4] ?? '', /^awaiting Human\s+\u2014 \u00b7 0 tok$/u);
   // The engine strip lives on line 1 now; healthy means no status row.
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
@@ -1636,7 +1636,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
     lines[4] ?? '',
-    /^ editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
+    /^editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
   );
   // Dotted seam between lines 2 and 3; the deck ends at line 3 when
   // clean (deck-reshape).

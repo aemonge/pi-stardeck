@@ -25,3 +25,10 @@
   baseline 100 files, graphify rebuilt (486 nodes). Step 4 (gate
   battery re-run at publish time) folded into the 0.9.0 bundle;
   Step 5 host validation with a real key pending.
+- 2026-10-19 (live envelope correction): probed with the real key —
+  nextResetTime arrives in MILLISECONDS (clean-room doc said seconds;
+  labels exploded to 20724871d). normalizeZaiEnvelope now floors
+  >1e11 values to seconds; both epochs covered by tests. Real envelope:
+  two CREDIT_LIMIT rows (unit 3 = 5h coding window, unit 6 = weekly),
+  usage as percentage AND currentValue/usage agreeing. Live snapshot:
+  5h 36% / 7d 7% — flame + calendar light on restart.

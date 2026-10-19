@@ -22,3 +22,11 @@
   corner can now empty, so the alert survives compacted (`󰅙 5`) —
   pinned as the new contract. 68 deck tests; full battery exit 0.
   .openspec.yaml gotcha repeated (scaffold lacked schema) — fixed.
+- 2026-10-19 (post-approval fixes): (1) Left-edge alignment — the
+  activity row's leading space is gone; every left edge sits at column 0
+  (lines 1/2/3 and the status row). (2) Sibling fix in
+  zai-quota-provider: the LIVE envelope (probed with the real key,
+  masked) reports nextResetTime in MILLISECONDS — normalizeZaiEnvelope
+  converts anything above 1e11 to seconds; live snapshot now reads
+  5h 36% + 7d 7%, which lights the corner flame and the 7d calendar on
+  restart. Battery exit 0 (19 gates), footer 11/11, deck 68/68.

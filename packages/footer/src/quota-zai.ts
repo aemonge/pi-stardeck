@@ -135,7 +135,15 @@ export function normalizeZaiEnvelope(
     ) {
       continue; // sort and labels ride on the reset deadline
     }
-    const resetAt = Math.floor(raw.nextResetTime);
+    // Live envelope correction (2026-10-19, real key): z.ai reports
+    // nextResetTime in MILLISECONDS — seconds values ride an order of
+    // magnitude lower, so anything above 1e11 is ms and gets floored
+    // to seconds. Both epochs keep working.
+    const resetRaw =
+      raw.nextResetTime > 1e11
+        ? Math.floor(raw.nextResetTime / 1000)
+        : Math.floor(raw.nextResetTime);
+    const resetAt = resetRaw;
     windows.push({ label: windowLabel(resetAt, nowSeconds), percent, resetAt });
   }
   if (windows.length === 0) return undefined;

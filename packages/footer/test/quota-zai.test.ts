@@ -48,6 +48,35 @@ test('readZaiKey reads zai.key from the pi auth file', async () => {
   }
 });
 
+test('normalizeZaiEnvelope converts millisecond reset times (live envelope shape)', () => {
+  // The real z.ai envelope (verified with a live key 2026-10-19) reports
+  // nextResetTime in ms — seconds-styled fixtures keep working too.
+  const envelope = {
+    data: {
+      limits: [
+        {
+          type: 'CREDIT_LIMIT',
+          unit: 3,
+          number: 5,
+          percentage: 35,
+          nextResetTime: (NOW + 3 * H) * 1000,
+        },
+        {
+          type: 'CREDIT_LIMIT',
+          unit: 6,
+          number: 1,
+          percentage: 7,
+          nextResetTime: (NOW + 6 * 24 * H) * 1000,
+        },
+      ],
+    },
+  };
+  assert.deepEqual(normalizeZaiEnvelope(envelope, NOW), [
+    { label: '5h', percent: 35, resetAt: NOW + 3 * H },
+    { label: '7d', percent: 7, resetAt: NOW + 6 * 24 * H },
+  ]);
+});
+
 test('normalizeZaiEnvelope skips TIME limits and normalizes both usage forms', () => {
   const envelope = {
     data: {

@@ -842,14 +842,10 @@ export function renderHeaderDeck(
   // Activity, and the spans rows are their replacements. The spans rows
   // keep their home directly beneath this line.
   const activityRow = alignedSingleRow(
-    ` ${activityTile(state, theme)}`,
+    activityTile(state, theme),
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // Line 4 (deck-machine-corner amendment): the engine group holds the
-  // row's left end; the right end is notice-only. The machine group moved
-  // to the line-1 corner, so notices can no longer starve machine
-  // readings — the old wholesale yield is gone with the group itself.
   // deck-reshape: line 4 is now the STATUS row — it renders only when
   // the notice ladder has something to say; healthy means no row (and
   // no seam) at all. The engine strip that lived here joined the
