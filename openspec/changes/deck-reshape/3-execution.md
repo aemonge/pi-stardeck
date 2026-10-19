@@ -39,3 +39,11 @@
   62 in the flame state the flame+countdown+cpu+mem+mcp all ride.
   Kept from the reshape: identity leads line 1 left, flush left edges,
   real conditional status, no placeholder. 68 tests, battery exit 0.
+- 2026-10-19 (swap amendment): top-right and bottom-left SWAPPED — the
+  short, predictable engine group (`󰚩 model › thinking › 󰃰 weekly`)
+  rides line 1 right (fits beside the path floor or yields wholesale),
+  and the long machine tail anchors the bottom row's left end, yielding
+  right-to-left into whatever width the status leaves. Rationale
+  (Human): PWD and branch grow unpredictably — they must never fight the
+  machine tail for line-1 width. Machine corner ladder preserved as
+  machineCornerLadder for the bottom row. 68 tests, battery exit 0.

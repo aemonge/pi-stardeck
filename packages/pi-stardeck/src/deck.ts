@@ -621,23 +621,31 @@ export function machineCornerSegments(
   return segments;
 }
 
-function deckCornerRight(
+function deckCornerRight(state: HeaderDeckState, theme: Theme, width: number): string {
+  // Line 1 right corner (deck-reshape, swap amendment): the ENGINE
+  // group — short and predictable (`󰚩 model › thinking › 󰃰 weekly?`) —
+  // so a growing PWD/branch never fights the long machine tail for
+  // width. It fits beside the path floor or yields wholesale. The
+  // machine tail lives on the bottom row now; the identity cluster
+  // leads line 1 LEFT and never yields.
+  const engine = modelGroupLeft(state, theme);
+  if (engine === '') return '';
+  return width - visibleWidth(engine) - 1 >= 20 ? engine : '';
+}
+
+function machineCornerLadder(
   state: HeaderDeckState,
   theme: Theme,
   width: number,
   nowMs = Date.now(),
 ): string {
-  // Line 1 right corner (deck-reshape, amended same day): machine
-  // readings only — the engine group moved back to the bottom row's
-  // left end after the live deck showed the merged corner overloading
-  // line 1. Yield: the tail drops right-to-left (cost first) before the
-  // path truncates; the identity cluster lives on line 1 LEFT and never
-  // yields.
+  // Bottom row left (deck-reshape, swap amendment): the machine tail
+  // yields right-to-left (cost first) into whatever width remains
+  // beside the status right end.
   const segments = machineCornerSegments(state, theme, nowMs);
-  const pathFloor = 20;
   for (let keep = segments.length; keep >= 1; keep -= 1) {
     const tail = segments.slice(0, keep).join(` ${minorSeparator(theme)} `);
-    if (width - visibleWidth(tail) - 1 >= pathFloor) return tail;
+    if (visibleWidth(tail) <= width) return tail;
   }
   return '';
 }
@@ -837,17 +845,21 @@ export function renderHeaderDeck(
     turnCostTile(state, theme),
     boundedWidth,
   );
-  // deck-reshape, same-day amendment: the bottom row is BACK — engine
-  // group on the left (`󰚩 model › thinking › weekly?`), status on the
-  // right. The merged corner overloaded line 1 in the live deck, so
-  // the engine came home; the status stays a real status thingi —
-  // right-aligned, present only when the ladder speaks (healthy means
-  // the right end is simply empty; the dim placeholder stays retired).
-  const engineRow = alignedSingleRow(
-    modelGroupLeft(state, theme),
-    noticeTile(state, theme),
-    boundedWidth,
+  // deck-reshape, swap amendment: the bottom row carries the MACHINE
+  // tail on the left (yielding right-to-left into whatever width the
+  // status leaves) and the status on the right — present only when the
+  // ladder speaks (healthy means the right end is empty; the dim
+  // placeholder stays retired). The engine group moved to line 1 right.
+  const statusRight = noticeTile(state, theme);
+  const machineRow = machineCornerLadder(
+    state,
+    theme,
+    statusRight === '' ? boundedWidth : boundedWidth - visibleWidth(statusRight) - 1,
   );
+  const engineRow =
+    statusRight === '' && machineRow === ''
+      ? ''
+      : alignedSingleRow(machineRow, statusRight, boundedWidth);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
   // amendment): the deck opens with a full ─ rule directly beneath the
