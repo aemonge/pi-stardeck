@@ -18,3 +18,9 @@
   153 package tests green, format/lint/typecheck clean, baseline
   digest refreshed, graphify updated, check:openspec PASS (12
   changes). Step 4 host-side validation pending.
+- 2026-10-19: Step 4 VALID — Human confirmed the live deck; release
+  ordered. Shipped as v0.9.1: commits pushed (feat + bookkeeping +
+  release chore), tag v0.9.1 pushed, gates re-run green via
+  `just publish`. npm publish awaits Human 2FA (EOTP) — resume with
+  `just publish 0.9.1` (skips the bump, publishes, reinstalls via
+  `pi install`).
