@@ -403,7 +403,7 @@ function projectDeckLeft(state: HeaderDeckState, theme: Theme, width: number): s
   // the path does. The devbox marker moved to the line-1 corner with the
   // companion chips (deck-machine-corner); the identity cluster never
   // drops, so the path never carries it again.
-  const path = color(theme, 'success', ` \u{F07B} ${safeText(state.cwd)}`);
+  const path = color(theme, 'success', `\u{F07B} ${safeText(state.cwd)}`);
   const gitSegment =
     width >= 79 ? truncateToWidth(gitRight(state, theme), 52, '…') : '';
   return gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
@@ -493,18 +493,20 @@ function identityCluster(
       ),
     );
   }
-  // Human fix 2026-10-19: graphify `⌬` and appa `⛨` render two cells
-  // wide in the base font — when two wide icons adjoin, their glyph
-  // padding is the gap (no space); every other pair keeps one space.
+  // Human fix 2026-10-19 (round 2): graphify `⌬` and appa `⛨` render
+  // two cells wide but sit tight within them — every wide chip gets an
+  // extra space on its RIGHT (double gap after ⌬ and ⛨, single
+  // everywhere else).
   let text = '';
-  let previous = '';
+  let previousWide = false;
   for (const part of parts) {
-    const bothWide =
-      previous !== '' && isWideChipIcon(previous) && isWideChipIcon(part);
-    text += text === '' || bothWide ? part : ` ${part}`;
-    previous = part;
+    text += text === '' ? part : `${previousWide ? '  ' : ' '}${part}`;
+    previousWide = isWideChipIcon(part);
   }
-  return { text, trailingBare: false };
+  // trailingBare now means "wide gap after the cluster" — the caller
+  // derives its corner separator gap from it; a wide trailing chip (⛨)
+  // keeps its right-breathing space before the major separator.
+  return { text, trailingBare: previousWide };
 }
 
 const WIDE_CHIP_ICONS = new Set(['\u{232C}', '\u{26E8}']);

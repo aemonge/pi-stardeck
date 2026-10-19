@@ -79,3 +79,10 @@
   Yield ladder shifted again: context rides at 60 columns now.
   68 deck tests, check exit 0 (status/active-work waitFor flake on first
   run, green on retry — timing-sensitive, unrelated).
+- 2026-10-19 (final polish): (1) Wide chips breathe right: ⌬ and ⛨ get
+  a double gap on their right (single everywhere else) — replaces the
+  round-1 no-space rule; a wide trailing chip keeps the double gap
+  before the major separator (trailingBare now means "wide gap after").
+  Context yields again at 60 cols. (2) The line-1 path no longer starts
+  with a space — the leftover devbox-prefix slot is gone; the path opens
+  directly with the folder glyph. 68 tests, check exit 0.
