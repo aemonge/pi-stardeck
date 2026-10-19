@@ -27,7 +27,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       14/14, vim 37/37, composition PASS (1 extension, 7 commands, 4 tools),
       OpenSpec 7/7; `graphify update .` clean (needs_update cleared) · paths:
       `baseline/source.sha256`
-- [ ] Step 5 — Human validation — host gates, `just publish 0.6.0`, push,
+- [x] Step 5 — Human validation — host gates, `just publish 0.6.0`, push,
       reinstall, deck-row spot check
 
   gate-attributed · tool: bash · paths: — · at 2026-10-15T08:22:10Z

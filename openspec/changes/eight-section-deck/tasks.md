@@ -230,7 +230,7 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
       2026-10-14 · `npm run check` FULL PASS at `89056df` (stardeck 149,
       status 186, components green, tarball 83/88, openspec strict PASS,
       baseline 119 files, import record 87); tree unchanged since
-- [ ] 4.2 Hand the release to Human: `just publish 0.4.0` (0.3.0 shipped
+- [x] 4.2 Hand the release to Human: `just publish 0.4.0` (0.3.0 shipped
       early per Human decision 2026-10-14 carrying the rename + four-line
       deck; 0.4.0 adds notices + waiver — minor bump, new features), push,
       then `pi update --extensions`; `pi list` confirms
