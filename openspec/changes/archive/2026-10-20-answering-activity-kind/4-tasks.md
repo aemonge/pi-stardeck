@@ -7,7 +7,8 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
 - [x] 1.3 deck.ts + title.ts label maps
 - [x] 1.4 markAnswering publishes {kind:'answering'}
 - [x] 1.5 Deck test; full gates (status 166/166, deck 152/152, root PASS)
-- [-] 1.6 Commit for the 0.9.2 release; archive after Human validation
+- [x] 1.6 Committed (0e1a26a) for the 0.9.2 release; Human eyeballs
+      `answering` live during the publish flow
 
   gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/gauge.ts · at 2026-10-20T11:54:23Z
 
@@ -28,3 +29,5 @@ Step states: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
   gate-attributed · tool: bash · paths: — · at 2026-10-20T11:55:49Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-20T11:57:53Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-20T11:58:00Z
