@@ -7,7 +7,7 @@ editor widget itself.
 ## Architecture
 
 ```text
-Pi tool lifecycle + session/Goal metadata + OpenSpec CLI + aggregate JSON state
+Pi tool lifecycle + session metadata + OpenSpec CLI + aggregate JSON state
                                   │
                                   ▼
                         normalized immutable state
@@ -64,9 +64,9 @@ active OpenSpec footer by themselves.
 
 ## Session focus and terminal title
 
-A Pi session has zero or one explicit OpenSpec task focus, optional read-only Pi Goal
-state, and an independent ephemeral Session Work state. Display priority is OpenSpec
-Task → Goal → Session Work → safe direct fallback. OpenSpec focus clears active Session
+A Pi session has zero or one explicit OpenSpec task focus and an independent
+ephemeral Session Work state. Display priority is OpenSpec
+Task → Session Work → safe direct fallback. OpenSpec focus clears active Session
 Work when acquired, preventing hidden or stale work from resurfacing later.
 
 Session Work is stored only as versioned custom entries on the active Pi session branch;
@@ -80,7 +80,7 @@ it never creates a repository status file. It supports this lifecycle:
 ```
 
 When no OpenSpec portfolio is available, the matching row-one footer fallback is the
-compact `▶ Focus` or `◇ Validate`; an active Goal uses `󰊕 Goal`, and an entirely empty
+compact `▶ Focus` or `◇ Validate`; an entirely empty
 project uses ` no OpenSpec`. The detailed Session Work intent remains in the header
 instead of being duplicated in the footer. Active and validation states also replace the
 fallback terminal title. Reload, resume, and tree navigation restore the newest valid
@@ -97,25 +97,14 @@ publication.
 
 The header projection uses the rich lifecycle `understanding`, `working`, `waiting`,
 `assuring`, `learning`, `answering`, `blocked`, `listening`, or `aborted`. It separately
-publishes one explicit selection with OpenSpec Task → Goal → Session Work precedence,
+publishes one explicit selection with OpenSpec Task → Session Work precedence,
 or `null` when no work is selected. A controlled suggestion enum communicates only
 Human-facing reporting cues such as `requesting-validation`,
 `awaiting-continuation`, or `requesting-redirection`; it never carries generated
 prose. Direct tool
-categories, read-only Pi Goal state, and known Taskflow phases move the lifecycle
-without exposing arguments or raw node prose. Goal state is restored from Pi's canonical
-`goal-state` session entries without enabling Goal RPC. An active Goal renders bounded
-automatic-turn progress from `pi-goal.json`; paused, blocked, limited, external-wait,
-and complete states render controlled labels. Complete projects as
-`awaiting Human validation` rather than Human acceptance. Raw Goal objectives, wait
-reasons, completion summaries, paths, and Goal IDs never enter the visible header. While
-a Goal exists, a session-scoped 500 ms in-memory branch monitor catches idle
-`/goal pause`, clear, and menu transitions; it performs no filesystem, process,
-provider, or network work and stops when Goal state is cleared. A stopped Goal remains
-visible while Pi is idle so its terminal reason is honest, but the next ordinary
-non-Goal turn automatically returns the title to current Ramona, OpenSpec, Session Work,
-or direct activity. This display transition never mutates Goal or focus state; a later
-Goal resume automatically reclaims the title. During a Taskflow tool run, structured
+categories and known Taskflow phases move the lifecycle
+without exposing arguments or raw node prose. Complete projects as
+`awaiting Human validation` rather than Human acceptance. During a Taskflow tool run, structured
 streaming state temporarily replaces the normal focus with the running top-level phase
 ID, such as `working ⟩ work-fragment`; promoted child IDs and generated output remain
 hidden. Visible assistant text moves it to `answering`; settling with selected work
@@ -128,7 +117,7 @@ operation transitions to bounded recovery. This prevents a completed command fro
 looking permanently active while Pi prepares its next action. A Ctrl-C assistant stop
 reason moves it to `aborted` and remains visible until the next turn resets it to
 `understanding`. Legacy work titles still preserve the existing explicit fallback states for compatible
-consumers. The additive selection field contains only an exact OpenSpec Task, Goal, or
+consumers. The additive selection field contains only an exact OpenSpec Task or
 Session Work; otherwise it is `null`, so the deck renders a stable dim `󰓾 —`. `Direct
 response` is never presented as selection and Human prompt text is never copied into it.
 
@@ -181,7 +170,7 @@ Aggregate portfolio progress is independent of focus and remains visible as:
 It occupies the right side of footer row one, opposite the full PWD and Git state. It
 updates from `openspec list --json`; task-list `` replaces `Plans` and notebook ``
 replaces `Tasks`. If no OpenSpec portfolio exists, the slot prefers compact active scope
-(`󰊕 Goal`, then `▶ Focus` or `◇ Validate`) before falling back to dim ` no OpenSpec`.
+(`▶ Focus` or `◇ Validate`) before falling back to dim ` no OpenSpec`.
 Focused-change metadata remains separate and does not replace these totals. The
 no-argument form reports the current focus without changing it. The matching tool calls
 are:
@@ -220,7 +209,7 @@ legacy focused-status producer also gives quiet state feedback:
 
 - actionable task work exists: dim `○ OpenSpec · no focus`
 - no actionable task work exists: dim `○ OpenSpec · clear`
-- no `openspec/` project exists: row one shows Goal or Focus when active, otherwise dim
+- no `openspec/` project exists: row one shows Focus when active, otherwise dim
   ` no OpenSpec`
 - OpenSpec status cannot be read: the last aggregate remains while focused status
   reports unavailable
@@ -282,7 +271,7 @@ A configured `orchestration.stateFile` takes precedence. Useful fields include `
 or node vocabulary is classified into an allowlisted title activity—understanding,
 inspection, synthesis, planning, skill proposal, mutation, implementation, change
 review, regression, verification, result review, recovery, waiting reason, or abort—and
-attached to the current OpenSpec, Goal, Session Work, or explicit empty focus. Task
+attached to the current OpenSpec, Session Work, or explicit empty focus. Task
 text, paths, generated prose, and promoted child IDs never enter the lifecycle title;
 unknown vocabulary produces no activity. The bounded top-level phase ID is the only
 exact Taskflow identifier shown. Named Taskflow runs invoked by the assistant through

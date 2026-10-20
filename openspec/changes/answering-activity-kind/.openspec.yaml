@@ -1,0 +1,10 @@
+schema: ramona-plan
+created: 2026-10-20
+goal: The answering phase publishes as an activity kind so the band never claims
+  awaiting Human mid-turn
+skip_specs: true
+
+status: approved
+created_by: assistant
+
+approved_at: 2026-10-20T11:53:58Z

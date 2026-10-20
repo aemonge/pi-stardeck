@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { GoalHeaderState } from '../src/goal.ts';
 import type { RunSpan } from '../src/types.ts';
 import {
   applyEvent,
@@ -10,13 +9,6 @@ import {
   reduceLedger,
   rootRun,
 } from '../src/reducer.ts';
-
-const goal: GoalHeaderState = {
-  id: 'goal-1',
-  status: 'active',
-  automaticModelTurns: 3,
-  waiting: false,
-};
 
 function span(overrides: Partial<RunSpan> = {}): RunSpan {
   return {
@@ -49,7 +41,6 @@ test('resolver priority: openspec-task beats all others', () => {
   const snapshot = reduceLedger([
     { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
     { type: 'focus/work', at: 2, work: { state: 'active', intent: 'work' } },
-    { type: 'focus/goal', at: 3, goal },
     {
       type: 'focus/openspec',
       at: 4,
@@ -61,15 +52,6 @@ test('resolver priority: openspec-task beats all others', () => {
     change: 'chg',
     task: '2',
   });
-});
-
-test('resolver priority: goal beats work and subject', () => {
-  const snapshot = reduceLedger([
-    { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
-    { type: 'focus/work', at: 2, work: { state: 'active', intent: 'work' } },
-    { type: 'focus/goal', at: 3, goal },
-  ]);
-  assert.equal(snapshot.selection.kind, 'goal');
 });
 
 test('resolver priority: subject is the passive fallback, never overriding', () => {

@@ -138,6 +138,7 @@ function sameActivity(
 
 export class TitleActivityFeed {
   private newest: TitleActivityState | null = null;
+  private ownerCallId: string | null = null;
 
   /** The newest observed event, or null when idle. */
   current(): TitleActivityState | null {
@@ -148,6 +149,17 @@ export class TitleActivityFeed {
   reset(): boolean {
     if (this.newest === null) return false;
     this.newest = null;
+    this.ownerCallId = null;
+    return true;
+  }
+
+  /** Observe a tool-execution end: the current activity clears when this
+   * call authored it — a finished tool never lingers through the gaps
+   * that follow (sticky-label fix, quiet-activity-row amendment). */
+  finish(toolCallId: string): boolean {
+    if (this.newest === null || this.ownerCallId !== toolCallId) return false;
+    this.newest = null;
+    this.ownerCallId = null;
     return true;
   }
 
@@ -180,7 +192,9 @@ export class TitleActivityFeed {
           span: turnSpanId ?? toolCallId,
           parent: null,
         };
-    return this.set(event);
+    const changed = this.set(event);
+    if (changed) this.ownerCallId = toolCallId;
+    return changed;
   }
 
   /**
@@ -204,12 +218,14 @@ export class TitleActivityFeed {
           shortTarget(result.agent) ??
           shortTarget(callsAgentName(args, index)) ??
           FALLBACK_SUBAGENT_TARGET;
-        return this.set({
+        const changed = this.set({
           class: 'subagent',
           target,
           span: `${toolCallId}:${index}`,
           parent: toolCallId,
         });
+        if (changed) this.ownerCallId = toolCallId;
+        return changed;
       }
       return false;
     }

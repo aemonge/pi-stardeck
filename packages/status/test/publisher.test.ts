@@ -183,22 +183,8 @@ test('publishes explicit Session Work states without competing with OpenSpec', (
   assert.equal(openSpecWins[0]?.id, 'galactica.openspec');
 });
 
-test('uses Goal, Focus, then no OpenSpec as row-one fallbacks', () => {
+test('uses Focus, then no OpenSpec as row-one fallbacks', () => {
   const noProject = { openSpecProjectDetected: false } as const;
-  const goalWidgets = buildWidgetSnapshots(snapshot({ openspec: null }), {
-    ...noProject,
-    goal: {
-      id: 'goal-1',
-      status: 'active',
-      automaticModelTurns: 1,
-      waiting: false,
-    },
-  });
-  assert.equal(goalWidgets.length, 1);
-  assert.equal(goalWidgets[0]?.id, 'galactica.goal');
-  assert.equal(goalWidgets[0]?.content.text, 'Goal');
-  assert.equal(goalWidgets[0]?.layout?.align, 'right');
-
   const focusWidgets = buildWidgetSnapshots(snapshot({ openspec: null }), {
     ...noProject,
     workFocus: { state: 'active', intent: 'Improve prompt layout' },
@@ -396,135 +382,6 @@ test('projects explicit empty-state titles without inventing direct-response foc
   });
   assert.deepEqual(event.work?.titles, []);
   assert.doesNotMatch(JSON.stringify(event), /Direct response/u);
-});
-
-test('projects bounded Goal progress without exposing the raw objective', () => {
-  const active = publisherModule.buildHeaderStatusEvent([], {
-    lifecycle: 'assuring',
-    goal: {
-      id: 'goal-1',
-      status: 'active',
-      automaticModelTurns: 2,
-      waiting: false,
-    },
-    goalAutomaticTurnLimit: 4,
-  });
-
-  assert.deepEqual(active.work, {
-    lifecycle: 'assuring',
-    titles: ['Goal'],
-    color: 'accent',
-    activityPath: [
-      {
-        id: 'goal-work',
-        label: 'completing Goal',
-        compact: 'Goal',
-        current: 2,
-        total: 4,
-      },
-    ],
-  });
-  assert.equal(active.backgroundActivity, true);
-  assert.equal(active.approvalRequired, false);
-  assert.equal(
-    publisherModule.buildHeaderStatusEvent([], {
-      goal: {
-        id: 'goal-1',
-        status: 'active',
-        automaticModelTurns: 0,
-        waiting: false,
-      },
-    }).work?.lifecycle,
-    'working',
-  );
-
-  const complete = publisherModule.buildHeaderStatusEvent([], {
-    lifecycle: 'answering',
-    goal: {
-      id: 'goal-1',
-      status: 'complete',
-      automaticModelTurns: 2,
-      waiting: false,
-    },
-    goalAutomaticTurnLimit: 4,
-  });
-  assert.deepEqual(complete.work, {
-    lifecycle: 'waiting',
-    titles: ['Goal'],
-    color: 'warning',
-    activityPath: [
-      {
-        id: 'awaiting-human-validation',
-        label: 'awaiting Human validation',
-        compact: 'validation',
-      },
-    ],
-  });
-  assert.equal(complete.backgroundActivity, false);
-  assert.equal(complete.approvalRequired, true);
-  assert.doesNotMatch(JSON.stringify([active, complete]), /private|objective|prompt/u);
-});
-
-test('Goal blocking and external waiting project controlled lifecycle states', () => {
-  const blocked = publisherModule.buildHeaderStatusEvent([], {
-    goal: {
-      id: 'goal-1',
-      status: 'blocked',
-      automaticModelTurns: 3,
-      waiting: false,
-    },
-  });
-  const waiting = publisherModule.buildHeaderStatusEvent([], {
-    goal: {
-      id: 'goal-1',
-      status: 'active',
-      automaticModelTurns: 3,
-      waiting: true,
-    },
-  });
-
-  assert.equal(blocked.work?.lifecycle, 'blocked');
-  assert.equal(blocked.blocked, true);
-  assert.deepEqual(blocked.work?.activityPath, [
-    { id: 'goal-blocked', label: 'Goal blocked', compact: 'blocked' },
-  ]);
-  assert.equal(waiting.work?.lifecycle, 'waiting');
-  assert.deepEqual(waiting.work?.activityPath, [
-    {
-      id: 'goal-waiting',
-      label: 'waiting for external event',
-      compact: 'waiting',
-    },
-  ]);
-});
-
-test('focused OpenSpec identity remains authoritative during Goal execution', () => {
-  const event = publisherModule.buildHeaderStatusEvent([], {
-    openSpec,
-    focusedTaskId: '3.8',
-    lifecycle: 'working',
-    goal: {
-      id: 'goal-1',
-      status: 'active',
-      automaticModelTurns: 1,
-      waiting: false,
-    },
-    goalAutomaticTurnLimit: 4,
-  });
-
-  assert.deepEqual(event.work?.titles, [
-    'Shape a Pi-first closed-loop development harness',
-    'Gondolin-backed permission profiles',
-  ]);
-  assert.deepEqual(event.work?.activityPath, [
-    {
-      id: 'goal-work',
-      label: 'completing Goal',
-      compact: 'Goal',
-      current: 1,
-      total: 4,
-    },
-  ]);
 });
 
 test('unknown focused OpenSpec task uses exact IDs instead of borrowing a headline', () => {

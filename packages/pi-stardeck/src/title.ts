@@ -45,6 +45,7 @@ const ACTIVITY_LABELS: Record<HeaderActivity['kind'], ActivityLabels> = {
     full: 'reviewing check results',
     compact: 'reviewing results',
   },
+  answering: { full: 'answering the Human', compact: 'answering' },
   recovery: { full: 'repairing bounded failure', compact: 'repair' },
   'awaiting-validation': {
     full: 'Human validation',

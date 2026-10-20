@@ -1,5 +1,4 @@
 import type { LedgerEvent } from './ledger.ts';
-import type { GoalHeaderState } from './goal.ts';
 import type { OpenSpecFocus, SessionSubject, SessionWorkFocus } from './active-work.ts';
 import type {
   CockpitSnapshot,
@@ -20,7 +19,6 @@ import type {
 
 export type ReducerFacts = {
   openSpec: OpenSpecFocus;
-  goal: GoalHeaderState | null;
   work: SessionWorkFocus;
   subject: SessionSubject;
   runs: ReadonlyMap<string, RunSpan>;
@@ -32,7 +30,6 @@ export const NO_SELECTION: SelectionState = { kind: 'none' };
 export function emptyFacts(): ReducerFacts {
   return {
     openSpec: { mode: 'none' },
-    goal: null,
     work: { state: 'clear' },
     subject: { state: 'clear' },
     runs: new Map(),
@@ -43,7 +40,6 @@ export function emptyFacts(): ReducerFacts {
 /** The single selection resolver. Priority order is contract-frozen. */
 export function resolveSelection(facts: {
   openSpec: OpenSpecFocus;
-  goal: GoalHeaderState | null;
   work: SessionWorkFocus;
   subject: SessionSubject;
 }): SelectionState {
@@ -52,13 +48,6 @@ export function resolveSelection(facts: {
       kind: 'openspec-task',
       change: facts.openSpec.change,
       task: facts.openSpec.taskId,
-    };
-  }
-  if (facts.goal) {
-    return {
-      kind: 'goal',
-      status: facts.goal.status,
-      waiting: facts.goal.waiting,
     };
   }
   if (facts.work.state !== 'clear') {
@@ -84,8 +73,6 @@ export function applyEvent(facts: ReducerFacts, event: LedgerEvent): ReducerFact
   switch (event.type) {
     case 'focus/openspec':
       return { ...facts, openSpec: event.focus };
-    case 'focus/goal':
-      return { ...facts, goal: event.goal };
     case 'focus/work':
       return { ...facts, work: event.work };
     case 'focus/subject':
@@ -165,14 +152,6 @@ export function deriveTitle(snapshot: CockpitSnapshot): string {
   switch (selection.kind) {
     case 'openspec-task':
       detail = `${selection.change} › ${selection.task}`;
-      break;
-    case 'goal':
-      detail =
-        selection.status === 'complete'
-          ? 'Validate › Goal'
-          : selection.waiting
-            ? 'Goal › waiting'
-            : 'Goal';
       break;
     case 'session-work':
       detail =

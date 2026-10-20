@@ -60,16 +60,26 @@ title state, reset at `before_agent_start`, zeroed when idle.
 
 The header SHALL render the eight sections as four lines, two per line:
 (1) path/git left with companion chips right; (2) clock and Subject left
-with Work right; (3) Activity left with this-turn cost right; (4) engine,
-quota window, machine, and global cost left with notices right.
+with Work right; (3) Activity left with this-turn cost right — rendered
+only while activity or per-turn cost speaks (quiet-activity-row: idle
+`awaiting Human` with a zeroed or absent meter retires the band and its
+seam); (4) engine, quota window, machine, and global cost left with
+notices right.
 
 #### Scenario: idle rendering at 100+ columns
 
 - **WHEN** the session is idle with no work focus and no notices
-- **THEN** lines 2–3 render as
-  `󰠭 000:00'00 ⟩ <Subject>` with dim `— no change owns the moment`
-  right, and `awaiting Human` with `— · 0 tok` right, and nothing renders
-  in the notice slot
+- **THEN** line 2 renders `󰠭 000:00'00 ⟩ <Subject>` with dim
+  `— no change owns the moment` right; the idle activity band renders
+  nothing, and no `⚠` renders in the notice slot
+
+#### Scenario: thinking gap between tools
+
+- **WHEN** a turn is running with no tool activity observed — thinking,
+  planning, or the gap after a tool ends — and the meter is accruing
+- **THEN** line 3 renders the live phase word left (e.g. `interpreting`)
+  with the accruing cost right, never `awaiting Human`; a finished
+  tool's label clears when its authoring call ends
 
 #### Scenario: mid-work rendering at 100+ columns
 
@@ -96,35 +106,24 @@ state; Work, Activity, and the spans rows are their replacements.
 - **THEN** the strings `task 00/00`, `stps 00/00`, and `00 › 00` appear
   in no rendered line
 
-### Requirement: Conditional blocks keep their homes
-
-Goal progress rows SHALL render beneath line 2 only while a goal is
-focused, and spans rows SHALL render beneath line 3 only while agents or
-bashes are live.
-
-#### Scenario: focused goal
-
-- **WHEN** a goal is focused and mid-work
-- **THEN** the goal's tasks and usage rows render beneath the Subject/Work
-  line and the headline never becomes the goal
-
 ### Requirement: Unified notice slot
 
-Line 4 right SHALL aggregate companion warning texts, the unfocused
-open-goal hint, and diagnostics counts into one `⚠` slot, ranked in that
-order and joined with ` · `, rendering nothing when clean.
+Line 4 right SHALL aggregate companion warning texts and diagnostics
+counts into one `⚠` slot, ranked in that order and joined with ` · `,
+yielding the right end to the quiet sentinel when clean.
 
 #### Scenario: clean session
 
 - **WHEN** no warnings exist
-- **THEN** the notice slot renders nothing
+- **THEN** the quiet ladybug sentinel holds the right end — dim when
+  bare, or accent-bounded with a purple id (`󰠭 xxxxxxxx 󰠭`) when the
+  session's short id is known and the frame is wide enough — and no
+  `⚠` renders
 
 #### Scenario: mixed warnings
 
-- **WHEN** one goal is open unfocused, appa is unreachable, and two
-  diagnostics exist
-- **THEN** the slot renders
-  `⚠ 1 open goal · /goal-focus · appa unreachable · 2 diagnostics`
+- **WHEN** appa is unreachable and two diagnostics exist
+- **THEN** the slot renders `⚠ appa unreachable · 2 diagnostics`
 
 ### Requirement: Waiver suppresses its notice
 

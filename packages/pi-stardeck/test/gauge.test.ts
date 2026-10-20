@@ -315,7 +315,6 @@ test('config keeps one footer row and moves compact telemetry to prompt rails', 
   for (const id of [
     'galactica.openspec-progress',
     'galactica.work',
-    'galactica.goal',
     'galactica.project-capabilities',
     'galactica.runtime-scope-separator',
     'galactica.runtime-state',

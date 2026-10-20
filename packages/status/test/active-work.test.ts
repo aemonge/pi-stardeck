@@ -41,35 +41,6 @@ const replacementTaskId = '2.4';
 const replacementTaskTitle = 'Replace active title focus';
 const replacementActiveTitle = `π  ${replacementChange} › ${replacementTaskId} ${replacementTaskTitle}`;
 
-function goalStateEntry(
-  status: string | null,
-  options: {
-    id?: string;
-    automaticModelTurns?: number;
-    waiting?: boolean;
-    text?: string;
-  } = {},
-) {
-  return {
-    type: 'custom',
-    customType: 'goal-state',
-    data: {
-      goal:
-        status === null
-          ? null
-          : {
-              id: options.id ?? 'goal-1',
-              text: options.text ?? 'raw/private Goal objective',
-              status,
-              automaticModelTurns: options.automaticModelTurns ?? 0,
-              ...(options.waiting
-                ? { waiting: { reason: 'private wait reason' } }
-                : {}),
-            },
-    },
-  };
-}
-
 const originalEnvironment = {
   codingAgentDir: process.env.PI_CODING_AGENT_DIR,
   openspecChange: process.env.PI_OPENSPEC_CHANGE,
@@ -1250,155 +1221,6 @@ test('unfocused direct tools publish an activity-only header bridge', async () =
   }
 });
 
-test('Goal session state drives safe header identity and Human-validation waiting', async () => {
-  const harness = new RuntimeHarness({
-    entries: [
-      {
-        type: 'custom',
-        customType: 'galactica-status.session-work.v1',
-        data: { state: 'active', intent: 'Stale Session Work' },
-      },
-      goalStateEntry('active', {
-        automaticModelTurns: 2,
-        text: 'Inspect /private/objective without exposing it',
-      }),
-    ],
-  });
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.equal(harness.titles.at(-1), 'π  Goal');
-    assert.equal(latestWorkFooterMessage(harness), undefined);
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'working',
-      titles: ['Goal'],
-      color: 'accent',
-      activityPath: [{ id: 'goal-work', label: 'completing Goal', compact: 'Goal' }],
-    });
-
-    await harness.emit('before_agent_start', {
-      prompt: 'private Goal continuation prompt',
-      systemPrompt: 'Base prompt',
-    });
-    assert.equal(
-      (latestHeaderWork(harness) as { lifecycle?: string } | undefined)?.lifecycle,
-      'understanding',
-    );
-
-    harness.entries.push(
-      goalStateEntry('complete', {
-        automaticModelTurns: 2,
-        text: 'Inspect /private/objective without exposing it',
-      }),
-    );
-    await harness.emit('tool_execution_end', {
-      toolCallId: 'goal-complete',
-      toolName: 'goal_complete',
-      result: { content: [{ type: 'text', text: 'private completion summary' }] },
-      isError: false,
-    });
-    await new Promise<void>((resolve) => setImmediate(resolve));
-
-    assert.equal(harness.titles.at(-1), 'π  Validate › Goal');
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'waiting',
-      titles: ['Goal'],
-      color: 'warning',
-      activityPath: [
-        {
-          id: 'awaiting-human-validation',
-          label: 'awaiting Human validation',
-          compact: 'validation',
-        },
-      ],
-    });
-    assert.doesNotMatch(
-      JSON.stringify(latestHeaderWork(harness)),
-      /private|objective|completion summary/u,
-    );
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('Goal polling notices idle slash-command clear without enabling RPC', async () => {
-  const harness = new RuntimeHarness({ entries: [goalStateEntry('paused')] });
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.equal(harness.titles.at(-1), 'π  Goal › paused');
-
-    harness.entries.push(goalStateEntry(null));
-    await waitFor(
-      () => harness.titles.at(-1) !== 'π  Goal › paused',
-      () => titleDiagnostics(harness),
-      1_200,
-    );
-
-    assert.equal(latestHeaderWork(harness)?.lifecycle, 'listening');
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('stopped Goal title yields automatically on normal Pi input and returns on resume', async () => {
-  const harness = new RuntimeHarness({
-    entries: [goalStateEntry('budget_limited', { automaticModelTurns: 4 })],
-  });
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'waiting',
-      titles: ['Goal'],
-      color: 'dim',
-      activityPath: [
-        {
-          id: 'goal-budget-limited',
-          label: 'Goal budget limited',
-          compact: 'budget limit',
-        },
-      ],
-    });
-
-    const entriesBeforeNormalTurn = harness.entries.length;
-    await harness.emit('before_agent_start', {
-      prompt: 'APPROVE',
-      systemPrompt: 'Base prompt',
-    });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [], // frozen contract: no narration
-      color: 'accent',
-      activity: { kind: 'understanding' },
-    });
-    assert.equal(
-      harness.entries.length,
-      entriesBeforeNormalTurn,
-      'automatic title projection must not mutate Goal or focus state',
-    );
-
-    await harness.emit('agent_settled', {});
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    assert.equal(latestHeaderWork(harness)?.lifecycle, 'listening');
-
-    harness.entries.push(
-      goalStateEntry('active', { automaticModelTurns: 0, id: 'goal-1' }),
-    );
-    await harness.emit('before_agent_start', {
-      prompt:
-        'Resume Goal\n<!-- pi-goal-prompt:ffe5a524-6bb8-4b87-b3d3-57fea9fc9797 -->',
-      systemPrompt: 'Base prompt',
-    });
-    assert.equal(harness.titles.at(-1), 'π  Goal');
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: ['Goal'],
-      color: 'accent',
-      activityPath: [{ id: 'goal-work', label: 'completing Goal', compact: 'Goal' }],
-    });
-  } finally {
-    await harness.stop();
-  }
-});
-
 test('rich lifecycle reports understanding, answering, abort, and next-turn reset', async () => {
   const harness = new RuntimeHarness();
   try {
@@ -1425,6 +1247,9 @@ test('rich lifecycle reports understanding, answering, abort, and next-turn rese
       lifecycle: 'answering',
       titles: [], // frozen contract: no narration
       color: 'accent',
+      // answering-activity-kind: the phase speaks as an activity so the
+      // deck band never claims `awaiting Human` mid-turn.
+      activity: { kind: 'answering' },
     });
 
     const aborted = {
@@ -2570,31 +2395,13 @@ test('OpenSpec, Session Work, and fallback title precedence stays explicit', () 
   );
 });
 
-test('OpenSpec stays authoritative while Goal safely replaces Session Work title focus', () => {
+test('OpenSpec stays authoritative over Session Work title focus', () => {
   const common = {
     workFocus: { state: 'active', intent: 'Stale session work' } as const,
-    goal: {
-      id: 'goal-1',
-      status: 'active',
-      automaticModelTurns: 1,
-      waiting: false,
-    } as const,
     sessionName: 'Fallback session',
     cwd: '/work/cwd-choice',
   };
 
-  assert.equal(
-    formatActiveWorkTitle({ focus: { mode: 'none' }, ...common }),
-    'π  Goal',
-  );
-  assert.equal(
-    formatActiveWorkTitle({
-      focus: { mode: 'none' },
-      ...common,
-      goal: { ...common.goal, status: 'complete' },
-    }),
-    'π  Validate › Goal',
-  );
   assert.equal(
     formatActiveWorkTitle({
       focus: { mode: 'task', change, taskId },

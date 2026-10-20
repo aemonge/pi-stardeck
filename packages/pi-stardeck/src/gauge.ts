@@ -62,6 +62,7 @@ export const HEADER_ACTIVITY_KINDS = [
   'regression',
   'verification',
   'result-review',
+  'answering',
   'recovery',
   'awaiting-validation',
   'awaiting-input',
@@ -97,27 +98,15 @@ export type HeaderWork = {
 
 export const HEADER_SELECTION_SOURCES = [
   'openspec',
-  'goal',
   'session-work',
   'subject',
   'legacy',
 ] as const;
 
-export type HeaderSelectionGoalDetail = {
-  status: string;
-  elapsedSeconds?: number;
-  tasksDone?: number;
-  tasksActive?: number;
-  tasksTotal?: number;
-  tokensUsed?: number;
-  tokenBudget?: number;
-};
-
 export type HeaderSelection = {
   source: (typeof HEADER_SELECTION_SOURCES)[number];
   titles: string[];
   color: HeaderColor;
-  goal?: HeaderSelectionGoalDetail;
 };
 
 export const HEADER_SUGGESTIONS = [
@@ -131,7 +120,6 @@ export const HEADER_SUGGESTIONS = [
 export type HeaderSuggestion = (typeof HEADER_SUGGESTIONS)[number];
 
 export type HeaderSnapshot = {
-  openGoals?: number;
   activity?: HeaderActivity | null;
   selection?: HeaderSelection | null;
   suggestion?: HeaderSuggestion | null;
@@ -954,46 +942,10 @@ function parseHeaderSelection(value: unknown): HeaderSelection | null {
   });
   if (titles.length !== candidate.titles.length) return null;
 
-  let goal: HeaderSelectionGoalDetail | undefined;
-  if (
-    candidate.source === 'goal' &&
-    candidate.goal &&
-    typeof candidate.goal === 'object' &&
-    !Array.isArray(candidate.goal)
-  ) {
-    const raw = candidate.goal as Record<string, unknown>;
-    const boundedNumber = (input: unknown): number | undefined =>
-      typeof input === 'number' &&
-      Number.isFinite(input) &&
-      input >= 0 &&
-      input <= 9_999_999_999
-        ? input
-        : undefined;
-    if (typeof raw.status === 'string' && raw.status.length <= 24) {
-      const detail: HeaderSelectionGoalDetail = { status: raw.status };
-      const elapsed = boundedNumber(raw.elapsedSeconds);
-      if (elapsed !== undefined) detail.elapsedSeconds = elapsed;
-      for (const [key, value] of [
-        ['tasksDone', raw.tasksDone],
-        ['tasksActive', raw.tasksActive],
-        ['tasksTotal', raw.tasksTotal],
-        ['tokenBudget', raw.tokenBudget],
-      ] as const) {
-        const parsed = boundedNumber(value);
-        if (parsed !== undefined && parsed <= 9_999) {
-          detail[key] = parsed;
-        }
-      }
-      const tokensUsed = boundedNumber(raw.tokensUsed);
-      if (tokensUsed !== undefined) detail.tokensUsed = tokensUsed;
-      goal = detail;
-    }
-  }
   return {
     source: candidate.source as HeaderSelection['source'],
     titles,
     color: candidate.color,
-    ...(goal !== undefined ? { goal } : {}),
   };
 }
 
@@ -1066,14 +1018,6 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const message = raw as Record<string, unknown>;
   if (message.protocol !== 1) return null;
-  const openGoals =
-    typeof message.openGoals === 'number' &&
-    Number.isInteger(message.openGoals) &&
-    message.openGoals >= 0 &&
-    message.openGoals <= 99
-      ? message.openGoals
-      : 0;
-
   const standaloneActivity = parseHeaderActivity(message.activity) ?? null;
   let work: HeaderWork | null = null;
   if (
@@ -1190,7 +1134,6 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
   const hasExplicitTurn = Object.prototype.hasOwnProperty.call(message, 'turn');
 
   return {
-    openGoals,
     activity: standaloneActivity,
     selection: hasExplicitSelection
       ? parseHeaderSelection(message.selection)

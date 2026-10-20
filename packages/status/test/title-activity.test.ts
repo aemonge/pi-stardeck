@@ -173,3 +173,34 @@ test('target labels collapse whitespace and stop at 48 characters', () => {
     target: 'subagent',
   });
 });
+
+// --- quiet-activity-row amendment: finished tools never linger ---------------
+
+test('finish clears the activity only when its authoring call ends', () => {
+  // Sticky-label fix: a finished tool must not stay the live label
+  // through the thinking gaps that follow it.
+  const feed = new TitleActivityFeed();
+  feed.begin('c1', 'edit', { path: 'src/deck.ts' }, 'turn-1');
+  assert.equal(feed.finish('c2'), false, 'a different call never clears');
+  assert.equal(feed.current()?.class, 'editing');
+  assert.equal(feed.finish('c1'), true, 'the author clears the label');
+  assert.equal(feed.current(), null);
+  assert.equal(feed.finish('c1'), false, 'clearing twice stays quiet');
+});
+
+test('subagent updates re-own the container so its end clears the label', () => {
+  const feed = new TitleActivityFeed();
+  feed.begin('c1', 'read', { path: 'a.ts' }, 'turn-1');
+  const partial = {
+    details: {
+      kind: 'pi-subagent',
+      results: [{ agent: 'scout', exitCode: -1, sawAgentStart: true }],
+    },
+  };
+  assert.equal(feed.update('c2', 'subagent', {}, partial, 'turn-1'), true);
+  assert.equal(feed.current()?.class, 'subagent');
+  assert.equal(feed.current()?.target, 'scout');
+  assert.equal(feed.finish('c1'), false, 'the superseded reader no longer owns it');
+  assert.equal(feed.finish('c2'), true, 'the container end clears it');
+  assert.equal(feed.current(), null);
+});

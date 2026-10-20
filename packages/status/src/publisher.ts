@@ -1,5 +1,4 @@
 import type { SessionSubject, SessionWorkFocus } from './active-work.ts';
-import type { GoalHeaderState } from './goal.ts';
 import type { ActiveRunSpanView, ActiveRuntimeRuns } from './runtime-runs.ts';
 import type { TitleState } from './title-state.ts';
 import type { TurnCostSnapshot } from './turn-cost.ts';
@@ -26,7 +25,6 @@ const OPEN_SPEC_WIDGET_ID = 'galactica.openspec';
 const OPEN_SPEC_SCOPE_SEPARATOR_WIDGET_ID = 'galactica.openspec-scope-separator';
 const OPEN_SPEC_PROGRESS_WIDGET_ID = 'galactica.openspec-progress';
 const SESSION_WORK_WIDGET_ID = 'galactica.work';
-const GOAL_WIDGET_ID = 'galactica.goal';
 const DIAGNOSTICS_WIDGET_ID = 'galactica.diagnostics';
 const ORCHESTRATION_WIDGET_ID = 'galactica.orchestration';
 
@@ -212,7 +210,6 @@ export function buildWidgetSnapshots(
     openSpecOverview?: OpenSpecOverview;
     openSpecProjectDetected?: boolean;
     workFocus?: SessionWorkFocus;
-    goal?: GoalHeaderState | null;
   } = {},
 ): FancyFooterWidget[] {
   const compact = options.compact ?? false;
@@ -221,8 +218,7 @@ export function buildWidgetSnapshots(
 
   const hasActiveFallback =
     !options.openSpecOverview &&
-    (Boolean(options.goal) ||
-      Boolean(options.workFocus && options.workFocus.state !== 'clear'));
+    Boolean(options.workFocus && options.workFocus.state !== 'clear');
 
   if (
     options.openSpecOverview ||
@@ -269,25 +265,7 @@ export function buildWidgetSnapshots(
   // Frozen contract: without an OpenSpec focus there is no progress surface —
   // no aggregate overview, no 'no OpenSpec' narration.
 
-  if (!snapshot.openspec && !options.openSpecOverview && options.goal) {
-    widgets.push({
-      id: GOAL_WIDGET_ID,
-      label: 'Goal',
-      description: 'Active Goal scope; its detailed objective remains in the header',
-      content: { type: 'text', text: 'Goal' },
-      icon: {
-        glyphs: { nerd: '󰊕', emoji: '🎯', unicode: '◎', ascii: 'G' },
-        color: goalHeaderColor(options.goal),
-      },
-      style: { textColor: goalHeaderColor(options.goal) },
-      layout: {
-        row: 0,
-        position: 0,
-        align: 'right',
-        fill: 'none',
-      },
-    });
-  } else if (
+  if (
     !snapshot.openspec &&
     !options.openSpecOverview &&
     options.workFocus &&
@@ -321,12 +299,7 @@ export function buildWidgetSnapshots(
     });
   }
 
-  if (
-    !snapshot.openspec &&
-    !options.workFocus &&
-    !options.goal &&
-    options.openSpecFeedback
-  ) {
+  if (!snapshot.openspec && !options.workFocus && options.openSpecFeedback) {
     const unavailable = options.openSpecFeedback === 'unavailable';
     const color: WidgetColor = unavailable ? 'warning' : 'dim';
     const stateText =
@@ -458,6 +431,7 @@ export const HEADER_ACTIVITY_KINDS = [
   'regression',
   'verification',
   'result-review',
+  'answering',
   'recovery',
   'awaiting-validation',
   'awaiting-input',
@@ -494,26 +468,14 @@ export type HeaderLifecycle = (typeof HEADER_LIFECYCLES)[number];
 
 export const HEADER_SELECTION_SOURCES = [
   'openspec',
-  'goal',
   'session-work',
   'subject',
 ] as const;
-
-export type HeaderSelectionGoalDetail = {
-  status: string;
-  elapsedSeconds?: number;
-  tasksDone?: number;
-  tasksActive?: number;
-  tasksTotal?: number;
-  tokensUsed?: number;
-  tokenBudget?: number;
-};
 
 export type HeaderSelection = {
   source: (typeof HEADER_SELECTION_SOURCES)[number];
   titles: string[];
   color: WidgetColor;
-  goal?: HeaderSelectionGoalDetail;
 };
 
 export const HEADER_SUGGESTIONS = [
@@ -548,7 +510,6 @@ export type HeaderStatusEvent = {
   backgroundActivity: boolean;
   approvalRequired: boolean;
   blocked: boolean;
-  openGoals?: number;
   activeRunSpans?: ActiveRunSpanView[];
   /** Versioned deck-title-state contract for the deck's upper half. */
   title?: TitleState;
@@ -586,7 +547,6 @@ function selectedOpenSpecTitles(
 export function headerSelection(options: {
   openSpec?: OpenSpecState | null;
   focusedTaskId?: string;
-  goal?: GoalHeaderState | null;
   workFocus?: SessionWorkFocus;
   subject?: SessionSubject;
 }): HeaderSelection | null {
@@ -595,26 +555,6 @@ export function headerSelection(options: {
       source: 'openspec',
       titles: selectedOpenSpecTitles(options.openSpec, options.focusedTaskId),
       color: openSpecColor(options.openSpec),
-    };
-  }
-  if (options.goal) {
-    const goal = options.goal;
-    const detail = {
-      status: goal.status,
-      ...(goal.elapsedSeconds !== undefined
-        ? { elapsedSeconds: goal.elapsedSeconds }
-        : {}),
-      ...(goal.tasksDone !== undefined ? { tasksDone: goal.tasksDone } : {}),
-      ...(goal.tasksActive !== undefined ? { tasksActive: goal.tasksActive } : {}),
-      ...(goal.tasksTotal !== undefined ? { tasksTotal: goal.tasksTotal } : {}),
-      ...(goal.tokensUsed !== undefined ? { tokensUsed: goal.tokensUsed } : {}),
-      ...(goal.tokenBudget !== undefined ? { tokenBudget: goal.tokenBudget } : {}),
-    };
-    return {
-      source: 'goal',
-      titles: [goal.objective ? normalizeInline(goal.objective) : 'Goal'],
-      color: goalHeaderColor(goal),
-      goal: detail,
     };
   }
   if (options.workFocus && options.workFocus.state !== 'clear') {
@@ -711,86 +651,6 @@ export function headerLifecycleForActivity(
   }
   if (activity.kind === 'operation-aborted') return 'aborted';
   return 'working';
-}
-
-export function goalHeaderLifecycle(
-  goal: GoalHeaderState,
-  activeFallback: HeaderLifecycle = 'working',
-): HeaderLifecycle {
-  if (goal.status === 'blocked') return 'blocked';
-  if (goal.status === 'active' && !goal.waiting) return activeFallback;
-  return 'waiting';
-}
-
-export function goalHeaderActivityPath(
-  goal: GoalHeaderState,
-  automaticTurnLimit?: number,
-): HeaderActivitySegment[] {
-  if (goal.status === 'complete') {
-    return [
-      {
-        id: 'awaiting-human-validation',
-        label: 'awaiting Human validation',
-        compact: 'validation',
-      },
-    ];
-  }
-  if (goal.status === 'blocked') {
-    return [{ id: 'goal-blocked', label: 'Goal blocked', compact: 'blocked' }];
-  }
-  if (goal.status === 'paused') {
-    return [{ id: 'goal-paused', label: 'Goal paused', compact: 'paused' }];
-  }
-  if (goal.status === 'usage_limited') {
-    return [
-      {
-        id: 'goal-usage-limited',
-        label: 'Goal usage limited',
-        compact: 'usage limit',
-      },
-    ];
-  }
-  if (goal.status === 'budget_limited') {
-    return [
-      {
-        id: 'goal-budget-limited',
-        label: 'Goal budget limited',
-        compact: 'budget limit',
-      },
-    ];
-  }
-  if (goal.status === 'queued') {
-    return [{ id: 'goal-queued', label: 'Goal queued', compact: 'queued' }];
-  }
-  if (goal.waiting) {
-    return [
-      {
-        id: 'goal-waiting',
-        label: 'waiting for external event',
-        compact: 'waiting',
-      },
-    ];
-  }
-  return [
-    {
-      id: 'goal-work',
-      label: 'completing Goal',
-      compact: 'Goal',
-      ...(automaticTurnLimit === undefined
-        ? {}
-        : {
-            current: Math.min(goal.automaticModelTurns, automaticTurnLimit),
-            total: automaticTurnLimit,
-          }),
-    },
-  ];
-}
-
-function goalHeaderColor(goal: GoalHeaderState): WidgetColor {
-  if (goal.status === 'blocked') return 'error';
-  if (goal.status === 'active' && !goal.waiting) return 'accent';
-  if (goal.status === 'complete') return 'warning';
-  return 'dim';
 }
 
 export function orchestrationHeaderLifecycle(
@@ -1032,9 +892,6 @@ export function buildHeaderStatusEvent(
     activityPath?: HeaderActivitySegment[];
     taskflowPhase?: string;
     fallbackTitles?: string[];
-    goal?: GoalHeaderState | null;
-    openGoals?: number;
-    goalAutomaticTurnLimit?: number;
     activeRuns?: ActiveRuntimeRuns;
     activeRunSpans?: ActiveRunSpanView[];
     idleMs?: number;
@@ -1060,7 +917,6 @@ export function buildHeaderStatusEvent(
   const orchestration = options.orchestration;
   const blocked =
     orchestration?.state === 'blocked' ||
-    options.goal?.status === 'blocked' ||
     Boolean(
       options.openSpec &&
       ['blocked', 'error', 'failed'].includes(options.openSpec.phase),
@@ -1071,33 +927,22 @@ export function buildHeaderStatusEvent(
   const taskflowPhase = boundedTaskflowPhase(options.taskflowPhase);
   const activityPath =
     options.activityPath ??
-    (taskflowPhase ? taskflowPhaseHeaderActivityPath(taskflowPhase) : undefined) ??
-    (options.goal
-      ? goalHeaderActivityPath(options.goal, options.goalAutomaticTurnLimit)
-      : undefined);
+    (taskflowPhase ? taskflowPhaseHeaderActivityPath(taskflowPhase) : undefined);
   const ordinaryLifecycle =
     orchestrationLifecycle ??
     options.lifecycle ??
     headerLifecycleForActivity(activity) ??
-    (options.goal?.status === 'active' && !options.goal.waiting
-      ? 'working'
-      : options.workFocus?.state === 'validation'
-        ? 'waiting'
-        : 'listening');
+    (options.workFocus?.state === 'validation' ? 'waiting' : 'listening');
   const lifecycle: HeaderLifecycle = blocked
     ? 'blocked'
     : options.lifecycle === 'aborted'
       ? 'aborted'
       : ((taskflowPhase ? taskflowPhaseHeaderLifecycle(taskflowPhase) : undefined) ??
-        (options.goal
-          ? goalHeaderLifecycle(options.goal, ordinaryLifecycle)
-          : undefined) ??
         ordinaryLifecycle);
   const projectedActivity =
     activityPath !== undefined ? { activityPath } : activity ? { activity } : {};
   const selection = headerSelection(options);
-  const approvalRequired =
-    options.workFocus?.state === 'validation' || options.goal?.status === 'complete';
+  const approvalRequired = options.workFocus?.state === 'validation';
   const suggestion = headerSuggestion({
     lifecycle,
     activity,
@@ -1113,13 +958,6 @@ export function buildHeaderStatusEvent(
       lifecycle,
       titles: selectedOpenSpecTitles(state, options.focusedTaskId),
       color: openSpecColor(state),
-      ...projectedActivity,
-    };
-  } else if (options.goal) {
-    work = {
-      lifecycle,
-      titles: ['Goal'],
-      color: goalHeaderColor(options.goal),
       ...projectedActivity,
     };
   } else if (options.workFocus && options.workFocus.state !== 'clear') {
@@ -1162,7 +1000,6 @@ export function buildHeaderStatusEvent(
 
   return {
     protocol: 1,
-    ...(options.openGoals ? { openGoals: options.openGoals } : {}),
     ...(options.activeRunSpans ? { activeRunSpans: options.activeRunSpans } : {}),
     ...(options.idleMs ? { idleMs: options.idleMs } : {}),
     ...(options.title ? { title: options.title } : {}),
@@ -1188,9 +1025,7 @@ export function buildHeaderStatusEvent(
           }
         : null,
     backgroundActivity: Boolean(
-      orchestration?.state === 'running' ||
-      (orchestration?.activeWorkers ?? 0) > 0 ||
-      (options.goal?.status === 'active' && !options.goal.waiting),
+      orchestration?.state === 'running' || (orchestration?.activeWorkers ?? 0) > 0,
     ),
     approvalRequired,
     blocked,

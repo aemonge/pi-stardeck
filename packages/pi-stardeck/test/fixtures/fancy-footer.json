@@ -27,9 +27,6 @@
     "galactica.work": {
       "enabled": false
     },
-    "galactica.goal": {
-      "enabled": false
-    },
     "galactica.project-capabilities": {
       "enabled": false
     },

@@ -5,7 +5,6 @@ import type {
   RunSpan,
   StageValue,
 } from './types.ts';
-import type { GoalHeaderState } from './goal.ts';
 import type { OpenSpecFocus, SessionSubject, SessionWorkFocus } from './active-work.ts';
 
 /**
@@ -19,7 +18,6 @@ import type { OpenSpecFocus, SessionSubject, SessionWorkFocus } from './active-w
 
 export const LEDGER_EVENT_TYPES = [
   'focus/openspec',
-  'focus/goal',
   'focus/work',
   'focus/subject',
   'run/start',
@@ -39,7 +37,6 @@ export type LedgerEvent =
       at: number;
       focus: OpenSpecFocus;
     }
-  | { type: 'focus/goal'; at: number; goal: GoalHeaderState | null }
   | { type: 'focus/work'; at: number; work: SessionWorkFocus }
   | { type: 'focus/subject'; at: number; subject: SessionSubject }
   | { type: 'run/start'; at: number; span: RunSpan }

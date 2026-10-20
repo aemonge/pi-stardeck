@@ -1,0 +1,10 @@
+schema: ramona-plan
+created: 2026-10-20
+goal: "The activity band hides when it has nothing to say: idle awaiting Human
+  plus zeroed turn meter"
+skip_specs: true
+
+status: approved
+created_by: assistant
+
+approved_at: 2026-10-20T08:59:08Z

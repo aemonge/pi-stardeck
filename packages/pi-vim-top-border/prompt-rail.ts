@@ -6,7 +6,6 @@ const TRACKED_WIDGET_IDS = new Set([
   'galactica.openspec-progress',
   'galactica.openspec',
   'galactica.work',
-  'galactica.goal',
   'galactica.project-capabilities',
   'galactica.session-memory',
   'galactica.session-cpu',
@@ -214,7 +213,6 @@ function workWidget(widgets: ReadonlyMap<string, RailWidget>): RailWidget | unde
   for (const id of [
     'galactica.openspec-progress',
     'galactica.openspec',
-    'galactica.goal',
     'galactica.work',
   ]) {
     const widget = widgets.get(id);

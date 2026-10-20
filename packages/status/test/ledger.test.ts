@@ -59,7 +59,6 @@ test('LEDGER_EVENT_TYPES covers all contract producer domains', () => {
     [...LEDGER_EVENT_TYPES],
     [
       'focus/openspec',
-      'focus/goal',
       'focus/work',
       'focus/subject',
       'run/start',

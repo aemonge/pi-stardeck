@@ -41,7 +41,7 @@ The title has four styled groups: lifecycle, a structured active ancestry, focus
 optional focus detail. Each activity-path segment receives the blue minor `›`; the
 violet-pink major `⟩` divides runtime ancestry from the green narrative focus. Human
 prompt text is never converted into focus automatically. OpenSpec may add its exact Task
-after another green `›`. Focus selection prefers an exact OpenSpec Task, then Goal, then
+after another green `›`. Focus selection prefers an exact OpenSpec Task, then
 Session Work. Active turns without a selection use the explicit `OpenSpec › no focus`,
 `no OpenSpec`, or `no focus` state supplied by the status producer; `Direct response` is
 never presented as a focus. Empty states are dim while real focus remains bold semantic
@@ -76,14 +76,14 @@ The additive header protocol projects selection independently from live work:
 
 ```ts
 selection: {
-  source: 'openspec' | 'goal' | 'session-work';
+  source: 'openspec' | 'session-work';
   titles: string[]; // one or two bounded, normalized titles
   color: HeaderColor;
 } | null;
 suggestion: HeaderSuggestion | null; // controlled enum, never generated prose
 ```
 
-Selection priority remains exact OpenSpec Task, Goal, then Session Work. Older
+Selection priority remains exact OpenSpec Task, then Session Work. Older
 protocol-1 events may use sanitized non-placeholder work titles as a legacy selection;
 explicit malformed selection is rejected rather than borrowing a fallback. The
 suggestion vocabulary is producer-owned, appears only in waiting, blocked, approval,
@@ -133,7 +133,7 @@ the otherwise missing project slot and yields before core project/work informati
 narrow terminals. Slash-prefixed Git branches collapse the prefix to its initial and cap
 display at 30 cells with `...` (`feat/persist-versioned-prompts-in-duckdb` →
 `f/persist-versioned-prompts...`). The right side shows compact OpenSpec Plan/Task
-progress, or the simple Goal, Focus, or `no OpenSpec` fallback when no OpenSpec
+progress, or the simple Focus or `no OpenSpec` fallback when no OpenSpec
 portfolio is available. The footer reserves a four-cell visual split between alignment
 groups. OpenSpec uses icons instead of repeated labels: task-list `` for Plans and
 notebook `` for Tasks, with minor `›` between them. Their Nerd Font glyphs exactly

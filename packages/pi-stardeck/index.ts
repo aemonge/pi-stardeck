@@ -153,6 +153,13 @@ export function installEmptyDeckFooter(
   return () => ctx.ui.setFooter(undefined);
 }
 
+/** Git-style short id of the running Pi session — 8 hex chars of the
+ * UUIDv7, undefined when the id does not match the expected shape. */
+function shortSessionId(ctx: ExtensionContext): string | undefined {
+  const short = ctx.sessionManager.getSessionId().slice(0, 8);
+  return /^[0-9a-f]{8}$/u.test(short) ? short : undefined;
+}
+
 export default function galacticaContextHeader(
   pi: ExtensionAPI,
   options: ContextHeaderOptions = {},
@@ -172,6 +179,7 @@ export default function galacticaContextHeader(
   let lastActivityAgeSignature = '';
   let activityAgeTimer: ReturnType<typeof setInterval> | undefined;
   let sessionGeneration = 0;
+  let sessionShortId: string | undefined;
   let activeCwd = '';
   let activeCtx: ExtensionContext | undefined;
   let gitRefreshInFlight = false;
@@ -493,6 +501,7 @@ export default function galacticaContextHeader(
     resourceTimer = undefined;
     ++sessionGeneration;
     activeCtx = ctx;
+    sessionShortId = shortSessionId(ctx);
     activeCwd = '';
     branch = '';
     gitAvailable = false;
@@ -578,6 +587,7 @@ export default function galacticaContextHeader(
           lsp: lspCapability,
           mcp: mcpCapability,
           mode: vimMode,
+          ...(sessionShortId !== undefined ? { sessionShortId } : {}),
         },
         width,
         theme,

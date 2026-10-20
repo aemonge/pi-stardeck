@@ -108,7 +108,10 @@ test('editor-deck publishes a renderer without registering an above-editor widge
     cwd: '/tmp/project',
     model: { name: 'Test Model', contextWindow: 100_000 },
     getContextUsage: () => ({ percent: 25, tokens: 25_000 }),
-    sessionManager: { getBranch: () => [] },
+    sessionManager: {
+      getBranch: () => [],
+      getSessionId: () => '01a157fd-382e-72a8-ba81-26a10cf103ef',
+    },
     ui: {
       setWorkingVisible() {},
       setFooter(factory: unknown) {

@@ -1,5 +1,4 @@
 import { basename } from 'node:path';
-import type { GoalHeaderState } from './goal.ts';
 
 export const OPEN_SPEC_FOCUS_ENTRY_TYPE = 'galactica-status.openspec-focus.v1';
 export const SESSION_WORK_FOCUS_ENTRY_TYPE = 'galactica-status.session-work.v1';
@@ -196,7 +195,6 @@ export function sameSessionSubject(
 export function formatActiveWorkTitle(options: {
   focus: OpenSpecFocus;
   workFocus?: SessionWorkFocus;
-  goal?: GoalHeaderState | null;
   subject?: SessionSubject;
   taskTitle?: string;
   sessionName?: string;
@@ -209,13 +207,6 @@ export function formatActiveWorkTitle(options: {
       ? shorten(normalizeTitlePart(options.taskTitle), MAX_TASK_TITLE_POINTS)
       : '';
     detail = `${options.focus.change} › ${options.focus.taskId}${taskTitle ? ` ${taskTitle}` : ''}`;
-  } else if (options.goal) {
-    detail =
-      options.goal.status === 'complete'
-        ? 'Validate › Goal'
-        : options.goal.status === 'active' && !options.goal.waiting
-          ? 'Goal'
-          : `Goal › ${options.goal.waiting ? 'waiting' : options.goal.status.replace('_', ' ')}`;
   } else if (options.workFocus && options.workFocus.state !== 'clear') {
     detail =
       options.workFocus.state === 'validation'

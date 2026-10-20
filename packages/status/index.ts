@@ -31,18 +31,6 @@ import {
 } from './src/active-work.ts';
 import { collectDiagnostics } from './src/diagnostics.ts';
 import { loadConfig } from './src/config.ts';
-import {
-  type GoalHeaderState,
-  isGoalOwnedPrompt,
-  loadGoalAutomaticTurnLimit,
-  restoreGoalHeaderState,
-  sameGoalHeaderState,
-} from './src/goal.ts';
-import {
-  countOpenGoals,
-  installGoalBlockTakeover,
-  readGoalHeadline,
-} from './src/goal-block.ts';
 import { collectOpenSpec, collectOpenSpecOverview } from './src/openspec.ts';
 import { collectOrchestration } from './src/orchestration.ts';
 import {
@@ -56,7 +44,6 @@ import {
   formatOpenSpecOverview,
   formatOrchestration,
   GALACTICA_HEADER_CHANNEL,
-  goalHeaderLifecycle,
   type HeaderActivity,
   type HeaderLifecycle,
   directToolCompletionHeaderActivity,
@@ -202,10 +189,6 @@ class GalacticaStatusRuntime {
   private focus: OpenSpecFocus;
   private workFocus: SessionWorkFocus;
   private subject: SessionSubject;
-  private goal: GoalHeaderState | null;
-  private goalProjectionSuppressed = false;
-  private goalAutomaticTurnLimit: number | undefined;
-  private goalPollCleanup: (() => void) | undefined;
   private sessionName: string | undefined;
   private lastTitle: string | undefined;
   private diagnosticsPath: string | undefined;
@@ -237,7 +220,6 @@ class GalacticaStatusRuntime {
     focus: OpenSpecFocus,
     workFocus: SessionWorkFocus,
     subject: SessionSubject,
-    goal: GoalHeaderState | null,
     sessionName: string | undefined,
   ) {
     this.pi = pi;
@@ -246,17 +228,10 @@ class GalacticaStatusRuntime {
     this.focus = focus;
     this.workFocus = workFocus;
     this.subject = subject;
-    this.goal = goal;
     this.sessionName = sessionName;
-    this.liveLifecycle = goal
-      ? goalHeaderLifecycle(goal)
-      : workFocus.state === 'validation'
-        ? 'waiting'
-        : 'listening';
+    this.liveLifecycle = workFocus.state === 'validation' ? 'waiting' : 'listening';
     this.liveActivity =
-      !goal && workFocus.state === 'validation'
-        ? { kind: 'awaiting-validation' }
-        : undefined;
+      workFocus.state === 'validation' ? { kind: 'awaiting-validation' } : undefined;
     this.store = new AtomicStatusStore({
       cwd: ctx.cwd,
       projectRoot: ctx.cwd,
@@ -266,7 +241,6 @@ class GalacticaStatusRuntime {
     this.recordEvent({ type: 'focus/openspec', at: seededAt, focus });
     this.recordEvent({ type: 'focus/work', at: seededAt, work: workFocus });
     this.recordEvent({ type: 'focus/subject', at: seededAt, subject });
-    if (goal) this.recordEvent({ type: 'focus/goal', at: seededAt, goal });
   }
 
   private runner: CommandRunner = async (command, args, options) => {
@@ -292,15 +266,6 @@ class GalacticaStatusRuntime {
       if ((snap.spans?.length ?? 0) > 0 || idle > 0) this.publish();
     }, 1_000);
     this.publish();
-    this.ensureGoalPolling();
-    this.launch(
-      loadGoalAutomaticTurnLimit().then((limit) => {
-        if (this.stopped || this.goalAutomaticTurnLimit === limit) return;
-        this.goalAutomaticTurnLimit = limit;
-        this.publish();
-      }),
-      'config',
-    );
     this.launch(
       (async () => {
         this.loadedConfig = await loadConfig();
@@ -632,14 +597,9 @@ class GalacticaStatusRuntime {
     this.watchSignature = '';
   }
 
-  private projectedGoal(): GoalHeaderState | null {
-    return this.goalProjectionSuppressed ? null : this.goal;
-  }
-
   private publish(): void {
     if (this.stopped) return;
     const snapshot = this.store.get();
-    const goal = this.projectedGoal();
     // Builders read focus facts through the snapshot layer (recordEvent stores
     // the same object references), so output stays byte-identical while the
     // ledger becomes the feeding seam.
@@ -652,7 +612,7 @@ class GalacticaStatusRuntime {
         ? snapshot.openspec
         : null;
     const visibleWorkFocus =
-      focus.mode === 'task' || goal || (work.state === 'clear' && this.openSpecFeedback)
+      focus.mode === 'task' || (work.state === 'clear' && this.openSpecFeedback)
         ? undefined
         : work;
     const widgets = buildWidgetSnapshots(
@@ -666,7 +626,6 @@ class GalacticaStatusRuntime {
         openSpecOverview: this.openSpecOverview,
         openSpecProjectDetected: this.openSpecProjectDetected,
         workFocus: visibleWorkFocus,
-        goal,
       },
     );
     this.publisher.sync(widgets);
@@ -681,9 +640,6 @@ class GalacticaStatusRuntime {
         lifecycle: this.liveLifecycle,
         activity: this.liveActivity,
         taskflowPhase: this.liveTaskflowPhase,
-        goal,
-        openGoals: goal ? 0 : countOpenGoals(this.ctx),
-        goalAutomaticTurnLimit: this.goalAutomaticTurnLimit,
         activeRuns: (() => {
           const runs = this.runtimeSpans.snapshot();
           return { children: runs.children, subagents: runs.subagents };
@@ -724,7 +680,6 @@ class GalacticaStatusRuntime {
       focus: facts.openSpec,
       workFocus: facts.work,
       subject: facts.subject,
-      goal: this.projectedGoal(),
       ...(taskTitle ? { taskTitle } : {}),
       ...(this.sessionName ? { sessionName: this.sessionName } : {}),
       projectRoot: snapshot.projectRoot,
@@ -757,56 +712,7 @@ class GalacticaStatusRuntime {
     return this.subject;
   }
 
-  currentGoal(): GoalHeaderState | null {
-    return this.goal;
-  }
-
-  syncGoalFromSession(): void {
-    this.setGoal(
-      readGoalHeadline(this.ctx) ??
-        restoreGoalHeaderState(this.ctx.sessionManager.getBranch()),
-    );
-  }
-
-  private ensureGoalPolling(): void {
-    if (!this.goal || this.goalPollCleanup || this.stopped) return;
-    const timer = setInterval(() => this.syncGoalFromSession(), 500);
-    timer.unref?.();
-    const cleanup = this.resources.add(() => clearInterval(timer));
-    this.goalPollCleanup = () => {
-      cleanup();
-      this.goalPollCleanup = undefined;
-    };
-  }
-
-  private stopGoalPolling(): void {
-    this.goalPollCleanup?.();
-  }
-
-  setGoal(goal: GoalHeaderState | null): void {
-    if (sameGoalHeaderState(this.goal, goal)) return;
-    this.goal = goal;
-    this.recordEvent({ type: 'focus/goal', at: Date.now(), goal });
-    this.goalProjectionSuppressed = false;
-    if (goal) {
-      this.ensureGoalPolling();
-      if (goal.status !== 'active' || goal.waiting) {
-        this.liveLifecycle = goalHeaderLifecycle(goal);
-        this.liveActivity = undefined;
-      } else if (['listening', 'waiting', 'blocked'].includes(this.liveLifecycle)) {
-        this.liveLifecycle = 'working';
-        this.liveActivity = undefined;
-      }
-      this.publish();
-      this.updateTitle();
-      return;
-    }
-    this.stopGoalPolling();
-    this.settle();
-    this.updateTitle();
-  }
-
-  beginTurn(prompt: unknown): void {
+  beginTurn(): void {
     this.directToolActivities.clear();
     this.directToolFailed = false;
     this.titleActivity.reset();
@@ -815,18 +721,6 @@ class GalacticaStatusRuntime {
     this.currentTurnId = `turn-${this.turnCounter}`;
     this.runtimeSpans.beginRoot(this.currentTurnId, 'understanding');
     this.syncSpanEvents();
-    this.syncGoalFromSession();
-    const suppressStoppedGoal = Boolean(
-      this.goal && this.goal.status !== 'active' && !isGoalOwnedPrompt(prompt),
-    );
-    const projectionChanged = this.goalProjectionSuppressed !== suppressStoppedGoal;
-    this.goalProjectionSuppressed = suppressStoppedGoal;
-    if (projectionChanged) {
-      this.liveLifecycle = 'understanding';
-      this.liveActivity = { kind: 'understanding' };
-      this.publish();
-      return;
-    }
     this.setLiveProjection('understanding', { kind: 'understanding' });
   }
 
@@ -936,6 +830,13 @@ class GalacticaStatusRuntime {
     this.publish();
   }
 
+  /** Clear the title-state activity when its authoring call ends — a
+   * finished tool never lingers as the live label (quiet-activity-row). */
+  finishTitleActivity(toolCallId: string): void {
+    if (!this.titleActivity.finish(toolCallId)) return;
+    this.publish();
+  }
+
   /** Accumulate one provider response's usage into the per-turn cost meter. */
   recordTurnUsage(message: unknown): void {
     if (!message || typeof message !== 'object' || Array.isArray(message)) return;
@@ -1024,7 +925,7 @@ class GalacticaStatusRuntime {
 
   markAnswering(): void {
     if (this.liveLifecycle !== 'aborted') {
-      this.setLiveProjection('answering');
+      this.setLiveProjection('answering', { kind: 'answering' });
     }
   }
 
@@ -1040,15 +941,6 @@ class GalacticaStatusRuntime {
     }
     if (this.liveLifecycle === 'aborted') {
       this.publish();
-      return;
-    }
-    const goal = this.projectedGoal();
-    if (goal) {
-      if (goal.status === 'active' && !goal.waiting) {
-        this.setLiveProjection('working');
-      } else {
-        this.setLiveProjection(goalHeaderLifecycle(goal));
-      }
       return;
     }
     if (this.focus.mode === 'task' || this.workFocus.state === 'validation') {
@@ -1097,11 +989,6 @@ class GalacticaStatusRuntime {
         : `Work: ${this.workFocus.state} · ${this.workFocus.intent}`,
     );
     lines.push(
-      this.goal
-        ? `Goal: ${this.goal.status} · automatic ${this.goal.automaticModelTurns}/${this.goalAutomaticTurnLimit ?? '?'}`
-        : 'Goal: none',
-    );
-    lines.push(
       snapshot.diagnostics
         ? `Diagnostics: ${formatDiagnostics(snapshot.diagnostics)}`
         : 'Diagnostics: hidden (no source)',
@@ -1123,9 +1010,6 @@ class GalacticaStatusRuntime {
         configWarnings: snapshot.configWarnings,
         focus: this.focus,
         workFocus: this.workFocus,
-        goal: this.goal,
-        goalProjected: this.projectedGoal(),
-        goalAutomaticTurnLimit: this.goalAutomaticTurnLimit ?? null,
         openSpecFeedback: this.openSpecFeedback ?? null,
         openSpecOverview: this.openSpecOverview ?? null,
         detected: {
@@ -1349,7 +1233,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     const focus = restoreOpenSpecFocus(branch);
     const workFocus = restoreSessionWorkFocus(branch);
     const subject = restoreSessionSubject(branch);
-    const goal = readGoalHeadline(ctx) ?? restoreGoalHeaderState(branch);
     const sessionName = pi.getSessionName() ?? ctx.sessionManager.getSessionName();
     runtime = new GalacticaStatusRuntime(
       pi,
@@ -1358,7 +1241,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
       focus,
       workFocus,
       subject,
-      goal,
       sessionName,
     );
     runtime.start();
@@ -1373,12 +1255,11 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     runtime?.setFocus(restoreOpenSpecFocus(branch));
     runtime?.setWorkFocus(restoreSessionWorkFocus(branch));
     runtime?.setSubject(restoreSessionSubject(branch));
-    runtime?.setGoal(readGoalHeadline(ctx) ?? restoreGoalHeaderState(branch));
     runtime?.settle();
   });
 
-  pi.on('before_agent_start', (event) => {
-    runtime?.beginTurn(event.prompt);
+  pi.on('before_agent_start', () => {
+    runtime?.beginTurn();
   });
 
   pi.on('tool_execution_start', (event) => {
@@ -1439,8 +1320,8 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   });
 
   pi.on('tool_execution_end', (event) => {
+    runtime?.finishTitleActivity(event.toolCallId);
     runtime?.finishRuntimeRun(event.toolCallId);
-    queueMicrotask(() => runtime?.syncGoalFromSession());
     if (event.toolName !== 'taskflow') {
       runtime?.finishDirectTool(event.toolCallId, event.isError);
       return;
@@ -1459,7 +1340,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
 
   pi.on('turn_end', (event) => {
     if (assistantStopReason(event.message) === 'aborted') runtime?.markAborted();
-    queueMicrotask(() => runtime?.syncGoalFromSession());
   });
 
   pi.on('agent_end', (event) => {
@@ -1469,10 +1349,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   });
 
   pi.on('agent_settled', () => {
-    queueMicrotask(() => {
-      runtime?.syncGoalFromSession();
-      runtime?.settle();
-    });
+    queueMicrotask(() => runtime?.settle());
   });
 
   pi.on('session_shutdown', () => {
@@ -1552,7 +1429,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     name: 'subject',
     label: 'Session Subject',
     description:
-      'Show or set the sanitized session subject that keeps the focus row populated beneath OpenSpec, Goal, and Session Work',
+      'Show or set the sanitized session subject that keeps the focus row populated beneath OpenSpec and Session Work',
     promptSnippet: 'Manage the automatic session subject title',
     promptGuidelines: [
       'Author a short sanitized subject (at most 120 characters, never raw prompt text) at the first conversational turn; revise it only when the topic clearly shifts. Never require Human action for it.',
@@ -1710,8 +1587,4 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
       ctx.ui.notify(runtime?.debug() ?? 'galactica-status is not active', 'info');
     },
   });
-
-  // Registered last: the goal widget takeover must never precede the
-  // status publisher's synchronous session-start publication order.
-  void installGoalBlockTakeover(pi);
 }

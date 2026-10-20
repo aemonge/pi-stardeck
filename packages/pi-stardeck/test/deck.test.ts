@@ -125,20 +125,21 @@ test('renders the approved rich wide header without side borders or spacer rows'
 
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
-  // deck-reshape (amended): seven rows — L1, ─, L2, ┈, L3, ┈, L4
-  // (engine left, status right when it speaks).
-  assert.equal(lines.length, 7);
+  // deck-reshape (amended), quiet-activity-row: five rows — L1, ─, L2,
+  // ┈, L4 (engine left, status right when it speaks); the idle line-3
+  // band and its seam retire (zero activity never narrates itself).
+  assert.equal(lines.length, 5);
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
   assert.match(plain(lines[1] ?? ''), /^─+$/u);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
   assert.ok(titleRow.includes("000:07'00"));
-  const activityRow = plain(lines[4] ?? '');
-  // Line 3 (four-line deck): idle renders `awaiting Human`; the
-  // lifecycle/suggestion/runs tiles are gone with the status row.
-  assert.ok(activityRow.trimEnd().endsWith('awaiting Human'));
-  assert.doesNotMatch(activityRow, /\bwaiting\b/u);
-  assert.equal(activityRow.includes('requesting validation'), false);
+  // quiet-activity-row: idle renders no line-3 band at all; the
+  // lifecycle/suggestion/runs tiles stay gone with the status row.
+  const deckText = lines.map(plain).join('\n');
+  assert.equal(deckText.includes('awaiting Human'), false);
+  assert.doesNotMatch(deckText, /\bwaiting\b/u);
+  assert.equal(deckText.includes('requesting validation'), false);
   // Counter removal lockstep: Work owns line 2's right end — task/stps
   // tiles never render there again (accepted mockups supersede them).
   assert.equal(titleRow.includes('task 0/1'), false);
@@ -225,70 +226,13 @@ test('drops the footer count; the strong rule opens the deck', () => {
   const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
   assert.equal(solidRules.length, 1, 'the lone strong rule opens the deck');
   const dottedSeams = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
-  // Both internal seams are back (engine row closes the deck).
-  assert.equal(dottedSeams.length, 2, 'dotted seams inside the deck');
+  // quiet-activity-row: the status seam remains; the idle band's seam
+  // retires with the band itself.
+  assert.equal(dottedSeams.length, 1, 'one dotted seam inside the deck');
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
   assert.doesNotMatch(empty[2] ?? '', /·0/u);
-});
-
-test('unfocused open goals leave line 2 for the notice slot', () => {
-  const state = fixture();
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    openGoals: 1,
-  };
-
-  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const titleRow = lines.find((line) => line.includes("000:07'00")) ?? '';
-  // Task 3.1: the hint's line-2 prefix is gone — the notice slot absorbed
-  // it (design: "notices absorb the unfocused open-goal hint").
-  assert.doesNotMatch(titleRow, /open goal/u);
-  assert.doesNotMatch(titleRow, /\/goal-focus/u);
-  assert.match(titleRow, /000:07'00 ⟩ Read-only preflight/u);
-  const line4 = lines.at(-1) ?? '';
-  assert.ok(line4.trimEnd().endsWith('⚠ 1 open goal · /goal-focus'));
-  assert.equal(
-    lines.some((line) => /^◆ /u.test(line)),
-    false,
-  );
-});
-
-test('goal selection owns the title row with badge and tree rows', () => {
-  const state = fixture();
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    selection: {
-      source: 'goal',
-      titles: ['Ship the chrome-only cockpit'],
-      color: 'accent',
-      goal: {
-        status: 'paused',
-        elapsedSeconds: 195,
-        tasksDone: 1,
-        tasksActive: 1,
-        tasksTotal: 3,
-        tokensUsed: 363_500,
-        tokenBudget: 600_000,
-      },
-    },
-  };
-
-  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  const titleRow =
-    lines.find((line) => line.includes('Ship the chrome-only cockpit')) ?? '';
-  assert.match(titleRow, /Ship the chrome-only cockpit.*● paused · 3m 15s/u);
-  assert.ok(lines.some((line) => /├ tasks 1\/3 done · 1 active/u.test(line)));
-  assert.ok(lines.some((line) => /└ usage 363\.5k tokens · budget 61%/u.test(line)));
-
-  const narrow = renderHeaderDeck(state, 50, plainTheme as never).map(plain);
-  assert.equal(
-    narrow.some((line) => line.includes('tasks 1/3')),
-    false,
-  );
-  const narrowTitle = narrow.find((line) => line.includes('Ship the chrome')) ?? '';
-  assert.match(narrowTitle, /● paused/u);
 });
 
 test('extension statuses ride the telemetry tail as icons', () => {
@@ -409,7 +353,7 @@ test('known companion icons are always present', () => {
   assert.match(bare.at(-1) ?? '', /\u{F035B}/u, 'cpu anchors the bottom row');
 });
 
-test('extension status icons drop on narrow frames and filter the goal key', () => {
+test('extension status icons drop on narrow frames', () => {
   const state = fixture();
   state.piStatus = {
     errors: 0,
@@ -417,13 +361,13 @@ test('extension status icons drop on narrow frames and filter the goal key', () 
     nativeStatusCount: 2,
     nativeStatuses: [
       { key: 'engram', text: 'ready' },
-      { key: 'goal', text: 'unfocused [1 open] - /goal-focus' },
+      { key: 'taskflow', text: 'run 2 active' },
     ],
   };
   const narrow = renderHeaderDeck(state, 60, plainTheme as never).map(plain);
   assert.match(narrow[0] ?? '', /\u{F1049}/u);
   assert.equal(
-    narrow.some((line) => line.includes('/goal-focus')),
+    narrow.some((line) => line.includes('taskflow')),
     false,
   );
 });
@@ -497,9 +441,16 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
   const focusIdx = narrow.findIndex((line) => plain(line).includes("000:07'00"));
   assert.ok(focusIdx >= 0);
-  const status = narrow.find((line) => plain(line).includes('waiting')) ?? '';
-  assert.ok(status.includes('waiting'));
-  assert.equal(status.includes('idle'), false);
+  // quiet-activity-row: the idle band is gone at every width — no
+  // `awaiting Human` narration and never an `idle` placeholder.
+  assert.equal(
+    narrow.some((line) => plain(line).includes('awaiting Human')),
+    false,
+  );
+  assert.equal(
+    narrow.some((line) => plain(line).includes('idle')),
+    false,
+  );
   const focus = narrow.slice(focusIdx, focusIdx + 2);
   assert.equal(focus.length, 2);
   assert.ok(plain(focus[0] ?? '').startsWith("󰠭 000:07'00 ⟩ Parent Plan title"));
@@ -629,10 +580,13 @@ test('renders every legacy activity class on line 3 without stage narration', ()
   assert.ok(activityRow.includes('recovering'));
   assert.equal(activityRow.includes('working'), false);
 
-  // Idle without observed activity still reads `awaiting Human`.
+  // quiet-activity-row: idle without observed activity retires the band.
   state.header!.work = null;
   const idle = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  assert.ok((idle[4] ?? '').includes('awaiting Human'));
+  assert.equal(
+    idle.some((line) => line.includes('awaiting Human')),
+    false,
+  );
 });
 
 test('reports the observed activity on line 3 while active without a cue', () => {
@@ -757,7 +711,7 @@ test('the engine group rides line 1 right; the machine tail anchors the bottom r
     /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
     'the full machine tail rides the bottom row',
   );
-  assert.equal(lines.length, 7, 'seven-row clean deck');
+  assert.equal(lines.length, 5, 'five-row clean deck');
 });
 
 test('renders no task, stps, or run-counter tiles in any state', () => {
@@ -896,9 +850,12 @@ test('renders unavailable optional telemetry honestly', () => {
   assert.doesNotMatch(all, /clean/u);
   assert.equal(all.includes('task'), false);
   assert.equal(all.includes('stps'), false);
-  // Line 3 idle reads `awaiting Human`; without a published turn meter the
-  // cost slot stays silent rather than narrating zeros it cannot know.
-  assert.equal(plain(lines[4] ?? '').trimEnd(), 'awaiting Human');
+  // quiet-activity-row: idle without a meter retires the band — no
+  // `awaiting Human`, no zero-cost narration it cannot know; the
+  // engine row closes the deck.
+  assert.equal(all.includes('awaiting Human'), false);
+  assert.equal(all.includes('tok'), false);
+  assert.ok(plain(lines[4] ?? '').includes('\u{F082D}'), 'the engine row closes');
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
 });
@@ -1188,38 +1145,136 @@ test('wraps a long subject onto an indented continuation line', () => {
   assert.ok((lines[first + 1] ?? '').includes('machinery'));
 });
 
-test('moves the unfocused open-goal hint off the title band into notices', () => {
-  const state = titleFixture({ title: IDLE_TITLE });
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    openGoals: 2,
-  };
-
-  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
-  // Task 3.1 lockstep: the parenthesized prefix no longer rides line 2…
-  assert.match(titleRow, /󰠭 000:00'00 ⟩ Pivot cockpit/u);
-  assert.doesNotMatch(titleRow, /open goals/u);
-  // …it rides the notice slot on line 4 right, plural-aware.
-  const line4 = lines.at(-1) ?? '';
-  assert.ok(line4.trimEnd().endsWith('⚠ 2 open goals · /goal-focus'));
-});
-
 // --- Step 2.2: line 3 on the title-state contract ---------------------------
 
 const TURN_MIDWORK = { tokens: 4_200, elapsedMs: 38_000 };
 
-test('renders line 3 idle as awaiting Human with the zeroed turn meter', () => {
+test('hides the idle line-3 band; a speaking meter restores it', () => {
+  // quiet-activity-row: `awaiting Human` + `— · 0 tok` is zero activity —
+  // the band and its seam retire; real cost keeps the band speaking.
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
     turn: { tokens: 0, elapsedMs: 0 },
   };
 
-  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const idle = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  assert.equal(
+    idle.some((line) => line.includes('awaiting Human')),
+    false,
+  );
+  assert.equal(
+    idle.some((line) => line.includes('0 tok')),
+    false,
+  );
+  const seams = idle.filter((line) => /^┈+$/u.test(line));
+  assert.equal(seams.length, 1, 'one seam remains — the status seam');
+
+  const costly = titleFixture({ title: IDLE_TITLE });
+  costly.header = {
+    ...(costly.header as NonNullable<typeof state.header>),
+    turn: TURN_MIDWORK,
+  };
+  const lines = renderHeaderDeck(costly, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
-  assert.ok(activityRow.startsWith('awaiting Human'));
-  assert.ok(activityRow.trimEnd().endsWith('— · 0 tok'));
+  assert.ok(
+    activityRow.trimEnd().endsWith('this turn 4.2k · 0:38'),
+    'cost keeps the band',
+  );
+});
+
+test('renders live phase words between tools, never awaiting Human mid-turn', () => {
+  // quiet-activity-row amendment: thinking gaps fall back to the header's
+  // kind-based activity projection — the band appears at turn start with
+  // the phase word and never claims `awaiting Human` while a turn runs.
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    activity: { kind: 'understanding' },
+    turn: { tokens: 0, elapsedMs: 0 },
+  };
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  const activityRow = lines.find((line) => line.includes('interpreting')) ?? '';
+  assert.ok(activityRow.length > 0, 'the phase word renders at turn start');
+  assert.equal(
+    lines.some((line) => line.includes('awaiting Human')),
+    false,
+  );
+
+  // A tool observation outranks the phase word; a settled session (no
+  // activity projection, no cost) keeps retiring the band.
+  const toolState = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      activity: { class: 'bash', target: 'npm test', span: 't1', parent: null },
+    },
+  });
+  toolState.header = {
+    ...(toolState.header as NonNullable<typeof state.header>),
+    activity: { kind: 'implementation' },
+    turn: TURN_MIDWORK,
+  };
+  const toolLines = renderHeaderDeck(toolState, 100, plainTheme as never).map(plain);
+  const toolRow = toolLines.find((line) => line.includes('bash npm test')) ?? '';
+  assert.ok(toolRow.length > 0, 'the precise tool label wins');
+  assert.equal(
+    toolLines.some((line) => line.includes('implementing')),
+    false,
+  );
+
+  // answering-activity-kind: prose streaming keeps an honest label —
+  // `answering` with the live meter, never `awaiting Human` mid-turn.
+  const answering = titleFixture({ title: IDLE_TITLE });
+  answering.header = {
+    ...(answering.header as NonNullable<typeof answering.header>),
+    activity: { kind: 'answering' },
+    turn: TURN_MIDWORK,
+  };
+  const answeringLines = renderHeaderDeck(answering, 100, plainTheme as never).map(
+    plain,
+  );
+  const answeringRow = answeringLines.find((line) => /\banswering\b/u.test(line)) ?? '';
+  assert.ok(answeringRow.includes('this turn 4.2k'), 'the meter rides beside it');
+  assert.equal(
+    answeringLines.some((line) => line.includes('awaiting Human')),
+    false,
+  );
+});
+
+test('awaiting kinds are rest: a focused session still retires the band', () => {
+  // The `awaiting-*` kinds are the post-settle rest face — they must not
+  // keep the band alive at zero cost, or a focused session would never
+  // rest (review-caught regression, quiet-activity-row amendment).
+  const state = titleFixture({ title: IDLE_TITLE });
+  state.header = {
+    ...(state.header as NonNullable<typeof state.header>),
+    activity: { kind: 'awaiting-input' },
+    turn: { tokens: 0, elapsedMs: 0 },
+  };
+  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+  assert.equal(lines.length, 5, 'the band retires at rest');
+  assert.equal(
+    lines.some((line) => line.includes('awaiting Human')),
+    false,
+  );
+  assert.equal(
+    lines.some((line) => /\binput\b/u.test(line)),
+    false,
+  );
+
+  const legacy = fixture();
+  legacy.header!.work = {
+    lifecycle: 'waiting',
+    titles: ['Repair runtime state'],
+    color: 'accent',
+    activity: { kind: 'awaiting-validation' },
+  };
+  const legacyLines = renderHeaderDeck(legacy, 100, plainTheme as never).map(plain);
+  assert.equal(legacyLines.length, 6, 'the legacy path rests too');
+  assert.equal(
+    legacyLines.some((line) => line.includes('awaiting Human')),
+    false,
+  );
 });
 
 test('renders line 3 mid-work as editing target with this-turn cost', () => {
@@ -1280,9 +1335,28 @@ test('renders every observed activity class with its target', () => {
 });
 
 test('keeps the turn-cost slot silent for pre-title publishers', () => {
-  const lines = renderHeaderDeck(fixture(), 100, plainTheme as never).map(plain);
-  const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
-  assert.ok(activityRow.includes('awaiting Human'));
+  // quiet-activity-row: idle + meterless retires the band wholesale; a
+  // speaking legacy activity renders its label with no cost narration.
+  const idle = renderHeaderDeck(fixture(), 100, plainTheme as never).map(plain);
+  assert.equal(
+    idle.some((line) => line.includes('awaiting Human')),
+    false,
+  );
+  assert.equal(
+    idle.some((line) => line.includes('tok')),
+    false,
+  );
+
+  const active = fixture();
+  active.header!.work = {
+    lifecycle: 'working',
+    titles: ['Repair runtime state'],
+    color: 'accent',
+    activity: { kind: 'verification' },
+  };
+  const lines = renderHeaderDeck(active, 100, plainTheme as never).map(plain);
+  const activityRow = lines.find((line) => line.includes('checking')) ?? '';
+  assert.ok(activityRow.includes('checking'));
   assert.equal(activityRow.includes('0 tok'), false);
   assert.equal(activityRow.includes('this turn'), false);
 });
@@ -1302,8 +1376,9 @@ test('colors the activity and turn meter by liveness', () => {
     turn: { tokens: 0, elapsedMs: 0 },
   };
   renderHeaderDeck(idle, 100, theme as never);
-  assert.ok(colors.includes('dim:awaiting Human'));
-  assert.ok(colors.includes('dim:— · 0 tok'));
+  // quiet-activity-row: the idle band retires — no dim placeholders.
+  assert.equal(colors.includes('dim:awaiting Human'), false);
+  assert.equal(colors.includes('dim:— · 0 tok'), false);
 
   colors.length = 0;
   const midwork = titleFixture({
@@ -1334,13 +1409,21 @@ test('spans rows keep their home directly beneath line 3', () => {
     },
   ];
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const activityIndex = lines.findIndex((line) => line.includes('awaiting Human'));
-  assert.ok(activityIndex >= 0);
-  assert.match(lines[activityIndex + 1] ?? '', /└ \(00'41\) reviewer assuring/u);
+  // quiet-activity-row: the idle band retires, but its seam survives for
+  // the spans rows, which keep their home directly beneath line 2.
+  assert.equal(
+    lines.some((line) => line.includes('awaiting Human')),
+    false,
+  );
+  const spanIndex = lines.findIndex((line) =>
+    /└ \(00'41\) reviewer assuring/u.test(line),
+  );
+  assert.ok(spanIndex >= 0);
+  assert.match(lines[spanIndex - 1] ?? '', /^┈+$/u, 'the seam survives for spans');
   // A ┈ seam follows the spans rows, then the engine row closes the deck.
-  assert.match(lines[activityIndex + 2] ?? '', /^┈+$/u);
-  assert.ok(lines[activityIndex + 3]?.includes('48.2%'));
-  assert.equal(lines.length, activityIndex + 4, 'the machine row closes the deck');
+  assert.match(lines[spanIndex + 1] ?? '', /^┈+$/u);
+  assert.ok(lines[spanIndex + 2]?.includes('48.2%'));
+  assert.equal(lines.length, spanIndex + 3, 'the machine row closes the deck');
 });
 
 // --- Step 2.3: line 1 right relocation and line 4 ---------------------------
@@ -1469,7 +1552,7 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
     engineAt >= 0 && calendarAt > engineAt,
     'calendar rides the engine on line 1',
   );
-  assert.equal(lines.length, 7, 'clean seven-row deck');
+  assert.equal(lines.length, 5, 'clean five-row deck');
   // Narrow: the bottom row has the full width — the whole tail rides
   // even when line 1 collapses to identity + path.
   const narrowBottom = plain(
@@ -1511,7 +1594,7 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
   const clean = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
   // deck-reshape (amended): the engine row stays when clean — status is
   // silent, no ⚠ glyph, calendar on the bottom row.
-  assert.equal(clean.length, 7, 'engine row stays when clean');
+  assert.equal(clean.length, 5, 'engine row stays when clean');
   assert.equal(clean.join('\n').includes('⚠'), false);
   assert.ok((clean[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
   // Severity counts (line 1) and notices stay distinct surfaces.
@@ -1550,20 +1633,20 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
 });
 
 test('opens the deck with a strong rule and dotted internal seams', () => {
-  // Single-line subject at this width so the band count is fixed at seven.
+  // Single-line subject at this width so the band count is fixed at five
+  // (quiet-activity-row: the idle band and its seam retire).
   const lines = renderHeaderDeck(
     titleFixture({ title: IDLE_TITLE }),
     100,
     plainTheme as never,
   ).map(plain);
   // deck-reshape (swap): engine rides line 1; the machine row closes.
-  assert.equal(lines.length, 7);
+  assert.equal(lines.length, 5);
   assert.match(lines[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
   assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam beneath line 2');
-  assert.match(lines[5] ?? '', /^┈+$/u, 'dotted seam beneath line 3');
   assert.ok((lines[0] ?? '').includes('GPT-5.6 Sol'));
-  assert.ok((lines[6] ?? '').includes('48.2%'));
-  assert.equal(lines[6], lines.at(-1));
+  assert.ok((lines[4] ?? '').includes('48.2%'));
+  assert.equal(lines[4], lines.at(-1));
 });
 
 // --- Step 2.4: the two accepted mockups as lockstep fixtures ----------------
@@ -1597,8 +1680,9 @@ test('renders the accepted idle mockup at wide widths', () => {
     JSON.stringify(renderHeaderDeck(state, 120, plainTheme as never).map(plain)),
   );
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // deck-reshape: clean mockup is five rows — no status row.
-  assert.equal(lines.length, 7);
+  // deck-reshape + quiet-activity-row: clean mockup is five rows — the
+  // idle band retires; no status row.
+  assert.equal(lines.length, 5);
   // Line 1: identity leads the path; the engine anchors the corner right.
   assert.match(
     lines[0] ?? '',
@@ -1612,11 +1696,10 @@ test('renders the accepted idle mockup at wide widths', () => {
     /^\u{F082D} 000:00'00 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
   );
   assert.match(lines[3] ?? '', /^\u2508+$/u);
-  // Line 3: awaiting Human left, the zeroed turn meter right.
-  assert.match(lines[4] ?? '', /^awaiting Human\s+\u2014 \u00b7 0 tok$/u);
-  // The machine tail anchors the bottom row; the sentinel closes it.
+  // quiet-activity-row: the idle band retires — the machine tail anchors
+  // the bottom row directly beneath the seam; the sentinel closes it.
   assert.match(
-    lines[6] ?? '',
+    lines[4] ?? '',
     /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
   );
   assert.equal(lines.join('\n').includes('healthy'), false);
@@ -1686,7 +1769,14 @@ test('renders both mockups identically at 100 and 120 columns', () => {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
     assert.ok((lines[0] ?? '').includes('~/project'), String(width));
     assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
-    assert.ok((lines[4] ?? '').includes('awaiting Human'), String(width));
+    // quiet-activity-row: the idle band is gone; the engine row rides
+    // directly beneath the title seam.
+    assert.ok((lines[4] ?? '').includes('48.2%'), String(width));
+    assert.equal(
+      lines.some((line) => line.includes('awaiting Human')),
+      false,
+      String(width),
+    );
   }
 });
 
@@ -1736,13 +1826,84 @@ test('the dim ladybug sentinel yields to notices and survives bare states', () =
   );
 });
 
+test('the clean sentinel wears the short session id between two ladybugs', () => {
+  // Ladybug-session-id amendment: only when the ladder is silent and the
+  // frame is wide enough — blue bugs (accent), purple id (thinkingHigh);
+  // the census grows to three (clock anchor + two cluster bugs).
+  const withId = titleFixture({ title: IDLE_TITLE });
+  withId.sessionShortId = '01a157fd';
+  const lines = renderHeaderDeck(withId, 120, plainTheme as never).map(plain);
+  assert.ok(
+    (lines.at(-1) ?? '').trimEnd().endsWith('󰠭 01a157fd 󰠭'),
+    'the clean right end wears the id cluster',
+  );
+  assert.equal(
+    lines.join('').split('󰠭').length - 1,
+    3,
+    'census: clock anchor + two cluster bugs',
+  );
+  const colors: string[] = [];
+  renderHeaderDeck(withId, 120, {
+    fg: (name: string, text: string) => {
+      colors.push(`${name}:${text}`);
+      return text;
+    },
+    bold: (text: string) => text,
+  } as never);
+  assert.ok(colors.includes('accent:󰠭'), 'the cluster bugs render accent');
+  assert.ok(colors.includes('thinkingHigh:01a157fd'), 'the id renders purple');
+  assert.ok(!colors.includes('dim:󰠭'), 'the plain dim bug yields to the cluster');
+
+  // No id known: the plain dim sentinel stays exactly as before.
+  const withoutId = titleFixture({ title: IDLE_TITLE });
+  const plainLines = renderHeaderDeck(withoutId, 120, plainTheme as never).map(plain);
+  assert.ok(
+    (plainLines.at(-1) ?? '').trimEnd().endsWith('󰠭') &&
+      !(plainLines.at(-1) ?? '').includes('01a157fd'),
+    'without an id the sentinel stays a single dim bug',
+  );
+
+  // Narrow frames degrade to the plain bug rather than crowding the row.
+  for (const width of [20, 23]) {
+    const narrow = renderHeaderDeck(withId, width, plainTheme as never).map(plain);
+    const last = narrow.at(-1) ?? '';
+    assert.ok(last.trimEnd().endsWith('󰠭'), String(width));
+    assert.equal(last.includes('01a157fd'), false, String(width));
+  }
+  const wide = renderHeaderDeck(withId, 24, plainTheme as never).map(plain);
+  assert.ok(
+    (wide.at(-1) ?? '').includes('01a157fd'),
+    'the cluster hosts from 24 columns up',
+  );
+
+  // A notice still displaces the whole cluster — the id never competes
+  // with a speaking ladder.
+  const warned = titleFixture({ title: IDLE_TITLE });
+  warned.sessionShortId = '01a157fd';
+  warned.piStatus = {
+    errors: 0,
+    warnings: 0,
+    nativeStatusCount: 1,
+    nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
+  };
+  const warnedLines = renderHeaderDeck(warned, 120, plainTheme as never).map(plain);
+  assert.ok(
+    (warnedLines.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
+    'notices still own the slot',
+  );
+  assert.equal(
+    (warnedLines.at(-1) ?? '').includes('01a157fd'),
+    false,
+    'no id beside a notice',
+  );
+});
+
 // --- Step 3.1: the unified notice slot --------------------------------------
 
-test('aggregates mixed notices ranked goal hint, companion, diagnostics', () => {
+test('aggregates mixed notices ranked companion, diagnostics', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
-    openGoals: 1,
     diagnostics: {
       text: '2E  1W  ✗ tests',
       color: 'error',
@@ -1759,14 +1920,13 @@ test('aggregates mixed notices ranked goal hint, companion, diagnostics', () => 
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const line4 = lines.at(-1) ?? '';
-  // The accepted mixed render, verbatim (spec scenario: one open goal,
-  // appa unreachable, two diagnostics).
+  // The accepted mixed render, verbatim (spec scenario: appa unreachable,
+  // two diagnostics).
+  assert.ok(line4.trimEnd().endsWith('⚠ appa unreachable · 2 diagnostics'));
   assert.ok(
-    line4
-      .trimEnd()
-      .endsWith('⚠ 1 open goal · /goal-focus · appa unreachable · 2 diagnostics'),
+    line4.trimEnd().includes('⚠ appa unreachable'),
+    'notices own the right end',
   );
-  assert.ok(line4.trimEnd().includes('⚠ 1 open goal'), 'notices own the right end');
 });
 
 test('restores blocked and approval signals as companion-group notices', () => {
@@ -1854,7 +2014,6 @@ test('keeps the notice slot sentinel-only when clean', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
-    openGoals: 0,
     diagnostics: {
       text: 'clean  ✓ tests',
       color: 'success',
@@ -1873,7 +2032,7 @@ test('keeps the notice slot sentinel-only when clean', () => {
   // Clean: no ⚠ glyph — the dim ladybug sentinel owns the status right
   // end while the calendar rides the engine on line 1.
   assert.equal(lines.join('\n').includes('⚠'), false);
-  assert.equal(lines.length, 7, 'engine row stays when clean');
+  assert.equal(lines.length, 5, 'engine row stays when clean');
   assert.ok((lines[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
   assert.ok(
     (lines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
@@ -1902,14 +2061,12 @@ test('keeps the notice slot sentinel-only when clean', () => {
 function waiverFixture(
   waiver: { id: string; notice: string } | null,
   overrides: {
-    openGoals?: number;
     nativeStatuses?: Array<{ key: string; text: string }>;
   } = {},
 ): HeaderDeckState {
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
-    ...(overrides.openGoals !== undefined ? { openGoals: overrides.openGoals } : {}),
     title: parseDeckTitleState({ ...IDLE_TITLE, waiver }),
   };
   if (overrides.nativeStatuses) {
@@ -1928,7 +2085,6 @@ test('waiver suppresses exactly its matching notice text', () => {
   const state = waiverFixture(
     { id: 'graphify-stale', notice: noticeText },
     {
-      openGoals: 1,
       nativeStatuses: [
         { key: 'graphify', text: noticeText },
         { key: 'appa', text: 'appa unreachable' },
@@ -1939,7 +2095,7 @@ test('waiver suppresses exactly its matching notice text', () => {
   const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
   const line4 = lines.at(-1) ?? '';
   // Exactly the waived text leaves the slot; the other notices remain.
-  assert.ok(line4.trimEnd().endsWith('⚠ 1 open goal · /goal-focus · appa unreachable'));
+  assert.ok(line4.trimEnd().endsWith('⚠ appa unreachable'));
   assert.equal(line4.includes(noticeText), false);
 });
 
@@ -1979,24 +2135,4 @@ test('a waiver matching no live notice text is inert', () => {
   // Exact-text matching: a waiver for a notice that is not live suppresses
   // nothing — the live companion warning still renders.
   assert.ok(line4.trimEnd().endsWith('⚠ graphify · update recommended'));
-});
-
-test('a waiver can suppress the open-goal hint by its exact text', () => {
-  const state = waiverFixture(
-    { id: 'open-goal-hint', notice: '1 open goal · /goal-focus' },
-    { openGoals: 1 },
-  );
-
-  const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
-  assert.equal(lines.join('\n').includes('/goal-focus'), false);
-  assert.equal(
-    lines.join('\n').includes('⚠'),
-    false,
-    'sole notice waived removes the row',
-  );
-  assert.equal(lines.length, 7, 'clean deck keeps the engine row');
-  assert.ok(
-    (lines.at(-1) ?? '').includes('$5.16'),
-    'machine group stays on the bottom row',
-  );
 });

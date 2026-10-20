@@ -1,0 +1,10 @@
+schema: ramona-plan
+created: 2026-10-20
+goal: The quiet ladybug sentinel carries the short session id for easy track and
+  restore
+skip_specs: true
+
+status: approved
+created_by: assistant
+
+approved_at: 2026-10-20T08:33:14Z

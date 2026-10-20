@@ -2,7 +2,6 @@ import type { Theme } from '@earendil-works/pi-coding-agent';
 import { truncateToWidth, visibleWidth } from '@earendil-works/pi-tui';
 
 import type { LspCapability, McpCapability } from './capabilities.ts';
-import type { HeaderSelection } from './gauge.ts';
 import type {
   FooterTelemetrySnapshot,
   GitStatusSummary,
@@ -41,6 +40,8 @@ export interface HeaderDeckState {
   lsp: LspCapability | null;
   mcp: McpCapability | null;
   mode: VimMode;
+  /** Git-style first 8 chars of the Pi session id; worn by the sentinel. */
+  sessionShortId?: string;
 }
 
 const ANSI_ESCAPE = new RegExp(
@@ -167,8 +168,6 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
   // Line 2 anchor: the clock always leads the band with its icon; the
   // Subject follows when the title state carries one, and a fresh session
   // (subject null) leaves the clock leading alone — no dangling separator.
-  // Task 3.1: the unfocused open-goal hint left this band for the notice
-  // slot (design: "notices absorb the unfocused open-goal hint").
   const clock = `${color(theme, 'customMessageLabel', '󰠭')} ${timerTile(state, theme)}`;
   const title = state.header?.title ?? null;
   if (title) {
@@ -305,6 +304,7 @@ const ACTIVITY_LABELS: Record<HeaderActivity['kind'], string> = {
   regression: 'testing',
   verification: 'checking',
   'result-review': 'reviewing result',
+  answering: 'answering',
   recovery: 'recovering',
   'awaiting-validation': 'validation',
   'awaiting-input': 'input',
@@ -316,7 +316,10 @@ function activityLabel(state: HeaderDeckState): string {
   const pathLabel = safeText(pathActivity?.compact || pathActivity?.label || '');
   if (pathLabel) return pathLabel;
   const activity = state.header?.work?.activity;
-  return activity ? ACTIVITY_LABELS[activity.kind] : '';
+  // `awaiting-*` kinds are the rest face — they never speak for the band
+  // (a focused session still retires; quiet-activity-row amendment).
+  if (!activity || activity.kind.startsWith('awaiting-')) return '';
+  return ACTIVITY_LABELS[activity.kind];
 }
 
 /** `editing deck.ts` / `reading schema.yaml` / `subagent: scout`. */
@@ -326,17 +329,45 @@ function titleActivityLabel(activity: { class: string; target: string }): string
     : `${activity.class} ${activity.target}`;
 }
 
-function activityTile(state: HeaderDeckState, theme: Theme): string {
-  // Line 3 left: the observed activity owns the slot — `awaiting Human`
-  // when idle, the legacy observed label for pre-title publishers.
+/** The line-3 band speaks when either side carries a real signal:
+ * an observed activity (title-state or legacy) or a turn meter that
+ * cost tokens or time. Both idle (`awaiting Human` + `— · 0 tok` or
+ * no meter) is zero activity — the band and its seam retire
+ * (Human-directed 2026-10-20, quiet-activity-row). */
+/** Live phase word from the header's kind-based activity projection —
+ * fills the gaps between tools (thinking, planning, checking) so the
+ * band never claims `awaiting Human` mid-turn. The `awaiting-*` kinds
+ * are the REST face (awaiting Human review/input after settle): they
+ * never speak for the band, or a focused session would never rest
+ * (quiet-activity-row amendment). */
+function liveKindLabel(state: HeaderDeckState): string {
+  const activity = state.header?.activity ?? null;
+  if (!activity || activity.kind.startsWith('awaiting-')) return '';
+  return ACTIVITY_LABELS[activity.kind] ?? '';
+}
+
+/** The band's current left label: the precise title-state activity when a
+ * tool is observed, else the live phase word; empty when truly idle. */
+function observedActivityLabel(state: HeaderDeckState): string {
   const title = state.header?.title ?? null;
   if (title) {
-    return title.activity
-      ? color(theme, 'text', titleActivityLabel(title.activity))
-      : color(theme, 'dim', 'awaiting Human');
+    return title.activity ? titleActivityLabel(title.activity) : liveKindLabel(state);
   }
-  const legacy = activityLabel(state);
-  return legacy ? color(theme, 'text', legacy) : color(theme, 'dim', 'awaiting Human');
+  return activityLabel(state) || liveKindLabel(state);
+}
+
+function activityBandSpeaks(state: HeaderDeckState): boolean {
+  const activitySpeaks = observedActivityLabel(state) !== '';
+  const turn = state.header?.turn ?? null;
+  const costSpeaks = turn !== null && (turn.tokens > 0 || turn.elapsedMs > 0);
+  return activitySpeaks || costSpeaks;
+}
+
+function activityTile(state: HeaderDeckState, theme: Theme): string {
+  // Line 3 left: the observed activity owns the slot — the live phase word
+  // between tools, `awaiting Human` only when the session truly rests.
+  const label = observedActivityLabel(state);
+  return label ? color(theme, 'text', label) : color(theme, 'dim', 'awaiting Human');
 }
 
 function formatTurnElapsed(ms: number): string {
@@ -478,7 +509,7 @@ function identityCluster(
   // the bare→bare chip spacing).
   const texts = new Map<string, string>();
   for (const item of state.piStatus?.nativeStatuses ?? []) {
-    if (item.key === 'goal' || texts.has(item.key)) continue;
+    if (texts.has(item.key)) continue;
     texts.set(item.key, item.text);
   }
   const parts: string[] = [];
@@ -512,12 +543,17 @@ function identityCluster(
 const BLOCKED_NOTICE = '\u26d4 blocked';
 const APPROVAL_NOTICE = 'approval required';
 
+/** Narrowest frame that hosts the id-bearing sentinel cluster (12 cells
+ * plus breathing room for the machine ladder). */
+const SENTINEL_ID_MIN_WIDTH = 24;
+const SENTINEL_BUG = '\u{F082D}';
+
 function companionWarningTexts(state: HeaderDeckState): string[] {
   // Same sources as the capability-health chips: the known companions'
-  // native-status texts, goal key filtered, ranked after blocked/approval.
+  // native-status texts, ranked after blocked/approval.
   const texts = new Map<string, string>();
   for (const item of state.piStatus?.nativeStatuses ?? []) {
-    if (item.key === 'goal' || texts.has(item.key)) continue;
+    if (texts.has(item.key)) continue;
     texts.set(item.key, item.text);
   }
   const warnings: string[] = [];
@@ -535,17 +571,13 @@ function companionWarningTexts(state: HeaderDeckState): string[] {
 
 /**
  * Aggregate the deck's scattered warning signals into one notice slot
- * (Task 3.1). Ranked per the spec's accepted mixed render: the unfocused
- * open-goal hint, then the companion group (blocked, approval, warning
- * texts), then the diagnostics count — `·`-joined, empty when clean.
+ * (Task 3.1). Ranked per the spec's accepted mixed render: the companion
+ * group (blocked, approval, warning texts), then the diagnostics count —
+ * `·`-joined, empty when clean.
  */
 export function collectDeckNotices(state: HeaderDeckState): string[] {
   const header = state.header;
-  const openGoals = header?.selection?.source === 'goal' ? 0 : (header?.openGoals ?? 0);
   const notices: string[] = [];
-  if (openGoals > 0) {
-    notices.push(`${openGoals} open goal${openGoals === 1 ? '' : 's'} · /goal-focus`);
-  }
   if (header?.blocked) notices.push(BLOCKED_NOTICE);
   if (header?.approvalRequired) notices.push(APPROVAL_NOTICE);
   notices.push(...companionWarningTexts(state));
@@ -559,18 +591,28 @@ export function collectDeckNotices(state: HeaderDeckState): string[] {
   return waiver ? notices.filter((notice) => notice !== waiver.notice) : notices;
 }
 
-function noticeTile(state: HeaderDeckState, theme: Theme): string {
+function noticeTile(state: HeaderDeckState, theme: Theme, width: number): string {
   const notices = collectDeckNotices(state);
   // Healthy sentinel (Human-directed 2026-10-19, reversing the retirement):
   // when the ladder is silent the dim ladybug holds the right end — the
   // deck's signature glyph and a reserved one (safeText strips 󰠭 from
   // published text), so the status row always speaks: ⚠ with notices,
-  // the quiet ladybug when all is well.
-  if (notices.length === 0) return color(theme, 'dim', '󰠭');
+  // the quiet ladybug when all is well. Ladybug-session-id amendment
+  // (Human-directed 2026-10-20): a clean frame with a known session id
+  // wears it between two ladybugs — blue bugs, purple id — so the deck
+  // doubles as a track-and-restore handle; the plain dim bug stays when
+  // the id is unknown or the frame is too narrow for the cluster.
+  if (notices.length === 0) {
+    const id = state.sessionShortId;
+    if (id !== undefined && width >= SENTINEL_ID_MIN_WIDTH) {
+      return `${color(theme, 'accent', SENTINEL_BUG)} ${color(theme, 'thinkingHigh', id)} ${color(theme, 'accent', SENTINEL_BUG)}`;
+    }
+    return color(theme, 'dim', SENTINEL_BUG);
+  }
   // Blocked carries the error severity it wore on the deleted lifecycle
   // tile; every other notice renders at warning.
   const semantic = notices.includes(BLOCKED_NOTICE) ? 'error' : 'warning';
-  return color(theme, semantic, `⚠ ${notices.join(' · ')}`);
+  return color(theme, semantic, `\u26a0 ${notices.join(' · ')}`);
 }
 
 export function machineCornerSegments(
@@ -761,63 +803,10 @@ function statusAlertTile(
   return visibleWidth(count) < width ? count : '';
 }
 
-function formatGoalElapsed(seconds: number): string {
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  const totalMinutes = Math.floor(seconds / 60);
-  if (totalMinutes < 60) return `${totalMinutes}m ${Math.floor(seconds % 60)}s`;
-  return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
-}
-
 function formatTokens(tokens: number): string {
   if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
   if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}k`;
   return `${Math.floor(tokens)}`;
-}
-
-const GOAL_STATUS_COLORS: Record<string, string> = {
-  active: 'accent',
-  complete: 'success',
-  paused: 'warning',
-  blocked: 'error',
-  usage_limited: 'warning',
-  budget_limited: 'warning',
-  queued: 'dim',
-};
-
-function goalBadgeTile(
-  goal: NonNullable<HeaderSelection['goal']>,
-  theme: Theme,
-): string {
-  const semantic = GOAL_STATUS_COLORS[goal.status] ?? 'text';
-  const elapsed =
-    goal.elapsedSeconds !== undefined
-      ? ` · ${formatGoalElapsed(goal.elapsedSeconds)}`
-      : '';
-  return `${color(theme, semantic, `● ${goal.status}`)}${color(theme, 'dim', elapsed)}`;
-}
-
-function goalTreeLines(
-  goal: NonNullable<HeaderSelection['goal']>,
-  width: number,
-  theme: Theme,
-): string[] {
-  if (width < 56) return [];
-  const rows: string[] = [];
-  if (goal.tasksTotal !== undefined && goal.tasksDone !== undefined) {
-    const active =
-      goal.tasksActive !== undefined && goal.tasksActive > 0
-        ? ` · ${goal.tasksActive} active`
-        : '';
-    rows.push(`  ├ tasks ${goal.tasksDone}/${goal.tasksTotal} done${active}`);
-  }
-  if (goal.tokensUsed !== undefined) {
-    const budget =
-      goal.tokenBudget !== undefined && goal.tokenBudget > 0
-        ? ` · budget ${Math.min(999, Math.round((goal.tokensUsed / goal.tokenBudget) * 100))}%`
-        : '';
-    rows.push(`  └ usage ${formatTokens(goal.tokensUsed)} tokens${budget}`);
-  }
-  return rows.map((line) => color(theme, 'dim', line));
 }
 
 export function renderHeaderDeck(
@@ -832,40 +821,34 @@ export function renderHeaderDeck(
   const solidRule = color(theme, lineColor, '─'.repeat(boundedWidth));
   const dottedRule = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   // Line 2 (four-line deck): the clock and Subject lead with Work on the
-  // right end; goal progress rows keep their home beneath this line.
-  // Narrow frames: the Work slot yields before the clock anchor does.
-  const goalDetail =
-    state.header?.selection?.source === 'goal'
-      ? state.header.selection.goal
-      : undefined;
-  const titleRight =
-    boundedWidth >= 40
-      ? goalDetail
-        ? goalBadgeTile(goalDetail, theme)
-        : workTile(state, theme)
-      : '';
+  // right end. Narrow frames: the Work slot yields before the clock anchor
+  // does.
+  const titleRight = boundedWidth >= 40 ? workTile(state, theme) : '';
   const focusLines = titleBandLines(state, boundedWidth, theme);
   const titleRows = [
     alignedSingleRow(focusLines[0] ?? '', titleRight, boundedWidth),
     ...focusLines.slice(1),
   ];
-  const goalRows = goalDetail ? goalTreeLines(goalDetail, boundedWidth, theme) : [];
 
   // Line 3 (four-line deck): Activity left with the per-turn cost right —
   // the superseded lifecycle/suggestion/runs tiles are gone; Work,
   // Activity, and the spans rows are their replacements. The spans rows
   // keep their home directly beneath this line.
-  const activityRow = alignedSingleRow(
-    activityTile(state, theme),
-    turnCostTile(state, theme),
-    boundedWidth,
-  );
+  const spanRows = spanTreeRows(state, boundedWidth, theme);
+  const bandSpeaks = activityBandSpeaks(state);
+  const activityRow = bandSpeaks
+    ? alignedSingleRow(
+        activityTile(state, theme),
+        turnCostTile(state, theme),
+        boundedWidth,
+      )
+    : '';
   // deck-reshape, swap amendment: the bottom row carries the MACHINE
   // tail on the left (yielding right-to-left into whatever width the
   // status leaves) and the status on the right — which always speaks
   // now: ⚠ notices or the dim ladybug sentinel when clean. The engine
   // group moved to line 1 right.
-  const statusRight = noticeTile(state, theme);
+  const statusRight = noticeTile(state, theme, boundedWidth);
   const machineRow = machineCornerLadder(
     state,
     theme,
@@ -879,7 +862,9 @@ export function renderHeaderDeck(
   // Band adjacency (Human-directed, accepted mockups; third 2.4
   // amendment): the deck opens with a full ─ rule directly beneath the
   // line-1 strip; the internal seams stay dotted ┈ between lines 2 and
-  // 3 and between line 3 (spans rows included) and the status row.
+  // 3 and between line 3 (spans rows included) and the status row —
+  // except the 2/3 seam retires with a silent, spanless line-3 band
+  // (quiet-activity-row): idle + zero cost never narrates itself.
   const identity = identityCluster(state, theme);
   const corner = deckCornerRight(state, theme, boundedWidth);
   const alert = statusAlertTile(
@@ -896,10 +881,9 @@ export function renderHeaderDeck(
     ),
     solidRule,
     ...titleRows,
-    ...goalRows,
-    dottedRule,
-    activityRow,
-    ...spanTreeRows(state, boundedWidth, theme),
+    ...(bandSpeaks || spanRows.length > 0 ? [dottedRule] : []),
+    ...(bandSpeaks ? [activityRow] : []),
+    ...spanRows,
     ...(engineRow.trim() !== '' ? [dottedRule, engineRow] : []),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));

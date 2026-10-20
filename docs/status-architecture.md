@@ -37,7 +37,6 @@ Selection is the single answer to "what is this session about". It is one slot:
 ```text
 selection =
   | { kind: 'openspec-task', change, task }   ← openspec_focus tool
-  | { kind: 'goal', ... }                     ← goal events
   | { kind: 'session-work', intent, phase }   ← work_focus tool
   | { kind: 'subject', title }                ← passive fallback, never overrides
   | { kind: 'none' }
@@ -49,7 +48,7 @@ Rules:
 - `subject` never displaces an active selection; it fills the slot only when nothing
   else holds it.
 - The existing tools keep their external behavior and persisted session-entry formats.
-- Goal and session-work are selection kinds, not parallel slots competing for focus.
+- Session-work is a selection kind, not a parallel slot competing for focus.
 
 ## runs
 
@@ -114,7 +113,7 @@ Title, status, and every rendered surface are pure projections of the snapshot:
 any change ─▶ append event ─▶ reducer ─▶ snapshot v++ ─▶ renderers
 ```
 
-Every producer — tools, Pi lifecycle events, goal sync, collectors, taskflow — appends
+Every producer — tools, Pi lifecycle events, collectors, taskflow — appends
 bounded events. The reducer is the only writer of snapshot state. Renderers are dumb,
 stateless consumers.
 

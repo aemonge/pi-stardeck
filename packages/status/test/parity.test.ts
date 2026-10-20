@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { headerSelection } from '../src/publisher.ts';
-import type { GoalHeaderState } from '../src/goal.ts';
 import type { OpenSpecState } from '../src/types.ts';
 import {
   reduceLedger,
@@ -12,13 +11,6 @@ import {
 import { applyEvent } from '../src/reducer.ts';
 import type { LedgerEvent } from '../src/ledger.ts';
 import type { RunSpan } from '../src/types.ts';
-
-const goal: GoalHeaderState = {
-  id: 'goal-1',
-  status: 'active',
-  automaticModelTurns: 3,
-  waiting: false,
-};
 
 const openSpec: OpenSpecState = {
   projectRoot: '/project',
@@ -66,7 +58,6 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
       name: 'nothing set',
       facts: {
         openSpec: { mode: 'none' },
-        goal: null,
         work: { state: 'clear' },
         subject: { state: 'clear' },
       },
@@ -77,7 +68,6 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
       name: 'subject alone',
       facts: {
         openSpec: { mode: 'none' },
-        goal: null,
         work: { state: 'clear' },
         subject,
       },
@@ -86,7 +76,7 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
     },
     {
       name: 'work beats subject',
-      facts: { openSpec: { mode: 'none' }, goal: null, work, subject },
+      facts: { openSpec: { mode: 'none' }, work, subject },
       legacy: { workFocus: work, subject },
       expected: 'session-work',
     },
@@ -94,7 +84,6 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
       name: 'validation work still session-work',
       facts: {
         openSpec: { mode: 'none' },
-        goal: null,
         work: workValidation,
         subject,
       },
@@ -102,18 +91,11 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
       expected: 'session-work',
     },
     {
-      name: 'goal beats work and subject',
-      facts: { openSpec: { mode: 'none' }, goal, work, subject },
-      legacy: { goal, workFocus: work, subject },
-      expected: 'goal',
-    },
-    {
       name: 'openspec task beats everything',
-      facts: { openSpec: taskFocus, goal, work, subject },
+      facts: { openSpec: taskFocus, work, subject },
       legacy: {
         openSpec,
         focusedTaskId: '2',
-        goal,
         workFocus: work,
         subject,
       },
@@ -184,7 +166,6 @@ test('exhibit regression: no selection narrates nothing (exhibits 1 and 5)', asy
       activity: { kind: 'understanding' },
       taskflowPhase: undefined,
       ...(fallbackTitles ? { fallbackTitles } : {}),
-      goal: null,
     });
     assert.deepEqual(event.work?.titles ?? [], []);
     const serialized = JSON.stringify(event);
