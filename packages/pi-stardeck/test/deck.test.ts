@@ -132,8 +132,8 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
   assert.match(plain(lines[1] ?? ''), /^─+$/u);
   const titleRow = plain(lines[2] ?? '');
-  assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Read-only preflight"));
-  assert.ok(titleRow.includes("000:07'00"));
+  assert.ok(titleRow.startsWith('Read-only preflight'));
+  assert.equal(titleRow.includes("000:07'00"), false);
   // quiet-activity-row: idle renders no line-3 band at all; the
   // lifecycle/suggestion/runs tiles stay gone with the status row.
   const deckText = lines.map(plain).join('\n');
@@ -163,9 +163,9 @@ test('renders the approved rich wide header without side borders or spacer rows'
   assert.equal(lines.join('\n').includes('healthy'), false, 'placeholder retired');
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
-  // Ladybug census (sentinel amendment): exactly two — the line-2 clock
-  // anchor and the line-4 healthy sentinel.
-  assert.equal(lines.join('').split('󰠭').length - 1, 2);
+  // Ladybug census (2026-10-23 amendment): exactly one — the line-4
+  // healthy sentinel; the clock anchor retired with the timer.
+  assert.equal(lines.join('').split('󰠭').length - 1, 1);
   assert.equal(lines.join('').includes('󱒋 LSP'), false);
 });
 
@@ -212,7 +212,7 @@ test('drops the footer count; the strong rule opens the deck', () => {
   // clean or alerting, the rule is constant (third amendment: it is the
   // only one; the deck ends at the telemetry row).
   assert.match(plain(lines[1] ?? ''), /^\u2500+$/u);
-  assert.match(plain(lines[2] ?? ''), /^\u{F082D} 000:07'00/u);
+  assert.match(plain(lines[2] ?? ''), /^Read-only preflight/u);
   assert.equal(lines.join('').includes('·3'), false);
   // Relocation phase: the footer count is deleted; the anchor echo remains.
   assert.doesNotMatch(lines.at(-1) ?? '', /[0-9] ‹/u);
@@ -414,8 +414,8 @@ test('keeps activity and focus distinct on the title row', () => {
   assert.equal(activityRow.includes('assuring'), false);
   assert.equal(activityRow.includes('requesting validation or redirection'), false);
   const titleRow = plain(lines[2] ?? '');
-  assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ Plan title › Current task"));
-  assert.ok(titleRow.includes("000:07'00"));
+  assert.ok(titleRow.startsWith('Plan title › Current task'));
+  assert.equal(titleRow.includes("000:07'00"), false);
   assert.equal(lines.join('\n').split('Running checks').length - 1, 0);
 });
 
@@ -433,13 +433,13 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
   assert.doesNotMatch(wide[5] ?? '', /Parent Plan title/u);
   const titleRow = plain(wide[2] ?? '');
-  assert.ok(
-    titleRow.startsWith(`󰠭 000:07'00 ⟩ Parent Plan title › ${expected}`.slice(0, 40)),
-  );
-  assert.ok(titleRow.includes("000:07'00"));
+  assert.ok(titleRow.startsWith(`Parent Plan title › ${expected}`.slice(0, 40)));
+  assert.equal(titleRow.includes("000:07'00"), false);
 
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
-  const focusIdx = narrow.findIndex((line) => plain(line).includes("000:07'00"));
+  const focusIdx = narrow.findIndex((line) =>
+    plain(line).includes('Parent Plan title'),
+  );
   assert.ok(focusIdx >= 0);
   // quiet-activity-row: the idle band is gone at every width — no
   // `awaiting Human` narration and never an `idle` placeholder.
@@ -453,7 +453,7 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
   );
   const focus = narrow.slice(focusIdx, focusIdx + 2);
   assert.equal(focus.length, 2);
-  assert.ok(plain(focus[0] ?? '').startsWith("󰠭 000:07'00 ⟩ Parent Plan title"));
+  assert.ok(plain(focus[0] ?? '').startsWith('Parent Plan title'));
   assert.ok(plain(focus[1] ?? '').includes('without repeating'));
 });
 
@@ -469,15 +469,15 @@ test('keeps a single selected title on the focus row only', () => {
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
   assert.doesNotMatch(wide[5] ?? '', /One focused work title/u);
   const titleRow = plain(wide[2] ?? '');
-  assert.ok(titleRow.startsWith("󰠭 000:07'00 ⟩ One focused work title"));
-  assert.ok(titleRow.includes("000:07'00"));
+  assert.ok(titleRow.startsWith('One focused work title'));
+  assert.equal(titleRow.includes("000:07'00"), false);
   assert.equal(wide.join('\n').split('One focused work title').length - 1, 1);
 
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
   assert.ok(
-    plain(narrow.find((line) => plain(line).includes("000:07'00")) ?? '').startsWith(
-      "󰠭 000:07'00 ⟩ One focused work title",
-    ),
+    plain(
+      narrow.find((line) => plain(line).includes('One focused work title')) ?? '',
+    ).startsWith('One focused work title'),
   );
 });
 
@@ -492,8 +492,8 @@ test('renders the subject selection on the focus row instead of an em dash', () 
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
   const subjectRow = plain(wide[2] ?? '');
-  assert.ok(subjectRow.startsWith("󰠭 000:07'00 ⟩ Session subject"));
-  assert.ok(subjectRow.includes("000:07'00"));
+  assert.ok(subjectRow.startsWith('Session subject'));
+  assert.equal(subjectRow.includes("000:07'00"), false);
   assert.doesNotMatch(wide.join('\n'), /󰠭 ⟩ —/u);
 
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
@@ -608,8 +608,8 @@ test('reports the observed activity on line 3 while active without a cue', () =>
   assert.ok(activityRow.trimEnd().endsWith('implementing'));
   assert.equal(activityRow.includes('step 7/16'), false);
   assert.equal(activityRow.includes('requesting'), false);
-  // Without a selection the clock leads line 2 alone.
-  assert.ok(plain(lines[2] ?? '').startsWith("󰠭 000:07'00"));
+  // Without a selection the dim no-subject hint leads line 2.
+  assert.ok(plain(lines[2] ?? '').startsWith('— no subject'));
   assert.doesNotMatch(plain(lines[2] ?? ''), /Plan title/u);
 });
 
@@ -630,13 +630,13 @@ test('renders the selected work title exactly once across the deck', () => {
   state.header!.suggestion = null;
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const titleLine = plain(lines.find((line) => line.includes("000:07'00")) ?? '');
+  const titleLine = plain(lines.find((line) => line.includes(echoTitle)) ?? '');
   assert.ok(titleLine.includes(echoTitle), 'selection band shows the title');
   // No-echo contract: the title renders exactly once across the whole deck.
   assert.equal(lines.join('\n').split(echoTitle).length - 1, 1);
 });
 
-test('keeps the clock accent and the counters absent in every counter state', () => {
+test('keeps the band accent and the counters absent in every counter state', () => {
   const state = fixture();
   state.header!.work!.color = 'warning';
   const colors: string[] = [];
@@ -650,7 +650,6 @@ test('keeps the clock accent and the counters absent in every counter state', ()
 
   renderHeaderDeck(state, 160, theme as never);
 
-  assert.ok(colors.includes("accent:000:07'00"));
   assert.ok(!colors.some((entry) => entry.endsWith(':idle')));
   assert.ok(
     colors.includes(
@@ -686,7 +685,7 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
   assert.ok(colors.some((entry) => entry.startsWith('thinkingHigh:─')));
   assert.ok(colors.includes('thinkingHigh:⟩'));
   assert.equal(colors.filter((entry) => entry.startsWith('text:┈')).length, 1);
-  assert.equal(colors.filter((entry) => entry === 'customMessageLabel:󰠭').length, 1);
+  assert.equal(colors.filter((entry) => entry === 'customMessageLabel:󰠭').length, 0);
   assert.equal(
     colors.some((entry) => entry.startsWith('thinkingMax:')),
     false,
@@ -780,12 +779,13 @@ test('preserves width and essential deck structure through responsive collapse',
       String(width),
     );
     assert.ok(
-      lines.some((line) => plain(line).includes("󰠭 000:07'00")),
+      lines.some((line) => plain(line).includes('Read-only preflight')),
       String(width),
     );
-    // Clock anchor + healthy sentinel — the ladybug census is two.
-    assert.equal(lines.join('').split('󰠭').length - 1, 2, String(width));
-    assert.match(lines.join('\n'), /000:07'00/u, String(width));
+    // Healthy sentinel alone — the clock is gone (Human amendment
+    // 2026-10-23); the ladybug census is one.
+    assert.equal(lines.join('').split('󰠭').length - 1, 1, String(width));
+    assert.doesNotMatch(lines.join('\n'), /000:07'00/u, String(width));
     if (width >= 100) {
       // deck-reshape: the engine joined the corner — context survives
       // only from ~100 columns up.
@@ -805,7 +805,7 @@ test('a live session without a subject renders the dim no-subject placeholder', 
     selection: undefined,
   };
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  assert.match(lines[2] ?? '', /^\u{F082D} 000:07'00 \u{27E9} — no subject/u);
+  assert.match(lines[2] ?? '', /^— no subject/u);
 
   // Header present but title absent entirely (selection-less): same hint.
   const untitled = fixture();
@@ -815,7 +815,7 @@ test('a live session without a subject renders the dim no-subject placeholder', 
     selection: undefined,
   };
   const untitledLines = renderHeaderDeck(untitled, 120, plainTheme as never).map(plain);
-  assert.match(untitledLines[2] ?? '', /^\u{F082D} 000:07'00 \u{27E9} — no subject/u);
+  assert.match(untitledLines[2] ?? '', /^— no subject/u);
 });
 
 test('renders unavailable optional telemetry honestly', () => {
@@ -845,7 +845,7 @@ test('renders unavailable optional telemetry honestly', () => {
   // silent — Work renders nothing for pre-title publishers (no placeholder).
   assert.equal(plain(lines[2] ?? '').includes('task 00/00'), false);
   assert.equal(plain(lines[2] ?? '').includes('stps 00/00'), false);
-  assert.equal(plain(lines[2] ?? '').trim(), "󰠭 000:00'00");
+  assert.equal(plain(lines[2] ?? '').trim(), '');
   assert.doesNotMatch(all, /next direction/u);
   assert.doesNotMatch(all, /clean/u);
   assert.equal(all.includes('task'), false);
@@ -1033,7 +1033,7 @@ function titleFixture(overrides: {
   return state;
 }
 
-test('renders line 2 as clock ⟩ Subject with the Work label on the right', () => {
+test('renders line 2 as Subject with the Work label on the right', () => {
   const state = titleFixture({
     title: {
       ...IDLE_TITLE,
@@ -1043,12 +1043,8 @@ test('renders line 2 as clock ⟩ Subject with the Work label on the right', () 
   });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines.find((line) => line.includes("000:04'12")) ?? '';
-  assert.ok(
-    titleRow.startsWith(
-      "󰠭 000:04'12 ⟩ Pivot cockpit to pure pi-starship-header chrome",
-    ),
-  );
+  const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
+  assert.ok(titleRow.startsWith('Pivot cockpit to pure pi-starship-header chrome'));
   assert.ok(titleRow.includes('eight-section-deck › 󰄱 1/4'));
   // The optional task segment is parsed for the contract but never rendered —
   // the human-steered format shows `change › 󰄱 done/total`.
@@ -1059,8 +1055,9 @@ test('renders the dim no-work hint when no change owns the moment', () => {
   const state = titleFixture({ title: IDLE_TITLE });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
-  assert.ok(titleRow.includes('— no change owns the moment'));
+  const titleRow =
+    lines.find((line) => line.includes('— no change owns the moment')) ?? '';
+  assert.ok(titleRow.includes('Pivot cockpit'));
   const colors: string[] = [];
   renderHeaderDeck(state, 120, {
     fg: (name: string, text: string) => {
@@ -1072,12 +1069,12 @@ test('renders the dim no-work hint when no change owns the moment', () => {
   assert.ok(colors.includes('dim:— no change owns the moment'));
 });
 
-test('renders the clock leading alone when the subject is null', () => {
+test('renders the dim no-subject placeholder when the subject is null', () => {
   const state = titleFixture({ title: { ...IDLE_TITLE, subject: null } });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const titleRow = lines[2] ?? '';
-  assert.ok(titleRow.startsWith("󰠭 000:00'00"));
+  assert.ok(titleRow.startsWith('— no subject'));
   assert.doesNotMatch(titleRow, /⟩\s*$/u);
   assert.doesNotMatch(titleRow, /󰠭\s+⟩/u);
   // The fresh session still owns its right end: the work hint stays.
@@ -1110,7 +1107,7 @@ test('colors the Work label segments and drops it on narrow frames', () => {
 
   // Narrow frames: the Work slot yields before the clock anchor does.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
-  assert.ok((narrow[2] ?? '').includes("000:00'00"));
+  assert.ok((narrow[2] ?? '').includes('Pivot cockpit'));
   assert.equal((narrow[2] ?? '').includes('eight-section-deck › 󰄱 1/4'), false);
 });
 
@@ -1149,7 +1146,7 @@ test('renders the subject green when it mirrors the focused change', () => {
 
 test('keeps pre-title publishers on the legacy selection band with a silent right end', () => {
   const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
-  const titleRow = lines.find((line) => line.includes("000:07'00")) ?? '';
+  const titleRow = lines.find((line) => line.includes('Read-only preflight')) ?? '';
   assert.ok(titleRow.includes('Read-only preflight'));
   // No title state means no Work slot: absent facts stay silent, and the
   // superseded counter tiles never come back to fill the gap.
@@ -1161,21 +1158,20 @@ test('ignores a malformed title state and falls back to the legacy band', () => 
   const state = titleFixture({ title: { v: 9, subject: 'stale' } });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines.find((line) => line.includes("000:00'00")) ?? '';
+  const titleRow = lines.find((line) => line.includes('Read-only preflight')) ?? '';
   assert.ok(titleRow.includes('Read-only preflight'), 'selection keeps the band');
   assert.equal(titleRow.includes('stale'), false);
 });
 
-test('wraps a long subject onto an indented continuation line', () => {
+test('wraps a long subject onto a continuation line', () => {
   const subject =
     'Deliver one deliberately long session subject that needs a second responsive line without inventing new machinery';
   const state = titleFixture({ title: { ...IDLE_TITLE, subject } });
 
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  const first = lines.findIndex((line) => line.includes("000:00'00"));
+  const first = lines.findIndex((line) => line.includes('Deliver one deliberately'));
   assert.ok(first >= 0);
-  assert.ok((lines[first] ?? '').startsWith("󰠭 000:00'00 ⟩ Deliver one deliberately"));
-  assert.ok((lines[first + 1] ?? '').startsWith(' '.repeat(12)));
+  assert.ok((lines[first] ?? '').startsWith('Deliver one deliberately'));
   assert.ok((lines[first + 1] ?? '').includes('machinery'));
 });
 
@@ -1211,10 +1207,7 @@ test('hides the idle line-3 band; a speaking meter restores it', () => {
   };
   const lines = renderHeaderDeck(costly, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
-  assert.ok(
-    activityRow.trimEnd().endsWith('this turn 4.2k · 0:38'),
-    'cost keeps the band',
-  );
+  assert.ok(activityRow.trimEnd().endsWith('󰠭 0:38 · 4.2k'), 'cost keeps the band');
 });
 
 test('renders live phase words between tools, never awaiting Human mid-turn', () => {
@@ -1268,7 +1261,7 @@ test('renders live phase words between tools, never awaiting Human mid-turn', ()
     plain,
   );
   const answeringRow = answeringLines.find((line) => /\banswering\b/u.test(line)) ?? '';
-  assert.ok(answeringRow.includes('this turn 4.2k'), 'the meter rides beside it');
+  assert.ok(answeringRow.includes('· 4.2k'), 'the meter rides beside it');
   assert.equal(
     answeringLines.some((line) => line.includes('awaiting Human')),
     false,
@@ -1332,7 +1325,7 @@ test('renders line 3 mid-work as editing target with this-turn cost', () => {
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('editing')) ?? '';
   assert.ok(activityRow.includes('editing packages/pi-stardeck/src/deck.ts'));
-  assert.ok(activityRow.trimEnd().endsWith('this turn 4.2k · 0:38'));
+  assert.ok(activityRow.trimEnd().endsWith('󰠭 0:38 · 4.2k'));
 });
 
 test('renders every observed activity class with its target', () => {
@@ -1427,7 +1420,9 @@ test('colors the activity and turn meter by liveness', () => {
   };
   renderHeaderDeck(midwork, 100, theme as never);
   assert.ok(colors.includes('text:bash npm test'));
-  assert.ok(colors.includes('accent:this turn 980 · 1:05'));
+  assert.ok(colors.includes('customMessageLabel:󰠭'));
+  assert.ok(colors.includes('warning:1:05'));
+  assert.ok(colors.includes('warning:980'));
 });
 
 test('spans rows keep their home directly beneath line 3', () => {
@@ -1724,10 +1719,11 @@ test('renders the accepted idle mockup at wide widths', () => {
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: clock + Subject left, the dim no-work hint right.
+  // Line 2: Subject left (no clock — 2026-10-23 amendment), the dim
+  // no-work hint right.
   assert.match(
     lines[2] ?? '',
-    /^\u{F082D} 000:00'00 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
   );
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   // quiet-activity-row: the idle band retires — the machine tail anchors
@@ -1776,12 +1772,12 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // Line 2: Work owns the right end with `change › 󰄱 done/total`.
   assert.match(
     lines[2] ?? '',
-    /^\u{F082D} 000:04'12 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck › 󰄱 1\/4$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck › 󰄱 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
     lines[4] ?? '',
-    /^editing packages\/pi-stardeck\/src\/deck\.ts\s+this turn 4\.2k \u00b7 0:38$/u,
+    /^editing packages\/pi-stardeck\/src\/deck\.ts\s+󰠭 0:38 · 4\.2k$/u,
   );
   // Dotted seams inside; the engine row closes the deck with the sentinel.
   assert.match(lines[3] ?? '', /^\u2508+$/u);
@@ -1863,7 +1859,7 @@ test('the dim ladybug sentinel yields to notices and survives bare states', () =
 test('the clean sentinel wears the short session id between two ladybugs', () => {
   // Ladybug-session-id amendment: only when the ladder is silent and the
   // frame is wide enough — blue bugs (accent), purple id (thinkingHigh);
-  // the census grows to three (clock anchor + two cluster bugs).
+  // the census is two cluster bugs (the clock anchor retired 2026-10-23).
   const withId = titleFixture({ title: IDLE_TITLE });
   withId.sessionShortId = '01a157fd';
   const lines = renderHeaderDeck(withId, 120, plainTheme as never).map(plain);
@@ -1871,11 +1867,7 @@ test('the clean sentinel wears the short session id between two ladybugs', () =>
     (lines.at(-1) ?? '').trimEnd().endsWith('󰠭 01a157fd 󰠭'),
     'the clean right end wears the id cluster',
   );
-  assert.equal(
-    lines.join('').split('󰠭').length - 1,
-    3,
-    'census: clock anchor + two cluster bugs',
-  );
+  assert.equal(lines.join('').split('󰠭').length - 1, 2, 'census: two cluster bugs');
   const colors: string[] = [];
   renderHeaderDeck(withId, 120, {
     fg: (name: string, text: string) => {

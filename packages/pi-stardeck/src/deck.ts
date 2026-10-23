@@ -168,32 +168,36 @@ function mirrorKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/gu, '');
 }
 
+function bandWrap(
+  content: string,
+  width: number,
+  theme: Theme,
+  contentColor: string,
+): string[] {
+  return wrapFocus(content, Math.max(1, width), 2).map((line) =>
+    color(theme, contentColor, line),
+  );
+}
+
 function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): string[] {
-  // Line 2 anchor: the clock always leads the band with its icon; the
-  // Subject follows when the title state carries one, and a fresh session
-  // (subject null) leaves the clock leading alone — no dangling separator.
-  const clock = `${color(theme, 'customMessageLabel', '󰠭')} ${timerTile(state, theme)}`;
+  // Human amendment 2026-10-23: line 2 is sacred — Subject and the Work
+  // tile only; no timers, no icons, no chrome. The session clock is
+  // discarded; liveness lives in the turn cluster on the activity lane.
   const title = state.header?.title ?? null;
   if (title) {
     const subject = safeText(title.subject ?? '');
     if (!subject) {
       // Human amendment 2026-10-19: the empty slot renders its dim
       // placeholder — mirroring the Work side's `— no change owns the
-      // moment` — instead of leaving the clock leading alone.
-      return focusWrapLines('— no subject', clock, width, theme, 'dim');
+      // moment` — never an empty band while the session talks.
+      return bandWrap('— no subject', width, theme, 'dim');
     }
-    // Human amendment 2026-10-23: when the subject mirrors the focused
-    // change (the gate law's "subject mirrors its title"), it renders
-    // success-green like the PWD — the mirror visible at a glance.
+    // When the subject mirrors the focused change (the gate law's
+    // "subject mirrors its title"), it renders success-green like the
+    // PWD — the mirror visible at a glance.
     const work = title.work;
     const mirrorsFocus = work !== null && mirrorKey(subject) === mirrorKey(work.change);
-    return focusWrapLines(
-      subject,
-      clock,
-      width,
-      theme,
-      mirrorsFocus ? 'success' : 'accent',
-    );
+    return bandWrap(subject, width, theme, mirrorsFocus ? 'success' : 'accent');
   }
   // Pre-title publishers: the legacy selection keeps the band alive.
   const selection = state.header?.selection;
@@ -202,35 +206,16 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
     .filter(Boolean);
   if (!selection || titles.length === 0) {
     if (!state.header) {
-      // Frozen contract: a publisher that reports nothing at all keeps
-      // the collapsed frame — clock alone, no placeholder dashes.
-      return [clock];
+      // Frozen contract (amended 2026-10-23): a publisher that reports
+      // nothing keeps the collapsed frame — an empty band, no dashes.
+      return [''];
     }
-    // Amendment: a live session (header present, Work rendering) that
-    // simply has no subject gets the dim placeholder — the title slot
-    // never renders empty when the session is talking to us.
-    return focusWrapLines('— no subject', clock, width, theme, 'dim');
+    return bandWrap('— no subject', width, theme, 'dim');
   }
   const selectionColor = ['accent', 'success'].includes(selection.color)
     ? 'accent'
     : selection.color;
-  return focusWrapLines(titles.join(' › '), clock, width, theme, selectionColor);
-}
-
-function focusWrapLines(
-  content: string,
-  clock: string,
-  width: number,
-  theme: Theme,
-  contentColor: string,
-): string[] {
-  const lead = `${clock} ${semanticSeparator(theme)} `;
-  const indent = ' '.repeat(visibleWidth(lead));
-  const contentWidth = Math.max(1, width - visibleWidth(lead));
-  return wrapFocus(content, contentWidth, 2).map(
-    (line, index) =>
-      `${index === 0 ? lead : indent}${color(theme, contentColor, line)}`,
-  );
+  return bandWrap(titles.join(' › '), width, theme, selectionColor);
 }
 
 function semanticSeparator(theme: Theme): string {
@@ -264,17 +249,6 @@ function workTile(state: HeaderDeckState, theme: Theme): string {
   return deckWorkSegments(work)
     .map((segment) => color(theme, segment.color, segment.text, segment.bold === true))
     .join('');
-}
-
-// Relocation phase (Human-directed): the clock leads the title band beside
-// the anchor, runs ride the lifecycle row, and Work keeps the title's
-// right end — real values when live, the dim hint when idle.
-function timerTile(state: HeaderDeckState, theme: Theme): string {
-  const elapsed = state.elapsedMs;
-  const idle = state.idleMs;
-  return elapsed != null
-    ? color(theme, 'accent', formatDeckElapsed(elapsed))
-    : color(theme, 'dim', formatDeckElapsed(idle ?? 0));
 }
 
 function spanElapsed(ms: number): string {
@@ -394,18 +368,21 @@ function formatTurnElapsed(ms: number): string {
 }
 
 function turnCostTile(state: HeaderDeckState, theme: Theme): string {
-  // Line 3 right: the per-turn cost meter. Idle renders the accepted
-  // `— · 0 tok`; pre-title publishers (no meter) stay silent.
+  // Activity lane right: the turn cluster — liveness icon, turn time,
+  // and tokens in one aligned group (Human amendment 2026-10-23: the
+  // deck's only timer). Idle keeps the accepted dim `— · 0 tok`; the
+  // quiet-activity-row contract depends on it.
   const turn = state.header?.turn ?? null;
   if (!turn) return '';
   if (turn.tokens <= 0 && turn.elapsedMs <= 0) {
     return color(theme, 'dim', '— · 0 tok');
   }
-  return color(
+  return `${color(theme, 'customMessageLabel', '󰠭')} ${color(
     theme,
-    'accent',
-    `this turn ${formatTokens(turn.tokens)} · ${formatTurnElapsed(turn.elapsedMs)}`,
-  );
+    'warning',
+    formatTurnElapsed(turn.elapsedMs),
+    true,
+  )} ${color(theme, 'dim', '·')} ${color(theme, 'warning', formatTokens(turn.tokens))}`;
 }
 
 function gitRight(state: HeaderDeckState, theme: Theme): string {
@@ -833,9 +810,9 @@ export function renderHeaderDeck(
   const lineColor = 'thinkingHigh';
   const solidRule = color(theme, lineColor, '─'.repeat(boundedWidth));
   const dottedRule = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
-  // Line 2 (four-line deck): the clock and Subject lead with Work on the
-  // right end. Narrow frames: the Work slot yields before the clock anchor
-  // does.
+  // Line 2 (four-line deck): the Subject leads with Work on the right end
+  // (Human amendment 2026-10-23 — no clock, no chrome). Narrow frames: the
+  // Work slot yields before the Subject does.
   const titleRight = boundedWidth >= 40 ? workTile(state, theme) : '';
   const focusLines = titleBandLines(state, boundedWidth, theme);
   const titleRows = [
