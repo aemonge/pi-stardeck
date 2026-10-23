@@ -24,10 +24,10 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — fix(status): let list counts win over blocked apply zeros
       message: fix(status): let list counts win over blocked apply zeros
       hash: dfd4959
-- [ ] Human validation — with the 4/7 fixture focused, the Work tile prints
+- [x] Human validation — with the 4/7 fixture focused, the Work tile prints
       `4/7`, not `0/0` (Human Validation Process, refined Requirements)
-      response: n/a · outcome: n/a · at: n/a
-      surfaced:
+      response: ":) VALID" · outcome: VALID · at: 2026-10-23T10:20:09Z
+      surfaced: Work label wants richer info — `[spec] planning 6/7 · tasks 4/14` — routed to follow-up Slice 4
 
 ## Slice 2 — Spec-level focus tracking
 
