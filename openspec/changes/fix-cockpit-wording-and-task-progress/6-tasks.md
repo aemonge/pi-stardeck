@@ -111,9 +111,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       state, degradation, deck color assertions
       started_at: ~2026-10-23T10:40Z · ended_at: 2026-10-23T11:07:32Z · total: 27m · check: typecheck 0 errors; lint green; prettier applied
       paths: packages/pi-stardeck/test/title-state.test.ts · packages/pi-stardeck/test/deck.test.ts
-- [ ] Commit — feat(status): retool work tile — ladder-led layout, state colors
+- [x] Commit — feat(status): retool work tile — ladder-led layout, state colors
       message: feat(status): retool work tile — ladder-led layout, state colors
-      hash: n/a
+      hash: 2b12d5e
 - [ ] Human validation — the footer prints
       `fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 12/23`
       response: n/a · outcome: n/a · at: n/a
