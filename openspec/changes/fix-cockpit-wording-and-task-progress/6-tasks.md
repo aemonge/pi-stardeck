@@ -29,50 +29,17 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       response: ":) VALID" · outcome: VALID · at: 2026-10-23T10:20:09Z
       surfaced: Work label wants richer info — `[spec] planning 6/7 · tasks 4/14` — routed to follow-up Slice 4
 
-## Slice 2 — Spec-level focus tracking
+## Slice 2 — Spec-level focus tracking (DESCOPED 2026-10-23)
 
-> Spec: fix-cockpit-wording-and-task-progress
+Descoped by the human at archive time — routed to a follow-up Spec.
+Scope travels intact: `packages/status/index.ts:1205` change-only `set`;
+`deriveTitleWork` change-mode + no-ledger marker; orchestration plumbing.
 
-- [ ] Task 1 — `packages/status/index.ts:1205`: `set` accepts change-only
-      focus (task optional); status/replace/clear follow the same shape
-      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
-      paths: n/a
-- [ ] Task 2 — `deriveTitleWork` change-mode tracks the focused change from
-      rung 1; `workTile` prints title + dim no-ledger marker until
-      `6-tasks.md` exists, honest counts after
-      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
-      paths: n/a
-- [ ] Task 3 — orchestration/publisher plumbing for the change-mode fact,
-      plus tests
-      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
-      paths: n/a
-- [ ] Commit — feat(status): change-only focus tracks the Spec from rung one
-      message: feat(status): change-only focus tracks the Spec from rung one
-      hash: n/a
-- [ ] Human validation — a change-only focus set on this Spec mid-ladder
-      tracks in the tile: title + dim no-ledger marker
-      response: n/a · outcome: n/a · at: n/a
-      surfaced:
+## Slice 3 — agent-facing wording (DESCOPED 2026-10-23)
 
-## Slice 3 — agent-facing wording
-
-> Spec: fix-cockpit-wording-and-task-progress
-
-- [ ] Task 1 — `AGENTS.md` lines 8 and 37 speak deck wording; lines 73 and
-      137 stay byte-identical (historical identifiers)
-      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
-      paths: n/a
-- [ ] Task 2 — `src/health.ts` WARN string speaks deck wording; test
-      expectation updated in the same commit
-      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
-      paths: n/a
-- [ ] Commit — docs(agents): retire cockpit wording from agent-injected surfaces
-      message: docs(agents): retire cockpit wording from agent-injected surfaces
-      hash: n/a
-- [ ] Human validation — a fresh agent session (or grep) receives no
-      cockpit metaphor
-      response: n/a · outcome: n/a · at: n/a
-      surfaced:
+Descoped by the human at archive time — routed to a follow-up Spec.
+Scope travels intact: `AGENTS.md` lines 8/37 deck wording (73/137
+byte-identical); `src/health.ts` WARN string + test.
 
 ## Slice 4 — rich Work label: schema, phase, ladder, and task counts
 

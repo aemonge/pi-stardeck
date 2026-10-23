@@ -156,6 +156,10 @@ executing tint dies with the word. Estimate delta: +30m.
 - [ ] Commit — fix(status): open-spec-named rung replaces invented phase word
 - [ ] Human validation — the footer prints `… ⟩ 6/7 tasks › 󰄱 d/t`
 
+> Removed (descoped at archive, 2026-10-23): Slices 2 (change-only focus)
+> and 3 (agent-facing wording) route to a follow-up Spec — scope recorded
+> in the ledger and learnings.
+
 ## Verification
 
 Deterministic, nearest-focused-first: `npm run test:status` → `tsc --noEmit`
