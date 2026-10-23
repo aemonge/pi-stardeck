@@ -225,37 +225,41 @@ export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
 }
 
 /** One colored piece of the Work label. */
-export type DeckWorkSegment = { text: string; color: string };
+export type DeckWorkSegment = { text: string; color: string; bold?: boolean };
 
 /**
- * The Work label as colored segments — the human-steered format:
- * `[spec] change ⟩ phase ladder › 󰄱 done/total`, each part degrading
- * honestly when its facts are unknown.
+ * The Work label as colored segments — the human-chosen design (V3 layout ×
+ * V6 state colors): `change ⟩ ladder phase › 󰄱 done/total` in one hue per
+ * state — accent while planning, the ladder group greens at executing, the
+ * whole tile greens with a filled checkbox and bold counts at complete.
+ * Unknown facts degrade honestly; the bare change is the floor.
  */
 export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
-  const segments: DeckWorkSegment[] = [];
-  if (work.schemaName) {
-    segments.push({ text: `[${work.schemaName}]`, color: 'dim' });
-    segments.push({ text: ` ${work.change}`, color: 'accent' });
-  } else {
-    segments.push({ text: work.change, color: 'accent' });
-  }
+  const complete =
+    work.done !== undefined &&
+    work.total !== undefined &&
+    work.total > 0 &&
+    work.done >= work.total;
+  const base = complete ? 'success' : 'accent';
+  const segments: DeckWorkSegment[] = [{ text: work.change, color: base }];
   const ladderText = work.ladder
     ? `${work.ladder.done}/${work.ladder.total}`
     : undefined;
   if (work.phase || ladderText) {
-    segments.push({ text: ' ⟩ ', color: 'thinkingHigh' });
-    if (work.phase) segments.push({ text: work.phase, color: 'success' });
-    if (ladderText) {
-      segments.push({
-        text: (work.phase ? ' ' : '') + ladderText,
-        color: 'thinkingHigh',
-      });
-    }
+    segments.push({ text: ' ⟩ ', color: base });
+    const group = `${ladderText ?? ''}${ladderText && work.phase ? ' ' : ''}${work.phase ?? ''}`;
+    segments.push({
+      text: group,
+      color: !complete && work.phase === 'executing' ? 'success' : base,
+    });
   }
   if (work.done !== undefined && work.total !== undefined) {
-    segments.push({ text: ' › ', color: 'accent' });
-    segments.push({ text: `󰄱 ${work.done}/${work.total}`, color: 'warning' });
+    segments.push({ text: ' › ', color: base });
+    segments.push({
+      text: `${complete ? '✔' : '󰄱'} ${work.done}/${work.total}`,
+      color: base,
+      ...(complete ? { bold: true } : {}),
+    });
   }
   return segments;
 }

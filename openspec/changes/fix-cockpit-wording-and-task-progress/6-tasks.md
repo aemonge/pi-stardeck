@@ -96,4 +96,25 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [ ] Human validation — the footer prints
       `[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 9/19`
       response: n/a · outcome: n/a · at: n/a
+      surfaced: rainbow reduction steering — V3 layout × V6 state colors,
+      [spec] tag removed — routed to Slice 5
+
+## Slice 5 — Work tile final design: V3 layout × V6 state colors
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [x] Task 1 — deckWorkSegments retooled: tag removed, ladder-led phase
+      group, state colors, bold flag, filled marker at complete
+      started_at: ~2026-10-23T10:40Z · ended_at: 2026-10-23T11:07:32Z · total: 27m · check: npm run test:stardeck — 153 pass, 0 fail
+      paths: packages/pi-stardeck/src/title-state.ts · packages/pi-stardeck/src/deck.ts
+- [x] Task 2 — tests updated: plain format per state, segment palette per
+      state, degradation, deck color assertions
+      started_at: ~2026-10-23T10:40Z · ended_at: 2026-10-23T11:07:32Z · total: 27m · check: typecheck 0 errors; lint green; prettier applied
+      paths: packages/pi-stardeck/test/title-state.test.ts · packages/pi-stardeck/test/deck.test.ts
+- [ ] Commit — feat(status): retool work tile — ladder-led layout, state colors
+      message: feat(status): retool work tile — ladder-led layout, state colors
+      hash: n/a
+- [ ] Human validation — the footer prints
+      `fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 12/23`
+      response: n/a · outcome: n/a · at: n/a
       surfaced:

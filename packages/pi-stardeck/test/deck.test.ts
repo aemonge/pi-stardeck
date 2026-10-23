@@ -1099,14 +1099,14 @@ test('colors the Work label segments and drops it on narrow frames', () => {
 
   renderHeaderDeck(state, 120, theme as never);
   assert.ok(colors.includes('accent:eight-section-deck'));
-  assert.ok(colors.includes('warning:󰄱 1/4'));
+  assert.ok(colors.includes('accent:󰄱 1/4'));
 
   colors.length = 0;
   const done = titleFixture({
     title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 4, total: 4 } },
   });
   renderHeaderDeck(done, 120, theme as never);
-  assert.ok(colors.includes('warning:󰄱 4/4'));
+  assert.ok(colors.includes('success:✔ 4/4'));
 
   // Narrow frames: the Work slot yields before the clock anchor does.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);

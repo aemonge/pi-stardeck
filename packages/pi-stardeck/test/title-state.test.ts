@@ -198,17 +198,16 @@ test('parses turn cost snapshots and rejects malformed meters', () => {
   });
 });
 
-test('formats the Work label as [spec] change ⟩ phase ladder › 󰄱 done/total', () => {
+test('formats the Work label as change ⟩ ladder phase › 󰄱 done/total', () => {
   assert.equal(
     formatDeckWorkLabel({
       change: 'fix-cockpit-wording-and-task-progress',
-      schemaName: 'spec',
       ladder: { done: 6, total: 7 },
       phase: 'planning',
       done: 4,
       total: 14,
     }),
-    '[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 4/14',
+    'fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 4/14',
   );
   assert.equal(
     formatDeckWorkLabel({ change: 'eight-section-deck', done: 1, total: 4 }),
@@ -221,7 +220,7 @@ test('formats the Work label as [spec] change ⟩ phase ladder › 󰄱 done/tot
       done: 4,
       total: 4,
     }),
-    'eight-section-deck › 󰄱 4/4',
+    'eight-section-deck › ✔ 4/4',
   );
   assert.equal(
     formatDeckWorkLabel({ change: 'eight-section-deck', task: '3.1' }),
@@ -229,25 +228,52 @@ test('formats the Work label as [spec] change ⟩ phase ladder › 󰄱 done/tot
   );
 });
 
-test('colors Work label segments per the human-steered palette', () => {
-  const segments = deckWorkSegments({
+test('colors Work label segments by state — one hue at a time', () => {
+  const planning = deckWorkSegments({
     change: 'fix-cockpit-wording-and-task-progress',
-    schemaName: 'spec',
     ladder: { done: 6, total: 7 },
     phase: 'planning',
     done: 4,
     total: 14,
   });
   assert.deepEqual(
-    segments.map((segment) => `${segment.color}:${segment.text}`),
+    planning.map((segment) => `${segment.color}:${segment.text}`),
     [
-      'dim:[spec]',
-      'accent: fix-cockpit-wording-and-task-progress',
-      'thinkingHigh: ⟩ ',
-      'success:planning',
-      'thinkingHigh: 6/7',
+      'accent:fix-cockpit-wording-and-task-progress',
+      'accent: ⟩ ',
+      'accent:6/7 planning',
       'accent: › ',
-      'warning:󰄱 4/14',
+      'accent:󰄱 4/14',
+    ],
+  );
+  const executing = deckWorkSegments({
+    change: 'fix-cockpit-wording-and-task-progress',
+    ladder: { done: 6, total: 7 },
+    phase: 'executing',
+    done: 11,
+    total: 19,
+  });
+  assert.deepEqual(
+    executing.map((segment) => segment.color),
+    ['accent', 'accent', 'success', 'accent', 'accent'],
+  );
+  const complete = deckWorkSegments({
+    change: 'fix-cockpit-wording-and-task-progress',
+    ladder: { done: 7, total: 7 },
+    phase: 'complete',
+    done: 19,
+    total: 19,
+  });
+  assert.deepEqual(
+    complete.map(
+      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
+    ),
+    [
+      'success:fix-cockpit-wording-and-task-progress',
+      'success: ⟩ ',
+      'success:7/7 complete',
+      'success: › ',
+      'success:✔ 19/19!',
     ],
   );
 });

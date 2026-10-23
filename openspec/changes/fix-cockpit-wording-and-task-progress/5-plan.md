@@ -89,6 +89,23 @@ executing; all complete → complete. Estimate delta: +1–2h.
 - [ ] Human validation — the footer prints
       `[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 4/14`
 
+### Slice 5 — Work tile final design: V3 layout × V6 state colors (follow-up)
+
+Human steering at Slice-4 review (2026-10-23): the `[spec]` tag is removed
+entirely; layout V3 — `change ⟩ 6/7 phase › 󰄱 done/total` (ladder leads the
+phase word); colors V6 — one hue per state: accent throughout while
+planning, the `6/7 executing` group greens at executing, the whole tile
+turns success at complete with the checkbox filled (`✔`) and bold counts.
+Degradation floor: the bare change. Estimate delta: +45m.
+
+- [ ] Task 1 — deckWorkSegments retooled: tag removed, ladder-led phase
+      group, state colors, bold flag, filled marker at complete
+- [ ] Task 2 — tests updated: plain format per state, segment palette per
+      state, degradation, deck color assertions
+- [ ] Commit — feat(status): retool work tile — ladder-led layout, state colors
+- [ ] Human validation — the footer prints
+      `fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 13/23`
+
 ## Verification
 
 Deterministic, nearest-focused-first: `npm run test:status` → `tsc --noEmit`

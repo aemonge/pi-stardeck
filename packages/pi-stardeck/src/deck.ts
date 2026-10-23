@@ -247,7 +247,7 @@ function workTile(state: HeaderDeckState, theme: Theme): string {
   const work = title.work;
   if (!work) return color(theme, 'dim', '— no change owns the moment');
   return deckWorkSegments(work)
-    .map((segment) => color(theme, segment.color, segment.text))
+    .map((segment) => color(theme, segment.color, segment.text, segment.bold === true))
     .join('');
 }
 
