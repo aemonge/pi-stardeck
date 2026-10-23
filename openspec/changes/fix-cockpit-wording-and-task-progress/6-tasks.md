@@ -21,9 +21,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       lint, format check
       started_at: 2026-10-23T09:35:25Z · ended_at: 2026-10-23T09:41:55Z · total: 7m · check: all green; baseline manifest refreshed — 96 files PASS
       paths: baseline/source.sha256
-- [ ] Commit — fix(status): let list counts win over blocked apply zeros
+- [x] Commit — fix(status): let list counts win over blocked apply zeros
       message: fix(status): let list counts win over blocked apply zeros
-      hash: n/a
+      hash: dfd4959
 - [ ] Human validation — with the 4/7 fixture focused, the Work tile prints
       `4/7`, not `0/0` (Human Validation Process, refined Requirements)
       response: n/a · outcome: n/a · at: n/a
