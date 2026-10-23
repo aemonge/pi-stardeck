@@ -131,9 +131,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       change slug (alphanumeric-normalized compare)
       started_at: ~2026-10-23T11:10Z · ended_at: 2026-10-23T11:15:35Z · total: ~20m · check: mirror test green; typecheck 0 errors
       paths: packages/pi-stardeck/src/deck.ts
-- [ ] Commit — feat(status): hard separator colors and mirrored-subject green
+- [x] Commit — feat(status): hard separator colors and mirrored-subject green
       message: feat(status): hard separator colors and mirrored-subject green
-      hash: n/a
+      hash: 637d118
 - [ ] Human validation — the footer shows the green mirrored subject and
       hard-colored separators: `… ⟩ 6/7 planning › 󰄱 15/27`
       response: n/a · outcome: n/a · at: n/a
