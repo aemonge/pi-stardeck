@@ -90,10 +90,10 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       + plain label join; tests for segments, degradation, phase
       started_at: 2026-10-23T10:20:09Z · ended_at: 2026-10-23T10:27:58Z · total: 8m · check: npm run test:stardeck — 153 pass, 0 fail; typecheck 0 errors
       paths: packages/pi-stardeck/src/title-state.ts · packages/pi-stardeck/src/deck.ts · packages/pi-stardeck/test/title-state.test.ts · packages/pi-stardeck/test/deck.test.ts
-- [ ] Commit — feat(status): rich work label — schema tag, phase, ladder, tasks
+- [x] Commit — feat(status): rich work label — schema tag, phase, ladder, tasks
       message: feat(status): rich work label — schema tag, phase, ladder, tasks
-      hash: n/a
+      hash: 76c0ff8
 - [ ] Human validation — the footer prints
-      `[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 8/19`
+      `[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 9/19`
       response: n/a · outcome: n/a · at: n/a
       surfaced:
