@@ -93,9 +93,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — feat(status): rich work label — schema tag, phase, ladder, tasks
       message: feat(status): rich work label — schema tag, phase, ladder, tasks
       hash: 76c0ff8
-- [ ] Human validation — the footer prints
+- [x] Human validation — the footer prints
       `[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 9/19`
-      response: n/a · outcome: n/a · at: n/a
+      response: "VALID — Well deserved" · outcome: VALID · at: 2026-10-23T12:53:23Z
       surfaced: rainbow reduction steering — V3 layout × V6 state colors,
       [spec] tag removed — routed to Slice 5
 
@@ -114,9 +114,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — feat(status): retool work tile — ladder-led layout, state colors
       message: feat(status): retool work tile — ladder-led layout, state colors
       hash: 2b12d5e
-- [ ] Human validation — the footer prints
+- [x] Human validation — the footer prints
       `fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 12/23`
-      response: n/a · outcome: n/a · at: n/a
+      response: "VALID — Well deserved" · outcome: VALID · at: 2026-10-23T12:53:23Z
       surfaced: steering — hard separator colors + mirrored-subject green — routed to Slice 6
 
 ## Slice 6 — separator hard colors + mirrored-subject green
@@ -134,9 +134,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — feat(status): hard separator colors and mirrored-subject green
       message: feat(status): hard separator colors and mirrored-subject green
       hash: 637d118
-- [ ] Human validation — the footer shows the green mirrored subject and
+- [x] Human validation — the footer shows the green mirrored subject and
       hard-colored separators: `… ⟩ 6/7 planning › 󰄱 15/27`
-      response: n/a · outcome: n/a · at: n/a
+      response: "VALID — Well deserved" · outcome: VALID · at: 2026-10-23T12:53:23Z
       surfaced:
 
 ## Slice 7 — sacred title band; verbose telemetry lanes
@@ -159,9 +159,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — feat(status): sacred title band, turn telemetry below
       message: feat(status): sacred title band, turn telemetry below
       hash: 30efcd4
-- [ ] Human validation — line 2 reads subject + Spec only; the turn cluster
+- [x] Human validation — line 2 reads subject + Spec only; the turn cluster
       ticks below while live, vanishes when idle
-      response: n/a · outcome: n/a · at: n/a
+      response: "VALID — Well deserved" · outcome: VALID · at: 2026-10-23T12:53:23Z
       surfaced: spinner idea — animated ⠦ riding the turn cluster (optional follow-up)
 
 ## Slice 8 — OpenSpec-named rung replaces the invented phase word
@@ -179,7 +179,7 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — fix(status): open-spec-named rung replaces invented phase word
       message: fix(status): open-spec-named rung replaces invented phase word
       hash: 9afe03e
-- [ ] Human validation — the footer prints
+- [x] Human validation — the footer prints
       `fix-cockpit-wording-and-task-progress ⟩ 6/7 tasks › 󰄱 21/36`
-      response: n/a · outcome: n/a · at: n/a
+      response: "VALID — Well deserved" · outcome: VALID · at: 2026-10-23T12:53:23Z
       surfaced:
