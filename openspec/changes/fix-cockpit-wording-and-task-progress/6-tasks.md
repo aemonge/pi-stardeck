@@ -117,4 +117,24 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [ ] Human validation — the footer prints
       `fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 12/23`
       response: n/a · outcome: n/a · at: n/a
+      surfaced: steering — hard separator colors + mirrored-subject green — routed to Slice 6
+
+## Slice 6 — separator hard colors + mirrored-subject green
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [x] Task 1 — deckWorkSegments: `⟩` thinkingHigh-bold, `›` accent (hard,
+      state-independent)
+      started_at: ~2026-10-23T11:10Z · ended_at: 2026-10-23T11:15:35Z · total: ~20m · check: npm run test:stardeck — 154 pass, 0 fail
+      paths: packages/pi-stardeck/src/title-state.ts
+- [x] Task 2 — titleBandLines: subject green when it mirrors the work
+      change slug (alphanumeric-normalized compare)
+      started_at: ~2026-10-23T11:10Z · ended_at: 2026-10-23T11:15:35Z · total: ~20m · check: mirror test green; typecheck 0 errors
+      paths: packages/pi-stardeck/src/deck.ts
+- [ ] Commit — feat(status): hard separator colors and mirrored-subject green
+      message: feat(status): hard separator colors and mirrored-subject green
+      hash: n/a
+- [ ] Human validation — the footer shows the green mirrored subject and
+      hard-colored separators: `… ⟩ 6/7 planning › 󰄱 15/27`
+      response: n/a · outcome: n/a · at: n/a
       surfaced:

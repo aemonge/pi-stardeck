@@ -237,10 +237,12 @@ test('colors Work label segments by state — one hue at a time', () => {
     total: 14,
   });
   assert.deepEqual(
-    planning.map((segment) => `${segment.color}:${segment.text}`),
+    planning.map(
+      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
+    ),
     [
       'accent:fix-cockpit-wording-and-task-progress',
-      'accent: ⟩ ',
+      'thinkingHigh: ⟩ !',
       'accent:6/7 planning',
       'accent: › ',
       'accent:󰄱 4/14',
@@ -255,7 +257,7 @@ test('colors Work label segments by state — one hue at a time', () => {
   });
   assert.deepEqual(
     executing.map((segment) => segment.color),
-    ['accent', 'accent', 'success', 'accent', 'accent'],
+    ['accent', 'thinkingHigh', 'success', 'accent', 'accent'],
   );
   const complete = deckWorkSegments({
     change: 'fix-cockpit-wording-and-task-progress',
@@ -270,9 +272,9 @@ test('colors Work label segments by state — one hue at a time', () => {
     ),
     [
       'success:fix-cockpit-wording-and-task-progress',
-      'success: ⟩ ',
+      'thinkingHigh: ⟩ !',
       'success:7/7 complete',
-      'success: › ',
+      'accent: › ',
       'success:✔ 19/19!',
     ],
   );

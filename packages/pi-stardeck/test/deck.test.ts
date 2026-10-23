@@ -1114,6 +1114,39 @@ test('colors the Work label segments and drops it on narrow frames', () => {
   assert.equal((narrow[2] ?? '').includes('eight-section-deck › 󰄱 1/4'), false);
 });
 
+test('renders the subject green when it mirrors the focused change', () => {
+  const state = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      subject: 'Eight Section Deck',
+      work: { change: 'eight-section-deck', done: 1, total: 4 },
+    },
+  });
+  const colors: string[] = [];
+  const theme = {
+    fg: (name: string, text: string) => {
+      colors.push(`${name}:${plain(text)}`);
+      return text;
+    },
+    bold: (text: string) => text,
+  };
+
+  renderHeaderDeck(state, 120, theme as never);
+  assert.ok(colors.includes('success:Eight Section Deck'));
+
+  // A subject that does not mirror the focused change stays accent.
+  colors.length = 0;
+  const other = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      subject: 'Pivot cockpit to pure pi-starship-header chrome',
+      work: { change: 'eight-section-deck', done: 1, total: 4 },
+    },
+  });
+  renderHeaderDeck(other, 120, theme as never);
+  assert.ok(colors.includes('accent:Pivot cockpit to pure pi-starship-header chrome'));
+});
+
 test('keeps pre-title publishers on the legacy selection band with a silent right end', () => {
   const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes("000:07'00")) ?? '';

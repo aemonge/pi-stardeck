@@ -232,7 +232,10 @@ export type DeckWorkSegment = { text: string; color: string; bold?: boolean };
  * V6 state colors): `change ⟩ ladder phase › 󰄱 done/total` in one hue per
  * state — accent while planning, the ladder group greens at executing, the
  * whole tile greens with a filled checkbox and bold counts at complete.
- * Unknown facts degrade honestly; the bare change is the floor.
+ * Separators are chrome with hard deck-wide colors — `⟩` thinkingHigh-bold
+ * like every semantic separator, `›` accent like every minor one — never
+ * state-colored. Unknown facts degrade honestly; the bare change is the
+ * floor.
  */
 export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
   const complete =
@@ -246,7 +249,7 @@ export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
     ? `${work.ladder.done}/${work.ladder.total}`
     : undefined;
   if (work.phase || ladderText) {
-    segments.push({ text: ' ⟩ ', color: base });
+    segments.push({ text: ' ⟩ ', color: 'thinkingHigh', bold: true });
     const group = `${ladderText ?? ''}${ladderText && work.phase ? ' ' : ''}${work.phase ?? ''}`;
     segments.push({
       text: group,
@@ -254,7 +257,7 @@ export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
     });
   }
   if (work.done !== undefined && work.total !== undefined) {
-    segments.push({ text: ' › ', color: base });
+    segments.push({ text: ' › ', color: 'accent' });
     segments.push({
       text: `${complete ? '✔' : '󰄱'} ${work.done}/${work.total}`,
       color: base,

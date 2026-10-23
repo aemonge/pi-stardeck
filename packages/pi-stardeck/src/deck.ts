@@ -164,6 +164,10 @@ function wrapFocus(text: string, width: number, maximumLines: number): string[] 
   return lines.slice(0, maximumLines);
 }
 
+function mirrorKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/gu, '');
+}
+
 function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): string[] {
   // Line 2 anchor: the clock always leads the band with its icon; the
   // Subject follows when the title state carries one, and a fresh session
@@ -178,7 +182,18 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
       // moment` — instead of leaving the clock leading alone.
       return focusWrapLines('— no subject', clock, width, theme, 'dim');
     }
-    return focusWrapLines(subject, clock, width, theme, 'accent');
+    // Human amendment 2026-10-23: when the subject mirrors the focused
+    // change (the gate law's "subject mirrors its title"), it renders
+    // success-green like the PWD — the mirror visible at a glance.
+    const work = title.work;
+    const mirrorsFocus = work !== null && mirrorKey(subject) === mirrorKey(work.change);
+    return focusWrapLines(
+      subject,
+      clock,
+      width,
+      theme,
+      mirrorsFocus ? 'success' : 'accent',
+    );
   }
   // Pre-title publishers: the legacy selection keeps the band alive.
   const selection = state.header?.selection;

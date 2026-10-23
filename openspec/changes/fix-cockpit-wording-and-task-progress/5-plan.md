@@ -106,6 +106,23 @@ Degradation floor: the bare change. Estimate delta: +45m.
 - [ ] Human validation — the footer prints
       `fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 13/23`
 
+### Slice 6 — separator hard colors + mirrored-subject green (follow-up)
+
+Human steering at Slice-5 review (2026-10-23): (1) the big `⟩` separator
+follows the deck-wide hard color (thinkingHigh, bold) — separators are
+chrome, never state; the minor `›` takes its hard accent likewise. (2) When
+the session subject mirrors the focused Spec (the gate law's
+"subject mirrors its title"), the subject renders success-green like the
+PWD path — the mirror becomes visible at a glance. Estimate delta: +30m.
+
+- [ ] Task 1 — deckWorkSegments: `⟩` thinkingHigh-bold, `›` accent (hard,
+      state-independent)
+- [ ] Task 2 — titleBandLines: subject green when it mirrors the work
+      change slug (alphanumeric-normalized compare)
+- [ ] Commit — feat(status): hard separator colors and mirrored-subject green
+- [ ] Human validation — the footer shows the green mirrored subject and
+      hard-colored separators: `… ⟩ 6/7 planning › 󰄱 15/27`
+
 ## Verification
 
 Deterministic, nearest-focused-first: `npm run test:status` → `tsc --noEmit`
