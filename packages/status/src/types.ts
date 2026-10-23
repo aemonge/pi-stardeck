@@ -90,7 +90,7 @@ export interface OpenSpecState {
   tasksPath?: string;
   hierarchy?: OpenSpecHierarchyProgress;
   schemaName?: string;
-  ladder?: { done: number; total: number };
+  ladder?: { done: number; total: number; rung?: string };
   meta: SourceMeta;
 }
 

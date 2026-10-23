@@ -198,16 +198,15 @@ test('parses turn cost snapshots and rejects malformed meters', () => {
   });
 });
 
-test('formats the Work label as change ⟩ ladder phase › 󰄱 done/total', () => {
+test('formats the Work label as change ⟩ done/total rung › 󰄱 done/total', () => {
   assert.equal(
     formatDeckWorkLabel({
       change: 'fix-cockpit-wording-and-task-progress',
-      ladder: { done: 6, total: 7 },
-      phase: 'planning',
+      ladder: { done: 6, total: 7, rung: 'tasks' },
       done: 4,
       total: 14,
     }),
-    'fix-cockpit-wording-and-task-progress ⟩ 6/7 planning › 󰄱 4/14',
+    'fix-cockpit-wording-and-task-progress ⟩ 6/7 tasks › 󰄱 4/14',
   );
   assert.equal(
     formatDeckWorkLabel({ change: 'eight-section-deck', done: 1, total: 4 }),
@@ -229,40 +228,27 @@ test('formats the Work label as change ⟩ ladder phase › 󰄱 done/total', ()
 });
 
 test('colors Work label segments by state — one hue at a time', () => {
-  const planning = deckWorkSegments({
+  const active = deckWorkSegments({
     change: 'fix-cockpit-wording-and-task-progress',
-    ladder: { done: 6, total: 7 },
-    phase: 'planning',
+    ladder: { done: 6, total: 7, rung: 'tasks' },
     done: 4,
     total: 14,
   });
   assert.deepEqual(
-    planning.map(
+    active.map(
       (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
     ),
     [
       'accent:fix-cockpit-wording-and-task-progress',
       'thinkingHigh: ⟩ !',
-      'accent:6/7 planning',
+      'accent:6/7 tasks',
       'accent: › ',
       'accent:󰄱 4/14',
     ],
   );
-  const executing = deckWorkSegments({
-    change: 'fix-cockpit-wording-and-task-progress',
-    ladder: { done: 6, total: 7 },
-    phase: 'executing',
-    done: 11,
-    total: 19,
-  });
-  assert.deepEqual(
-    executing.map((segment) => segment.color),
-    ['accent', 'thinkingHigh', 'success', 'accent', 'accent'],
-  );
   const complete = deckWorkSegments({
     change: 'fix-cockpit-wording-and-task-progress',
-    ladder: { done: 7, total: 7 },
-    phase: 'complete',
+    ladder: { done: 7, total: 7, rung: 'learnings' },
     done: 19,
     total: 19,
   });
@@ -273,7 +259,7 @@ test('colors Work label segments by state — one hue at a time', () => {
     [
       'success:fix-cockpit-wording-and-task-progress',
       'thinkingHigh: ⟩ !',
-      'success:7/7 complete',
+      'success:7/7 learnings',
       'accent: › ',
       'success:✔ 19/19!',
     ],

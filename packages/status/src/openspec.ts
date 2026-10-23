@@ -236,20 +236,27 @@ function chooseChange(
 
 function parseOpenSpecStatus(value: unknown): {
   schemaName?: string;
-  ladder?: { done: number; total: number };
+  ladder?: { done: number; total: number; rung?: string };
 } {
   if (!isRecord(value)) return {};
   const schemaName =
     typeof value.schemaName === 'string' && value.schemaName.trim()
       ? value.schemaName.trim()
       : undefined;
-  let ladder: { done: number; total: number } | undefined;
+  let ladder: { done: number; total: number; rung?: string } | undefined;
   if (Array.isArray(value.artifacts) && value.artifacts.length > 0) {
     let done = 0;
+    let rung: string | undefined;
     for (const artifact of value.artifacts) {
-      if (isRecord(artifact) && artifact.status === 'done') done += 1;
+      if (!isRecord(artifact)) continue;
+      const id = typeof artifact.id === 'string' ? artifact.id : undefined;
+      if (rung === undefined && id) rung = id;
+      if (artifact.status === 'done') {
+        done += 1;
+        if (id) rung = id;
+      }
     }
-    ladder = { done, total: value.artifacts.length };
+    ladder = { done, total: value.artifacts.length, ...(rung ? { rung } : {}) };
   }
   return { ...(schemaName ? { schemaName } : {}), ...(ladder ? { ladder } : {}) };
 }

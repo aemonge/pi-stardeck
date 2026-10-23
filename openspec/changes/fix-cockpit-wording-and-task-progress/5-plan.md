@@ -123,6 +123,39 @@ PWD path — the mirror becomes visible at a glance. Estimate delta: +30m.
 - [ ] Human validation — the footer shows the green mirrored subject and
       hard-colored separators: `… ⟩ 6/7 planning › 󰄱 15/27`
 
+### Slice 7 — sacred title band; verbose telemetry lanes (follow-up)
+
+Human steering at clock×cost review (2026-10-23): line 2 stays CLEAN —
+subject and the OpenSpec Work tile only; no timers, no icons, no chrome.
+Session elapsed is discarded entirely. The 󰠭 liveness icon + turn time +
+turn tokens move to the activity lane's right as one aligned cluster
+(`󰠭 4:08 · 977.3k`, yellow while live, nothing when idle); span lanes stay
+aligned below. The clock-leads frozen contract is amended (Human amendment
+2026-10-23, superseding the 2026-10-19 clock-anchor rule). Estimate delta: +1h.
+
+- [ ] Task 1 — titleBandLines: subject + work only; clock lead, timerTile,
+      and session elapsed removed; `— no subject` dim fallback preserved
+- [ ] Task 2 — activity lane: right cluster `󰠭 <turn-time> · <tokens>`
+      (yellow bold time), replacing `this turn X · Y`; idle renders nothing
+      on the right
+- [ ] Task 3 — mockup/contract tests rewritten subject-led; narrow-frame
+      and collapsed-frame cases updated
+- [ ] Commit — feat(status): sacred title band, turn telemetry below
+- [ ] Human validation — line 2 reads subject + Spec only; the turn cluster
+      ticks below while live, vanishes when idle
+
+### Slice 8 — OpenSpec-named rung replaces the invented phase word (follow-up)
+
+Human steering at ladder-label review (2026-10-23): `6/7 planning` named a
+hard-coded phase word; the rung name must come from OpenSpec — the status
+artifacts' last-done id (`6/7 tasks`). No invented vocabulary survives; the
+executing tint dies with the word. Estimate delta: +30m.
+
+- [ ] Task 1 — collector: ladder.rung from artifacts (last-done id)
+- [ ] Task 2 — phase retired through derive/parse/segments; the rung renders
+- [ ] Commit — fix(status): open-spec-named rung replaces invented phase word
+- [ ] Human validation — the footer prints `… ⟩ 6/7 tasks › 󰄱 d/t`
+
 ## Verification
 
 Deterministic, nearest-focused-first: `npm run test:status` → `tsc --noEmit`

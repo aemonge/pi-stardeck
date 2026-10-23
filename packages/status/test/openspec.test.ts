@@ -411,7 +411,7 @@ test('collects the schema name and artifact ladder from status', async () => {
       configuredChange: 'demo',
     });
     assert.equal(state?.schemaName, 'spec');
-    assert.deepEqual(state?.ladder, { done: 2, total: 3 });
+    assert.deepEqual(state?.ladder, { done: 2, total: 3, rung: 'requirements' });
     assert.equal(state?.completedTasks, 4);
     assert.equal(state?.totalTasks, 14);
   } finally {

@@ -45,8 +45,7 @@ export type DeckTitleWorkState = {
   done?: number;
   total?: number;
   schemaName?: string;
-  ladder?: { done: number; total: number };
-  phase?: string;
+  ladder?: { done: number; total: number; rung?: string };
 };
 
 export type DeckTitleActivityState = {
@@ -135,15 +134,19 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
     required: false,
   });
   if (schemaName === null) return undefined;
-  const phase = boundedText(value.phase, 32, { required: false });
-  if (phase === null) return undefined;
-  let ladder: { done: number; total: number } | undefined;
+  let ladder: { done: number; total: number; rung?: string } | undefined;
   if ('ladder' in value) {
     if (!isRecord(value.ladder)) return undefined;
     const ladderDone = boundedTotal(value.ladder.done);
     const ladderTotal = boundedTotal(value.ladder.total);
     if (ladderDone === null || ladderTotal === null) return undefined;
-    ladder = { done: ladderDone, total: ladderTotal };
+    const ladderRung = boundedText(value.ladder.rung, 32, { required: false });
+    if (ladderRung === null) return undefined;
+    ladder = {
+      done: ladderDone,
+      total: ladderTotal,
+      ...(ladderRung ? { rung: ladderRung } : {}),
+    };
   }
   const counts =
     typeof boundedDone === 'number' && typeof boundedTotalValue === 'number'
@@ -152,7 +155,6 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
   const extras = {
     ...(schemaName ? { schemaName } : {}),
     ...(ladder ? { ladder } : {}),
-    ...(phase ? { phase } : {}),
   };
   return task === undefined
     ? { change, ...counts, ...extras }
@@ -228,14 +230,13 @@ export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
 export type DeckWorkSegment = { text: string; color: string; bold?: boolean };
 
 /**
- * The Work label as colored segments — the human-chosen design (V3 layout ×
- * V6 state colors): `change ⟩ ladder phase › 󰄱 done/total` in one hue per
- * state — accent while planning, the ladder group greens at executing, the
- * whole tile greens with a filled checkbox and bold counts at complete.
- * Separators are chrome with hard deck-wide colors — `⟩` thinkingHigh-bold
- * like every semantic separator, `›` accent like every minor one — never
- * state-colored. Unknown facts degrade honestly; the bare change is the
- * floor.
+ * The Work label as colored segments — the human-chosen design: `change ⟩
+ * done/total rung › 󰄱 done/total` in one hue per state (accent, success at
+ * complete with a filled checkbox and bold counts). The rung name comes
+ * straight from OpenSpec's status artifacts — never an invented phase
+ * word. Separators are chrome with hard deck-wide colors — `⟩`
+ * thinkingHigh-bold like every semantic separator, `›` accent like every
+ * minor one. Unknown facts degrade honestly; the bare change is the floor.
  */
 export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
   const complete =
@@ -245,16 +246,11 @@ export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
     work.done >= work.total;
   const base = complete ? 'success' : 'accent';
   const segments: DeckWorkSegment[] = [{ text: work.change, color: base }];
-  const ladderText = work.ladder
-    ? `${work.ladder.done}/${work.ladder.total}`
-    : undefined;
-  if (work.phase || ladderText) {
+  const ladder = work.ladder;
+  if (ladder) {
     segments.push({ text: ' ⟩ ', color: 'thinkingHigh', bold: true });
-    const group = `${ladderText ?? ''}${ladderText && work.phase ? ' ' : ''}${work.phase ?? ''}`;
-    segments.push({
-      text: group,
-      color: !complete && work.phase === 'executing' ? 'success' : base,
-    });
+    const group = `${ladder.done}/${ladder.total}${ladder.rung ? ` ${ladder.rung}` : ''}`;
+    segments.push({ text: group, color: base });
   }
   if (work.done !== undefined && work.total !== undefined) {
     segments.push({ text: ' › ', color: 'accent' });

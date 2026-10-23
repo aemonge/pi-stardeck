@@ -138,3 +138,48 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       hard-colored separators: `… ⟩ 6/7 planning › 󰄱 15/27`
       response: n/a · outcome: n/a · at: n/a
       surfaced:
+
+## Slice 7 — sacred title band; verbose telemetry lanes
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [x] Task 1 — titleBandLines: subject + work only; clock lead, timerTile,
+      and session elapsed removed; `— no subject` dim fallback preserved
+      started_at: ~2026-10-23T11:20Z · ended_at: 2026-10-23T12:47:19Z · total: ~90m · check: npm run test:stardeck — 154 pass, 0 fail
+      paths: packages/pi-stardeck/src/deck.ts
+- [x] Task 2 — activity lane: right cluster `󰠭 <turn-time> · <tokens>`
+      (yellow bold time), replacing `this turn X · Y`; idle keeps the
+      accepted `— · 0 tok` (the quiet-activity-row contract depends on it)
+      started_at: ~2026-10-23T11:20Z · ended_at: 2026-10-23T12:47:19Z · total: ~90m · check: lint green; typecheck 0 errors
+      paths: packages/pi-stardeck/src/deck.ts
+- [x] Task 3 — mockup/contract tests rewritten subject-led; narrow-frame
+      and collapsed-frame cases updated
+      started_at: ~2026-10-23T11:20Z · ended_at: 2026-10-23T12:47:19Z · total: ~90m · check: 27 assertions across 25 tests updated; all green
+      paths: packages/pi-stardeck/test/deck.test.ts
+- [x] Commit — feat(status): sacred title band, turn telemetry below
+      message: feat(status): sacred title band, turn telemetry below
+      hash: 30efcd4
+- [ ] Human validation — line 2 reads subject + Spec only; the turn cluster
+      ticks below while live, vanishes when idle
+      response: n/a · outcome: n/a · at: n/a
+      surfaced: spinner idea — animated ⠦ riding the turn cluster (optional follow-up)
+
+## Slice 8 — OpenSpec-named rung replaces the invented phase word
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [x] Task 1 — parseOpenSpecStatus derives ladder.rung from the artifacts
+      array (last-done id; first when none) — no invented vocabulary
+      started_at: ~2026-10-23T12:30Z · ended_at: 2026-10-23T12:47:19Z · total: ~17m · check: npm run test:status — 169 pass, 0 fail
+      paths: packages/status/src/openspec.ts · packages/status/src/types.ts
+- [x] Task 2 — phase word retired through derive/parse/segments; the rung
+      renders: `change ⟩ 6/7 tasks › 󰄱 d/t`
+      started_at: ~2026-10-23T12:30Z · ended_at: 2026-10-23T12:47:19Z · total: ~17m · check: test:stardeck 154 pass; typecheck 0; lint green
+      paths: packages/status/src/title-state.ts · packages/pi-stardeck/src/title-state.ts
+- [ ] Commit — fix(status): open-spec-named rung replaces invented phase word
+      message: fix(status): open-spec-named rung replaces invented phase word
+      hash: n/a
+- [ ] Human validation — the footer prints
+      `fix-cockpit-wording-and-task-progress ⟩ 6/7 tasks › 󰄱 <counts>`
+      response: n/a · outcome: n/a · at: n/a
+      surfaced:

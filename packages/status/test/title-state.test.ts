@@ -243,8 +243,12 @@ test('builder derives task-focused work with hierarchy counts', () => {
   );
 });
 
-test('derives work with schema, ladder, and the phase word', () => {
-  const rich = { ...openSpec, schemaName: 'spec', ladder: { done: 6, total: 7 } };
+test('derives work with schema and the OpenSpec-named rung', () => {
+  const rich = {
+    ...openSpec,
+    schemaName: 'spec',
+    ladder: { done: 6, total: 7, rung: 'tasks' },
+  };
   assert.deepEqual(
     deriveTitleWork(
       { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
@@ -256,31 +260,11 @@ test('derives work with schema, ladder, and the phase word', () => {
       done: 1,
       total: 4,
       schemaName: 'spec',
-      ladder: { done: 6, total: 7 },
-      phase: 'planning',
+      ladder: { done: 6, total: 7, rung: 'tasks' },
     },
   );
-  assert.equal(
-    deriveTitleWork(
-      { mode: 'none' },
-      { ...openSpec, schemaName: 'spec', ladder: { done: 4, total: 4 } },
-    )?.phase,
-    'executing',
-  );
-  assert.equal(
-    deriveTitleWork(
-      { mode: 'none' },
-      {
-        ...openSpec,
-        completedTasks: 4,
-        totalTasks: 4,
-        hierarchy: undefined,
-        schemaName: 'spec',
-        ladder: { done: 4, total: 4 },
-      },
-    )?.phase,
-    'complete',
-  );
+  // Human steering 2026-10-23: no invented phase words in any state.
+  assert.equal('phase' in (deriveTitleWork({ mode: 'none' }, rich) ?? {}), false);
 });
 
 test('builder derives passive work without a task id and clamps totals', () => {
