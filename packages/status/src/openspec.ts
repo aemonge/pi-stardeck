@@ -204,12 +204,19 @@ export function parseApplyInstructions(value: unknown): ApplyInstructionsResult 
     );
   }
 
-  const progress = isRecord(value.progress)
+  const state = typeof value.state === 'string' ? value.state : undefined;
+  const reportedProgress = isRecord(value.progress)
     ? {
         total: finiteNumber(value.progress.total),
         complete: finiteNumber(value.progress.complete),
       }
     : undefined;
+  // A blocked apply (mid-ladder, artifacts missing) reports zero progress;
+  // those zeros must never shadow the honest `openspec list` counts.
+  const progress =
+    state !== 'blocked' && (reportedProgress?.total ?? 0) > 0
+      ? reportedProgress
+      : undefined;
 
   return { tasks, tasksPath, progress };
 }

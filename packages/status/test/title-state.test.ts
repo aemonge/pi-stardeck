@@ -232,7 +232,14 @@ test('builder derives task-focused work with hierarchy counts', () => {
       { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
       { ...openSpec, changeId: 'other-change' },
     ),
-    { change: 'eight-section-deck', task: '1.2', done: 0, total: 0 },
+    { change: 'eight-section-deck', task: '1.2' },
+  );
+  assert.deepEqual(
+    deriveTitleWork(
+      { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
+      undefined,
+    ),
+    { change: 'eight-section-deck', task: '1.2' },
   );
 });
 

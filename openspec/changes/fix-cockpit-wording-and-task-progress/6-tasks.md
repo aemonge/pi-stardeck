@@ -1,0 +1,75 @@
+# Tasks
+
+State legend: `[ ]` Pending, `[-]` Running/interrupted/failed, `[x]` Complete.
+A Slice = one conventional commit + one post-commit Human validation. Tasks are quick checkpoints inside a Slice.
+
+## Slice 1 — honest counts at the print boundary
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [x] Task 1 — zero-guard apply-progress in `packages/status/src/openspec.ts`
+      (use it only when total > 0 / not `blocked`; `list` counts otherwise)
+      with unit tests covering the blocked-apply case
+      started_at: 2026-10-23T09:35:25Z · ended_at: 2026-10-23T09:41:55Z · total: 7m · check: npm run test:status — 167 pass, 0 fail
+      paths: packages/status/src/openspec.ts · packages/status/test/openspec.test.ts
+- [x] Task 2 — remove the fabricated `{done: 0, total: 0}` default at
+      `packages/status/src/title-state.ts:189`; real change-level counts or
+      the dim hint, with tests for both branches
+      started_at: 2026-10-23T09:35:25Z · ended_at: 2026-10-23T09:41:55Z · total: 7m · check: npm run test:stardeck — 152 pass, 0 fail; typecheck green
+      paths: packages/status/src/title-state.ts · packages/status/test/title-state.test.ts · packages/pi-stardeck/src/title-state.ts · packages/pi-stardeck/src/deck.ts · packages/pi-stardeck/test/title-state.test.ts
+- [x] Task 3 — focused checks: `npm run test:status`, `tsc --noEmit`,
+      lint, format check
+      started_at: 2026-10-23T09:35:25Z · ended_at: 2026-10-23T09:41:55Z · total: 7m · check: all green; baseline manifest refreshed — 96 files PASS
+      paths: baseline/source.sha256
+- [ ] Commit — fix(status): let list counts win over blocked apply zeros
+      message: fix(status): let list counts win over blocked apply zeros
+      hash: n/a
+- [ ] Human validation — with the 4/7 fixture focused, the Work tile prints
+      `4/7`, not `0/0` (Human Validation Process, refined Requirements)
+      response: n/a · outcome: n/a · at: n/a
+      surfaced:
+
+## Slice 2 — Spec-level focus tracking
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [ ] Task 1 — `packages/status/index.ts:1205`: `set` accepts change-only
+      focus (task optional); status/replace/clear follow the same shape
+      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
+      paths: n/a
+- [ ] Task 2 — `deriveTitleWork` change-mode tracks the focused change from
+      rung 1; `workTile` prints title + dim no-ledger marker until
+      `6-tasks.md` exists, honest counts after
+      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
+      paths: n/a
+- [ ] Task 3 — orchestration/publisher plumbing for the change-mode fact,
+      plus tests
+      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
+      paths: n/a
+- [ ] Commit — feat(status): change-only focus tracks the Spec from rung one
+      message: feat(status): change-only focus tracks the Spec from rung one
+      hash: n/a
+- [ ] Human validation — a change-only focus set on this Spec mid-ladder
+      tracks in the tile: title + dim no-ledger marker
+      response: n/a · outcome: n/a · at: n/a
+      surfaced:
+
+## Slice 3 — agent-facing wording
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [ ] Task 1 — `AGENTS.md` lines 8 and 37 speak deck wording; lines 73 and
+      137 stay byte-identical (historical identifiers)
+      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
+      paths: n/a
+- [ ] Task 2 — `src/health.ts` WARN string speaks deck wording; test
+      expectation updated in the same commit
+      started_at: n/a · ended_at: n/a · total: n/a · check: n/a
+      paths: n/a
+- [ ] Commit — docs(agents): retire cockpit wording from agent-injected surfaces
+      message: docs(agents): retire cockpit wording from agent-injected surfaces
+      hash: n/a
+- [ ] Human validation — a fresh agent session (or grep) receives no
+      cockpit metaphor
+      response: n/a · outcome: n/a · at: n/a
+      surfaced:

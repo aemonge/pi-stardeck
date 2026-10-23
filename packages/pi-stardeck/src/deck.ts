@@ -248,7 +248,12 @@ function workTile(state: HeaderDeckState, theme: Theme): string {
   if (!work) return color(theme, 'dim', '— no change owns the moment');
   return color(
     theme,
-    work.total > 0 && work.done >= work.total ? 'success' : 'text',
+    work.total !== undefined &&
+      work.done !== undefined &&
+      work.total > 0 &&
+      work.done >= work.total
+      ? 'success'
+      : 'text',
     formatDeckWorkLabel(work),
   );
 }

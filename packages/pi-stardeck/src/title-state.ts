@@ -42,8 +42,8 @@ const TURN_ELAPSED_MAX = (99 * 60 + 59) * 1_000 + 999;
 export type DeckTitleWorkState = {
   change: string;
   task?: string;
-  done: number;
-  total: number;
+  done?: number;
+  total?: number;
 };
 
 export type DeckTitleActivityState = {
@@ -116,12 +116,23 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
   if (value === null) return null;
   if (!isRecord(value)) return undefined;
   const change = boundedText(value.change, IDENTIFIER_MAX);
-  const done = boundedTotal(value.done);
-  const total = boundedTotal(value.total);
-  if (!change || done === null || total === null) return undefined;
+  if (!change) return undefined;
+  // Counts are optional as a pair: absent means unknown (never fabricated
+  // zeros); present-but-invalid rejects the object.
+  const hasCounts = 'done' in value && 'total' in value;
+  if ('done' in value !== 'total' in value) return undefined;
+  const boundedDone = hasCounts ? boundedTotal(value.done) : undefined;
+  const boundedTotalValue = hasCounts ? boundedTotal(value.total) : undefined;
+  if (hasCounts && (boundedDone === null || boundedTotalValue === null)) {
+    return undefined;
+  }
   const task = boundedText(value.task, TASK_ID_MAX, { required: false });
   if (task === null) return undefined;
-  return task === undefined ? { change, done, total } : { change, task, done, total };
+  const counts =
+    typeof boundedDone === 'number' && typeof boundedTotalValue === 'number'
+      ? { done: boundedDone, total: boundedTotalValue }
+      : {};
+  return task === undefined ? { change, ...counts } : { change, task, ...counts };
 }
 
 function parseTitleWaiver(value: unknown): DeckTitleWaiverState | null | undefined {
@@ -191,5 +202,9 @@ export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
 
 /** `change · done/total` — the Work label from the accepted mockups. */
 export function formatDeckWorkLabel(work: DeckTitleWorkState): string {
-  return `${work.change} · ${work.done}/${work.total}`;
+  const counts =
+    work.done !== undefined && work.total !== undefined
+      ? ` · ${work.done}/${work.total}`
+      : '';
+  return `${work.change}${counts}`;
 }

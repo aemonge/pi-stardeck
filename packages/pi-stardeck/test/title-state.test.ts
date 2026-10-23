@@ -211,4 +211,8 @@ test('formats the Work label as change · done/total', () => {
     }),
     'eight-section-deck · 4/4',
   );
+  assert.equal(
+    formatDeckWorkLabel({ change: 'eight-section-deck', task: '3.1' }),
+    'eight-section-deck',
+  );
 });

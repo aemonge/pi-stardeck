@@ -38,8 +38,8 @@ const NOTICE_MAX = 180;
 export type TitleWorkState = {
   change: string;
   task?: string;
-  done: number;
-  total: number;
+  done?: number;
+  total?: number;
 };
 
 export type TitleActivityState = {
@@ -109,12 +109,23 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
   if (value === null) return null;
   if (!isRecord(value)) return undefined;
   const change = boundedText(value.change, IDENTIFIER_MAX);
-  const done = boundedTotal(value.done);
-  const total = boundedTotal(value.total);
-  if (!change || done === null || total === null) return undefined;
+  if (!change) return undefined;
+  // Counts are optional as a pair: absent means unknown (never fabricated
+  // zeros); present-but-invalid rejects the object.
+  const hasCounts = 'done' in value && 'total' in value;
+  if ('done' in value !== 'total' in value) return undefined;
+  const boundedDone = hasCounts ? boundedTotal(value.done) : undefined;
+  const boundedTotalValue = hasCounts ? boundedTotal(value.total) : undefined;
+  if (hasCounts && (boundedDone === null || boundedTotalValue === null)) {
+    return undefined;
+  }
   const task = boundedText(value.task, TASK_ID_MAX, { required: false });
   if (task === null) return undefined;
-  return task === undefined ? { change, done, total } : { change, task, done, total };
+  const counts =
+    typeof boundedDone === 'number' && typeof boundedTotalValue === 'number'
+      ? { done: boundedDone, total: boundedTotalValue }
+      : {};
+  return task === undefined ? { change, ...counts } : { change, task, ...counts };
 }
 
 function parseTitleWaiver(value: unknown): TitleWaiverState | null | undefined {
@@ -185,7 +196,7 @@ export function deriveTitleWork(
     return {
       change: focus.change,
       task: focus.taskId,
-      ...(state ? counts(state) : { done: 0, total: 0 }),
+      ...(state ? counts(state) : {}),
     };
   }
   if (!openspec) return null;

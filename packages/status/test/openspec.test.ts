@@ -301,3 +301,55 @@ test('malformed task file preserves the instruction fallback', async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('blocked apply progress never shadows honest list counts', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  const runner: CommandRunner = async (_command, args) => {
+    if (args[0] === 'list') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          changes: [
+            {
+              name: 'demo',
+              completedTasks: 4,
+              totalTasks: 7,
+              lastModified: '2026-01-01T00:00:00Z',
+              status: 'in-progress',
+            },
+          ],
+          root: { path: root },
+        }),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'show') {
+      return { code: 0, stdout: JSON.stringify({ title: 'Demo' }), stderr: '' };
+    }
+    return {
+      code: 0,
+      stdout: JSON.stringify({
+        state: 'blocked',
+        missingArtifacts: ['idea'],
+        progress: { total: 0, complete: 0, remaining: 0 },
+        tasks: [],
+      }),
+      stderr: '',
+    };
+  };
+
+  try {
+    const state = await collectOpenSpec({
+      cwd: root,
+      runner,
+      now: 100,
+      configuredChange: 'demo',
+    });
+    assert.equal(state?.changeId, 'demo');
+    assert.equal(state?.completedTasks, 4);
+    assert.equal(state?.totalTasks, 7);
+    assert.equal(state?.phase, 'in-progress');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
