@@ -176,10 +176,10 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       renders: `change ⟩ 6/7 tasks › 󰄱 d/t`
       started_at: ~2026-10-23T12:30Z · ended_at: 2026-10-23T12:47:19Z · total: ~17m · check: test:stardeck 154 pass; typecheck 0; lint green
       paths: packages/status/src/title-state.ts · packages/pi-stardeck/src/title-state.ts
-- [ ] Commit — fix(status): open-spec-named rung replaces invented phase word
+- [x] Commit — fix(status): open-spec-named rung replaces invented phase word
       message: fix(status): open-spec-named rung replaces invented phase word
-      hash: n/a
+      hash: 9afe03e
 - [ ] Human validation — the footer prints
-      `fix-cockpit-wording-and-task-progress ⟩ 6/7 tasks › 󰄱 <counts>`
+      `fix-cockpit-wording-and-task-progress ⟩ 6/7 tasks › 󰄱 21/36`
       response: n/a · outcome: n/a · at: n/a
       surfaced:
