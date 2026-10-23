@@ -73,3 +73,27 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       cockpit metaphor
       response: n/a · outcome: n/a · at: n/a
       surfaced:
+
+## Slice 4 — rich Work label: schema, phase, ladder, and task counts
+
+> Spec: fix-cockpit-wording-and-task-progress
+
+- [x] Task 1 — collector fetches `openspec status --change <id> --json`
+      (fail-soft) for schemaName + artifact ladder counts
+      started_at: 2026-10-23T10:20:09Z · ended_at: 2026-10-23T10:27:58Z · total: 8m · check: npm run test:status — 169 pass, 0 fail
+      paths: packages/status/src/openspec.ts · packages/status/src/types.ts · packages/status/test/openspec.test.ts
+- [x] Task 2 — work state carries schemaName + ladder through derive and
+      both parsers (paired presence); phase word derived
+      started_at: 2026-10-23T10:20:09Z · ended_at: 2026-10-23T10:27:58Z · total: 8m · check: phase cases — planning/executing/complete green
+      paths: packages/status/src/title-state.ts · packages/status/test/title-state.test.ts
+- [x] Task 3 — segment-based workTile rendering (per-segment colors, 󰄱 glyph)
+      + plain label join; tests for segments, degradation, phase
+      started_at: 2026-10-23T10:20:09Z · ended_at: 2026-10-23T10:27:58Z · total: 8m · check: npm run test:stardeck — 153 pass, 0 fail; typecheck 0 errors
+      paths: packages/pi-stardeck/src/title-state.ts · packages/pi-stardeck/src/deck.ts · packages/pi-stardeck/test/title-state.test.ts · packages/pi-stardeck/test/deck.test.ts
+- [ ] Commit — feat(status): rich work label — schema tag, phase, ladder, tasks
+      message: feat(status): rich work label — schema tag, phase, ladder, tasks
+      hash: n/a
+- [ ] Human validation — the footer prints
+      `[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 8/19`
+      response: n/a · outcome: n/a · at: n/a
+      surfaced:

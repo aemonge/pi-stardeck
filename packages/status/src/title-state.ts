@@ -40,6 +40,9 @@ export type TitleWorkState = {
   task?: string;
   done?: number;
   total?: number;
+  schemaName?: string;
+  ladder?: { done: number; total: number };
+  phase?: string;
 };
 
 export type TitleActivityState = {
@@ -121,11 +124,32 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
   }
   const task = boundedText(value.task, TASK_ID_MAX, { required: false });
   if (task === null) return undefined;
+  const schemaName = boundedText(value.schemaName, IDENTIFIER_MAX, {
+    required: false,
+  });
+  if (schemaName === null) return undefined;
+  const phase = boundedText(value.phase, 32, { required: false });
+  if (phase === null) return undefined;
+  let ladder: { done: number; total: number } | undefined;
+  if ('ladder' in value) {
+    if (!isRecord(value.ladder)) return undefined;
+    const ladderDone = boundedTotal(value.ladder.done);
+    const ladderTotal = boundedTotal(value.ladder.total);
+    if (ladderDone === null || ladderTotal === null) return undefined;
+    ladder = { done: ladderDone, total: ladderTotal };
+  }
   const counts =
     typeof boundedDone === 'number' && typeof boundedTotalValue === 'number'
       ? { done: boundedDone, total: boundedTotalValue }
       : {};
-  return task === undefined ? { change, ...counts } : { change, task, ...counts };
+  const extras = {
+    ...(schemaName ? { schemaName } : {}),
+    ...(ladder ? { ladder } : {}),
+    ...(phase ? { phase } : {}),
+  };
+  return task === undefined
+    ? { change, ...counts, ...extras }
+    : { change, task, ...counts, ...extras };
 }
 
 function parseTitleWaiver(value: unknown): TitleWaiverState | null | undefined {
@@ -178,6 +202,16 @@ function boundedCount(value: number | undefined, fallback = 0): number {
   return Math.max(0, Math.min(TITLE_TOTAL_MAX, Math.round(candidate)));
 }
 
+function workPhase(
+  ladder: { done: number; total: number } | undefined,
+  tasks: { done: number; total: number } | undefined,
+): string | undefined {
+  if (!ladder) return undefined;
+  if (ladder.done < ladder.total) return 'planning';
+  if (tasks && tasks.total > 0 && tasks.done >= tasks.total) return 'complete';
+  return 'executing';
+}
+
 /**
  * Derive the `work` slot from the OpenSpec focus and the focused snapshot.
  * A task focus owns its change; without a focus a passively collected change
@@ -191,16 +225,31 @@ export function deriveTitleWork(
     done: boundedCount(state.hierarchy?.tasks?.completed, state.completedTasks),
     total: boundedCount(state.hierarchy?.tasks?.total, state.totalTasks),
   });
+  const extras = (
+    state: OpenSpecState | undefined,
+    taskCounts: { done: number; total: number } | undefined,
+  ) => {
+    if (!state) return {};
+    const phase = workPhase(state.ladder, taskCounts);
+    return {
+      ...(state.schemaName ? { schemaName: state.schemaName } : {}),
+      ...(state.ladder ? { ladder: state.ladder } : {}),
+      ...(phase ? { phase } : {}),
+    };
+  };
   if (focus.mode === 'task') {
     const state = openspec && openspec.changeId === focus.change ? openspec : undefined;
+    const taskCounts = state ? counts(state) : undefined;
     return {
       change: focus.change,
       task: focus.taskId,
-      ...(state ? counts(state) : {}),
+      ...(taskCounts ?? {}),
+      ...extras(state, taskCounts),
     };
   }
   if (!openspec) return null;
-  return { change: openspec.changeId, ...counts(openspec) };
+  const taskCounts = counts(openspec);
+  return { change: openspec.changeId, ...taskCounts, ...extras(openspec, taskCounts) };
 }
 
 /**

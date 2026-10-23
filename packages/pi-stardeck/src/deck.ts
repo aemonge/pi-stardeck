@@ -12,7 +12,7 @@ import type {
 } from './gauge.ts';
 import type { ResourceTelemetry } from './process-resources.ts';
 import { formatDeckCountdown } from './gauge.ts';
-import { formatDeckWorkLabel } from './title-state.ts';
+import { deckWorkSegments } from './title-state.ts';
 
 export interface HeaderDeckModeRail {
   plain: string;
@@ -246,16 +246,9 @@ function workTile(state: HeaderDeckState, theme: Theme): string {
   if (!title) return '';
   const work = title.work;
   if (!work) return color(theme, 'dim', '— no change owns the moment');
-  return color(
-    theme,
-    work.total !== undefined &&
-      work.done !== undefined &&
-      work.total > 0 &&
-      work.done >= work.total
-      ? 'success'
-      : 'text',
-    formatDeckWorkLabel(work),
-  );
+  return deckWorkSegments(work)
+    .map((segment) => color(theme, segment.color, segment.text))
+    .join('');
 }
 
 // Relocation phase (Human-directed): the clock leads the title band beside

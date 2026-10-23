@@ -353,3 +353,68 @@ test('blocked apply progress never shadows honest list counts', async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('collects the schema name and artifact ladder from status', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  const runner: CommandRunner = async (_command, args) => {
+    if (args[0] === 'list') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          changes: [
+            {
+              name: 'demo',
+              completedTasks: 4,
+              totalTasks: 14,
+              lastModified: '2026-01-01T00:00:00Z',
+              status: 'in-progress',
+            },
+          ],
+          root: { path: root },
+        }),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'show') {
+      return { code: 0, stdout: JSON.stringify({ title: 'Demo' }), stderr: '' };
+    }
+    if (args[0] === 'status') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          schemaName: 'spec',
+          artifacts: [
+            { id: 'idea', status: 'done' },
+            { id: 'requirements', status: 'done' },
+            { id: 'research', status: 'ready' },
+          ],
+        }),
+        stderr: '',
+      };
+    }
+    return {
+      code: 0,
+      stdout: JSON.stringify({
+        state: 'blocked',
+        progress: { total: 0, complete: 0, remaining: 0 },
+        tasks: [],
+      }),
+      stderr: '',
+    };
+  };
+
+  try {
+    const state = await collectOpenSpec({
+      cwd: root,
+      runner,
+      now: 100,
+      configuredChange: 'demo',
+    });
+    assert.equal(state?.schemaName, 'spec');
+    assert.deepEqual(state?.ladder, { done: 2, total: 3 });
+    assert.equal(state?.completedTasks, 4);
+    assert.equal(state?.totalTasks, 14);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

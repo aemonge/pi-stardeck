@@ -44,6 +44,9 @@ export type DeckTitleWorkState = {
   task?: string;
   done?: number;
   total?: number;
+  schemaName?: string;
+  ladder?: { done: number; total: number };
+  phase?: string;
 };
 
 export type DeckTitleActivityState = {
@@ -128,11 +131,32 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
   }
   const task = boundedText(value.task, TASK_ID_MAX, { required: false });
   if (task === null) return undefined;
+  const schemaName = boundedText(value.schemaName, IDENTIFIER_MAX, {
+    required: false,
+  });
+  if (schemaName === null) return undefined;
+  const phase = boundedText(value.phase, 32, { required: false });
+  if (phase === null) return undefined;
+  let ladder: { done: number; total: number } | undefined;
+  if ('ladder' in value) {
+    if (!isRecord(value.ladder)) return undefined;
+    const ladderDone = boundedTotal(value.ladder.done);
+    const ladderTotal = boundedTotal(value.ladder.total);
+    if (ladderDone === null || ladderTotal === null) return undefined;
+    ladder = { done: ladderDone, total: ladderTotal };
+  }
   const counts =
     typeof boundedDone === 'number' && typeof boundedTotalValue === 'number'
       ? { done: boundedDone, total: boundedTotalValue }
       : {};
-  return task === undefined ? { change, ...counts } : { change, task, ...counts };
+  const extras = {
+    ...(schemaName ? { schemaName } : {}),
+    ...(ladder ? { ladder } : {}),
+    ...(phase ? { phase } : {}),
+  };
+  return task === undefined
+    ? { change, ...counts, ...extras }
+    : { change, task, ...counts, ...extras };
 }
 
 function parseTitleWaiver(value: unknown): DeckTitleWaiverState | null | undefined {
@@ -200,11 +224,45 @@ export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
   }
 }
 
-/** `change · done/total` — the Work label from the accepted mockups. */
+/** One colored piece of the Work label. */
+export type DeckWorkSegment = { text: string; color: string };
+
+/**
+ * The Work label as colored segments — the human-steered format:
+ * `[spec] change ⟩ phase ladder › 󰄱 done/total`, each part degrading
+ * honestly when its facts are unknown.
+ */
+export function deckWorkSegments(work: DeckTitleWorkState): DeckWorkSegment[] {
+  const segments: DeckWorkSegment[] = [];
+  if (work.schemaName) {
+    segments.push({ text: `[${work.schemaName}]`, color: 'dim' });
+    segments.push({ text: ` ${work.change}`, color: 'accent' });
+  } else {
+    segments.push({ text: work.change, color: 'accent' });
+  }
+  const ladderText = work.ladder
+    ? `${work.ladder.done}/${work.ladder.total}`
+    : undefined;
+  if (work.phase || ladderText) {
+    segments.push({ text: ' ⟩ ', color: 'thinkingHigh' });
+    if (work.phase) segments.push({ text: work.phase, color: 'success' });
+    if (ladderText) {
+      segments.push({
+        text: (work.phase ? ' ' : '') + ladderText,
+        color: 'thinkingHigh',
+      });
+    }
+  }
+  if (work.done !== undefined && work.total !== undefined) {
+    segments.push({ text: ' › ', color: 'accent' });
+    segments.push({ text: `󰄱 ${work.done}/${work.total}`, color: 'warning' });
+  }
+  return segments;
+}
+
+/** The plain-text Work label — the segment join without colors. */
 export function formatDeckWorkLabel(work: DeckTitleWorkState): string {
-  const counts =
-    work.done !== undefined && work.total !== undefined
-      ? ` · ${work.done}/${work.total}`
-      : '';
-  return `${work.change}${counts}`;
+  return deckWorkSegments(work)
+    .map((segment) => segment.text)
+    .join('');
 }

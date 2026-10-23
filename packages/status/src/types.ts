@@ -89,6 +89,8 @@ export interface OpenSpecState {
   allTasks?: OpenSpecTask[];
   tasksPath?: string;
   hierarchy?: OpenSpecHierarchyProgress;
+  schemaName?: string;
+  ladder?: { done: number; total: number };
   meta: SourceMeta;
 }
 

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   DECK_TITLE_ACTIVITY_CLASSES,
   type DeckTitleState,
+  deckWorkSegments,
   formatDeckWorkLabel,
   parseDeckTitleState,
   parseDeckTurnCost,
@@ -197,10 +198,21 @@ test('parses turn cost snapshots and rejects malformed meters', () => {
   });
 });
 
-test('formats the Work label as change · done/total', () => {
+test('formats the Work label as [spec] change ⟩ phase ladder › 󰄱 done/total', () => {
+  assert.equal(
+    formatDeckWorkLabel({
+      change: 'fix-cockpit-wording-and-task-progress',
+      schemaName: 'spec',
+      ladder: { done: 6, total: 7 },
+      phase: 'planning',
+      done: 4,
+      total: 14,
+    }),
+    '[spec] fix-cockpit-wording-and-task-progress ⟩ planning 6/7 › 󰄱 4/14',
+  );
   assert.equal(
     formatDeckWorkLabel({ change: 'eight-section-deck', done: 1, total: 4 }),
-    'eight-section-deck · 1/4',
+    'eight-section-deck › 󰄱 1/4',
   );
   assert.equal(
     formatDeckWorkLabel({
@@ -209,10 +221,33 @@ test('formats the Work label as change · done/total', () => {
       done: 4,
       total: 4,
     }),
-    'eight-section-deck · 4/4',
+    'eight-section-deck › 󰄱 4/4',
   );
   assert.equal(
     formatDeckWorkLabel({ change: 'eight-section-deck', task: '3.1' }),
     'eight-section-deck',
+  );
+});
+
+test('colors Work label segments per the human-steered palette', () => {
+  const segments = deckWorkSegments({
+    change: 'fix-cockpit-wording-and-task-progress',
+    schemaName: 'spec',
+    ladder: { done: 6, total: 7 },
+    phase: 'planning',
+    done: 4,
+    total: 14,
+  });
+  assert.deepEqual(
+    segments.map((segment) => `${segment.color}:${segment.text}`),
+    [
+      'dim:[spec]',
+      'accent: fix-cockpit-wording-and-task-progress',
+      'thinkingHigh: ⟩ ',
+      'success:planning',
+      'thinkingHigh: 6/7',
+      'accent: › ',
+      'warning:󰄱 4/14',
+    ],
   );
 });

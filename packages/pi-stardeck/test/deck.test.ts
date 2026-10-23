@@ -1049,10 +1049,10 @@ test('renders line 2 as clock ⟩ Subject with the Work label on the right', () 
       "󰠭 000:04'12 ⟩ Pivot cockpit to pure pi-starship-header chrome",
     ),
   );
-  assert.ok(titleRow.includes('eight-section-deck · 1/4'));
+  assert.ok(titleRow.includes('eight-section-deck › 󰄱 1/4'));
   // The optional task segment is parsed for the contract but never rendered —
-  // the accepted mockup shows exactly `change · done/total`.
-  assert.equal(titleRow.includes('2.1 ·'), false);
+  // the human-steered format shows `change › 󰄱 done/total`.
+  assert.equal(titleRow.includes('2.1'), false);
 });
 
 test('renders the dim no-work hint when no change owns the moment', () => {
@@ -1084,7 +1084,7 @@ test('renders the clock leading alone when the subject is null', () => {
   assert.ok(titleRow.includes('— no change owns the moment'));
 });
 
-test('colors the Work label by completion and drops it on narrow frames', () => {
+test('colors the Work label segments and drops it on narrow frames', () => {
   const state = titleFixture({
     title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 1, total: 4 } },
   });
@@ -1098,19 +1098,20 @@ test('colors the Work label by completion and drops it on narrow frames', () => 
   };
 
   renderHeaderDeck(state, 120, theme as never);
-  assert.ok(colors.includes('text:eight-section-deck · 1/4'));
+  assert.ok(colors.includes('accent:eight-section-deck'));
+  assert.ok(colors.includes('warning:󰄱 1/4'));
 
   colors.length = 0;
   const done = titleFixture({
     title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 4, total: 4 } },
   });
   renderHeaderDeck(done, 120, theme as never);
-  assert.ok(colors.includes('success:eight-section-deck · 4/4'));
+  assert.ok(colors.includes('warning:󰄱 4/4'));
 
   // Narrow frames: the Work slot yields before the clock anchor does.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
   assert.ok((narrow[2] ?? '').includes("000:00'00"));
-  assert.equal((narrow[2] ?? '').includes('eight-section-deck · 1/4'), false);
+  assert.equal((narrow[2] ?? '').includes('eight-section-deck › 󰄱 1/4'), false);
 });
 
 test('keeps pre-title publishers on the legacy selection band with a silent right end', () => {
@@ -1739,10 +1740,10 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: Work owns the right end with `change · done/total`.
+  // Line 2: Work owns the right end with `change › 󰄱 done/total`.
   assert.match(
     lines[2] ?? '',
-    /^\u{F082D} 000:04'12 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck \u00b7 1\/4$/u,
+    /^\u{F082D} 000:04'12 \u{27E9} Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck › 󰄱 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(

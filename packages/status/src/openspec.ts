@@ -234,6 +234,26 @@ function chooseChange(
   return selected;
 }
 
+function parseOpenSpecStatus(value: unknown): {
+  schemaName?: string;
+  ladder?: { done: number; total: number };
+} {
+  if (!isRecord(value)) return {};
+  const schemaName =
+    typeof value.schemaName === 'string' && value.schemaName.trim()
+      ? value.schemaName.trim()
+      : undefined;
+  let ladder: { done: number; total: number } | undefined;
+  if (Array.isArray(value.artifacts) && value.artifacts.length > 0) {
+    let done = 0;
+    for (const artifact of value.artifacts) {
+      if (isRecord(artifact) && artifact.status === 'done') done += 1;
+    }
+    ladder = { done, total: value.artifacts.length };
+  }
+  return { ...(schemaName ? { schemaName } : {}), ...(ladder ? { ladder } : {}) };
+}
+
 async function runJson(
   runner: CommandRunner,
   args: string[],
@@ -333,6 +353,23 @@ export async function collectOpenSpec(options: {
     // The list result is still useful when an optional title lookup fails.
   }
 
+  let schemaName: string | undefined;
+  let ladder: OpenSpecState['ladder'];
+  try {
+    const status = parseOpenSpecStatus(
+      await runJson(
+        options.runner,
+        ['status', '--change', change.name, '--json'],
+        projectRoot,
+        'openspec status',
+      ),
+    );
+    schemaName = status.schemaName;
+    ladder = status.ladder;
+  } catch {
+    // Ladder facts are optional; the list counts remain valid without them.
+  }
+
   let tasks: OpenSpecTask[] = [];
   let tasksPath: string | undefined;
   let instructionProgress: ApplyInstructionsResult['progress'];
@@ -390,6 +427,8 @@ export async function collectOpenSpec(options: {
     allTasks: tasks,
     ...(tasksPath ? { tasksPath } : {}),
     ...(hierarchy ? { hierarchy } : {}),
+    ...(schemaName ? { schemaName } : {}),
+    ...(ladder ? { ladder } : {}),
     meta: {
       source: 'openspec-cli',
       refreshedAt: now,

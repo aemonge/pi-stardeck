@@ -243,6 +243,46 @@ test('builder derives task-focused work with hierarchy counts', () => {
   );
 });
 
+test('derives work with schema, ladder, and the phase word', () => {
+  const rich = { ...openSpec, schemaName: 'spec', ladder: { done: 6, total: 7 } };
+  assert.deepEqual(
+    deriveTitleWork(
+      { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
+      rich,
+    ),
+    {
+      change: 'eight-section-deck',
+      task: '1.2',
+      done: 1,
+      total: 4,
+      schemaName: 'spec',
+      ladder: { done: 6, total: 7 },
+      phase: 'planning',
+    },
+  );
+  assert.equal(
+    deriveTitleWork(
+      { mode: 'none' },
+      { ...openSpec, schemaName: 'spec', ladder: { done: 4, total: 4 } },
+    )?.phase,
+    'executing',
+  );
+  assert.equal(
+    deriveTitleWork(
+      { mode: 'none' },
+      {
+        ...openSpec,
+        completedTasks: 4,
+        totalTasks: 4,
+        hierarchy: undefined,
+        schemaName: 'spec',
+        ladder: { done: 4, total: 4 },
+      },
+    )?.phase,
+    'complete',
+  );
+});
+
 test('builder derives passive work without a task id and clamps totals', () => {
   assert.deepEqual(deriveTitleWork({ mode: 'none' }, openSpec), {
     change: 'eight-section-deck',
