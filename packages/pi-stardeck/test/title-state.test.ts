@@ -116,10 +116,10 @@ test('enforces the schema bounds: targets, totals, and label lengths', () => {
   assert.equal(
     parseDeckTitleState({
       ...titleState(),
-      activity: { class: 'bash', target: long(49), span: 't1', parent: null },
+      activity: { class: 'bash', target: long(121), span: 't1', parent: null },
     }),
     null,
-    'target beyond 48 characters rejects',
+    'target beyond 120 characters rejects',
   );
   assert.equal(
     parseDeckTitleState({

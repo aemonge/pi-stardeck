@@ -157,15 +157,15 @@ test('direct tools fall back to their call id without an active turn', () => {
   });
 });
 
-test('target labels collapse whitespace and stop at 48 characters', () => {
+test('target labels collapse whitespace and stop at 120 characters', () => {
   assert.equal(
     classifyTitleActivity('bash', { command: 'echo   a\n b' })?.target,
     'echo a b',
   );
   const long = classifyTitleActivity('read', {
-    path: `packages/${'deep/'.repeat(20)}/deck.ts`,
+    path: `packages/${'deep/'.repeat(26)}/deck.ts`,
   });
-  assert.equal(Array.from(long?.target ?? '').length, 48);
+  assert.equal(Array.from(long?.target ?? '').length, 120);
   assert.ok(long?.target.endsWith('…'));
   assert.equal(classifyTitleActivity('read', {}), undefined);
   assert.deepEqual(classifyTitleActivity('subagent', {}), {

@@ -24,8 +24,10 @@ export const DECK_TITLE_ACTIVITY_CLASSES = [
 
 export type DeckTitleActivityClass = (typeof DECK_TITLE_ACTIVITY_CLASSES)[number];
 
-/** Short target label bound from the accepted schema. */
-export const DECK_TITLE_TARGET_MAX = 48;
+/** Short target label bound from the accepted schema (Human amendment
+ * 2026-10-24: 48 → 120, mirroring the status producer — the deck's
+ * render-time width crop owns the real limit now). */
+export const DECK_TITLE_TARGET_MAX = 120;
 
 /** Task/step totals bound from the accepted schema. */
 export const DECK_TITLE_TOTAL_MAX = 999;

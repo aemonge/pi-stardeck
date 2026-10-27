@@ -22,8 +22,11 @@ export const TITLE_ACTIVITY_CLASSES = [
 
 export type TitleActivityClass = (typeof TITLE_ACTIVITY_CLASSES)[number];
 
-/** Short target label bound from the accepted schema. */
-export const TITLE_TARGET_MAX = 48;
+/** Short target label bound from the accepted schema (Human amendment
+ * 2026-10-24: 48 → 120 — the deck's activity lane now owns the full
+ * width beside the turn cluster, so the protocol bound yields to the
+ * render-time crop instead of pre-cutting subagent/bash labels). */
+export const TITLE_TARGET_MAX = 120;
 
 /** Task/step totals bound from the accepted schema. */
 export const TITLE_TOTAL_MAX = 999;
@@ -165,7 +168,7 @@ function parseTitleWaiver(value: unknown): TitleWaiverState | null | undefined {
 
 /**
  * Defensive parser for incoming title-state payloads. Unknown versions,
- * malformed shapes, and out-of-bounds values (target > 48 characters,
+ * malformed shapes, and out-of-bounds values (target > 120 characters,
  * totals > 999) reject the whole object with `null`; it never throws.
  */
 export function parseTitleState(value: unknown): TitleState | null {

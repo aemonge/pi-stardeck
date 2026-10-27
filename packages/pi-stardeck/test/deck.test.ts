@@ -1207,7 +1207,7 @@ test('hides the idle line-3 band; a speaking meter restores it', () => {
   };
   const lines = renderHeaderDeck(costly, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
-  assert.ok(activityRow.trimEnd().endsWith('󰠭 0:38 · 4.2k'), 'cost keeps the band');
+  assert.ok(activityRow.trimEnd().endsWith("000:38'00 · 4.2k"), 'cost keeps the band');
 });
 
 test('renders live phase words between tools, never awaiting Human mid-turn', () => {
@@ -1325,7 +1325,7 @@ test('renders line 3 mid-work as editing target with this-turn cost', () => {
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   const activityRow = lines.find((line) => line.includes('editing')) ?? '';
   assert.ok(activityRow.includes('editing packages/pi-stardeck/src/deck.ts'));
-  assert.ok(activityRow.trimEnd().endsWith('󰠭 0:38 · 4.2k'));
+  assert.ok(activityRow.trimEnd().endsWith("000:38'00 · 4.2k"));
 });
 
 test('renders every observed activity class with its target', () => {
@@ -1420,8 +1420,7 @@ test('colors the activity and turn meter by liveness', () => {
   };
   renderHeaderDeck(midwork, 100, theme as never);
   assert.ok(colors.includes('text:bash npm test'));
-  assert.ok(colors.includes('customMessageLabel:󰠭'));
-  assert.ok(colors.includes('warning:1:05'));
+  assert.ok(colors.includes("warning:001:05'00"));
   assert.ok(colors.includes('warning:980'));
 });
 
@@ -1777,7 +1776,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
     lines[4] ?? '',
-    /^editing packages\/pi-stardeck\/src\/deck\.ts\s+󰠭 0:38 · 4\.2k$/u,
+    /^editing packages\/pi-stardeck\/src\/deck\.ts\s+000:38'00 · 4\.2k$/u,
   );
   // Dotted seams inside; the engine row closes the deck with the sentinel.
   assert.match(lines[3] ?? '', /^\u2508+$/u);

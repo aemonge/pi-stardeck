@@ -118,12 +118,12 @@ test('parser rejects malformed work shapes and totals over 999', () => {
   );
 });
 
-test('parser rejects malformed activity shapes and targets over 48 chars', () => {
+test('parser rejects malformed activity shapes and targets over 120 chars', () => {
   const base = { v: 1, subject: null, work: null, waiver: null };
   assert.equal(
     parseTitleState({
       ...base,
-      activity: { class: 'editing', target: 'x'.repeat(49), span: 't1', parent: null },
+      activity: { class: 'editing', target: 'x'.repeat(121), span: 't1', parent: null },
     }),
     null,
   );
@@ -288,15 +288,15 @@ test('builder derives passive work without a task id and clamps totals', () => {
   assert.equal(deriveTitleWork({ mode: 'none' }, null), null);
 });
 
-test('shortenTitleTarget bounds live labels to 48 characters', () => {
+test('shortenTitleTarget bounds live labels to 120 characters', () => {
   assert.equal(shortenTitleTarget('deck.ts'), 'deck.ts');
   assert.equal(
     shortenTitleTarget('  packages/status/src/deck.ts  '),
     'packages/status/src/deck.ts',
   );
-  const long = 'a'.repeat(60);
+  const long = 'a'.repeat(140);
   const shortened = shortenTitleTarget(long);
-  assert.equal(Array.from(shortened).length, 48);
+  assert.equal(Array.from(shortened).length, 120);
   assert.ok(shortened.endsWith('…'));
 });
 

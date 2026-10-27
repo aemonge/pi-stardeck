@@ -357,32 +357,22 @@ function activityTile(state: HeaderDeckState, theme: Theme): string {
   return label ? color(theme, 'text', label) : color(theme, 'dim', 'awaiting Human');
 }
 
-function formatTurnElapsed(ms: number): string {
-  // Matches the turn meter's span-idle ceiling: 99m59s999ms → `99:59`.
-  const bounded = Math.min(
-    (99 * 60 + 59) * 1_000 + 999,
-    Math.max(0, Math.floor(Number.isFinite(ms) ? ms : 0)),
-  );
-  const totalSeconds = Math.floor(bounded / 1_000);
-  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
-}
-
 function turnCostTile(state: HeaderDeckState, theme: Theme): string {
-  // Activity lane right: the turn cluster — liveness icon, turn time,
-  // and tokens in one aligned group (Human amendment 2026-10-23: the
-  // deck's only timer). Idle keeps the accepted dim `— · 0 tok`; the
-  // quiet-activity-row contract depends on it.
+  // Activity lane right: the turn cluster — turn time and tokens in one
+  // aligned group (Human amendment 2026-10-23: the deck's only timer;
+  // Human amendment 2026-10-24: the liveness icon is gone — the ticking
+  // chronometer `mmm:ss'cc` is the liveness). Idle keeps the accepted
+  // dim `— · 0 tok`; the quiet-activity-row contract depends on it.
   const turn = state.header?.turn ?? null;
   if (!turn) return '';
   if (turn.tokens <= 0 && turn.elapsedMs <= 0) {
     return color(theme, 'dim', '— · 0 tok');
   }
-  return `${color(theme, 'customMessageLabel', '󰠭')} ${color(
+  return `${color(theme, 'warning', formatDeckElapsed(turn.elapsedMs), true)} ${color(
     theme,
-    'warning',
-    formatTurnElapsed(turn.elapsedMs),
-    true,
-  )} ${color(theme, 'dim', '·')} ${color(theme, 'warning', formatTokens(turn.tokens))}`;
+    'dim',
+    '·',
+  )} ${color(theme, 'warning', formatTokens(turn.tokens))}`;
 }
 
 function gitRight(state: HeaderDeckState, theme: Theme): string {
