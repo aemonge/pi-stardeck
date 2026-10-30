@@ -36,19 +36,20 @@ Selection is the single answer to "what is this session about". It is one slot:
 
 ```text
 selection =
-  | { kind: 'openspec-task', change, task }   ← openspec_focus tool
-  | { kind: 'session-work', intent, phase }   ← work_focus tool
-  | { kind: 'subject', title }                ← passive fallback, never overrides
+  | { kind: 'openspec-task', change, task, awaitingValidation }  ← openspec_focus tool
+  | { kind: 'session-work', intent, phase }  ← legacy entries only (writers retired)
+  | { kind: 'title', title }                ← title tool; passive fallback, never overrides
   | { kind: 'none' }
 ```
 
 Rules:
 
 - Priority is resolved by exactly one resolver, in the order listed above.
-- `subject` never displaces an active selection; it fills the slot only when nothing
+- `title` never displaces an active selection; it fills the slot only when nothing
   else holds it.
-- The existing tools keep their external behavior and persisted session-entry formats.
-- Session-work is a selection kind, not a parallel slot competing for focus.
+- The `openspec_focus` and `title` tools keep their persisted session-entry formats;
+  `work_focus` and `stage` are retired instruments — restored legacy entries still
+  render, fail-soft, and no writers remain.
 
 ## runs
 
@@ -74,10 +75,11 @@ understanding | working | assuring | learning | answering
 waiting | blocked | listening | aborted
 ```
 
-- Declared stages are truth. The model announces stage transitions through a Ramona
-  `AGENTS.md` emission duty, recorded here as a future dependency of full fidelity.
-- Name-based inference (`classifyHeaderActivity`) is demoted to a fallback for runs
-  and turns without declarations; it must never override a declaration.
+- Stages are event-inferred truth: the Ramona `stage` declaration tool is retired; the
+  model no longer announces transitions by tool call. Taskflow phase promotion and
+  message/tool lifecycle events drive the vocabulary.
+- Name-based inference (`classifyHeaderActivity`) serves runs and turns without
+  richer signals; declarations no longer exist to override it.
 - Child runs without declarations use the fallback until subagent partial results
   carry a bounded stage hint (optional future enrichment).
 

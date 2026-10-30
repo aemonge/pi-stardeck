@@ -49,6 +49,19 @@ const replacementTaskId = '2.4';
 const replacementTaskTitle = 'Replace active title focus';
 const replacementActiveTitle = `π  ${replacementChange} › ${replacementTaskId} ${replacementTaskTitle}`;
 
+/** Legacy Session Work entry — the retired writers leave these in old
+ *  sessions; restore must keep rendering them, fail-soft. */
+function seededWorkEntry(intent: string, state: 'active' | 'validation' = 'active') {
+  return {
+    type: 'custom' as const,
+    id: `work-${state}-${intent.length}`,
+    parentId: null,
+    timestamp: new Date(1).toISOString(),
+    customType: 'galactica-status.session-work.v1',
+    data: { state, intent },
+  };
+}
+
 const originalEnvironment = {
   codingAgentDir: process.env.PI_CODING_AGENT_DIR,
   openspecChange: process.env.PI_OPENSPEC_CHANGE,
@@ -840,22 +853,13 @@ test('openspec_focus carries the explicit-direction rule in its description', ()
   assert.match(description, /never infer/u);
 });
 
-test('work_focus exposes one provider-safe string action enum', () => {
+test('retired instruments stay retired: work_focus and stage are gone', () => {
   const harness = new RuntimeHarness();
-  const tool = harness.tools.get('work_focus');
-  assert.ok(tool, 'work_focus should be registered');
-
-  const action = tool.parameters.properties.action as {
-    type?: string;
-    enum?: unknown[];
-    anyOf?: unknown;
-  };
-  assert.equal(action.type, 'string');
-  assert.deepEqual(
-    new Set(action.enum),
-    new Set(['status', 'set', 'validate', 'clear']),
-  );
-  assert.equal('anyOf' in action, false);
+  assert.equal(harness.tools.has('work_focus'), false, 'work_focus is retired');
+  assert.equal(harness.tools.has('stage'), false, 'stage is retired');
+  assert.equal(harness.commands.has('work'), false, '/work is retired');
+  assert.ok(harness.tools.has('openspec_focus'), 'openspec_focus remains');
+  assert.ok(harness.tools.has('title'), 'title remains');
 });
 
 test('openspec_focus exposes one provider-safe string action enum', () => {
@@ -878,10 +882,9 @@ test('openspec_focus exposes one provider-safe string action enum', () => {
 
 test('conversation-driven Taskflow calls publish and clear controlled live activity', async () => {
   const intent = 'Consolidate proportional routing contracts';
-  const harness = new RuntimeHarness();
+  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    await harness.tool('work_focus', { action: 'set', intent });
     await harness.emit('tool_call', {
       toolCallId: 'conversation-taskflow',
       toolName: 'taskflow',
@@ -912,10 +915,9 @@ test('conversation-driven Taskflow calls publish and clear controlled live activ
 
 test('live Taskflow updates preserve focus and add bounded activity ancestry', async () => {
   const intent = 'Diagnose why profile edits are not applied';
-  const harness = new RuntimeHarness();
+  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    await harness.tool('work_focus', { action: 'set', intent });
     await harness.emit('tool_call', {
       toolCallId: 'taskflow-live-phase',
       toolName: 'taskflow',
@@ -996,10 +998,9 @@ test('live Taskflow updates preserve focus and add bounded activity ancestry', a
 
 test('ordinary direct tools publish bounded activity until agent settle', async () => {
   const intent = 'Plan a greeting canary';
-  const harness = new RuntimeHarness();
+  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    await harness.tool('work_focus', { action: 'set', intent });
 
     await harness.emit('tool_call', {
       toolCallId: 'direct-read',
@@ -1099,10 +1100,9 @@ test('ordinary direct tools publish bounded activity until agent settle', async 
 
 test('parallel direct tools stay active until completion and surface bounded recovery', async () => {
   const intent = 'Inspect two bounded inputs';
-  const harness = new RuntimeHarness();
+  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    await harness.tool('work_focus', { action: 'set', intent });
     await harness.emit('tool_call', {
       toolCallId: 'parallel-read-one',
       toolName: 'read',
@@ -1425,55 +1425,10 @@ test('specialized Taskflow focus remains exact and conflict-aware', async () => 
   }
 });
 
-test('/work persists active, validation, and clear metadata with matching UI state', async () => {
-  const intent = 'Implement ephemeral Session Work metadata';
-  const harness = new RuntimeHarness({ sessionName: 'Fallback session' });
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.equal(latestWorkFooterMessage(harness), undefined);
-
-    await harness.command('work', `set ${intent}`);
-    assert.deepEqual(harness.entries.at(-1), {
-      type: 'custom',
-      id: 'entry-1',
-      parentId: null,
-      timestamp: new Date(1).toISOString(),
-      customType: 'galactica-status.session-work.v1',
-      data: { state: 'active', intent },
-    });
-    assert.equal(harness.titles.at(-1), `π  ${intent}`);
-    assert.equal(openSpecFooterText(latestWorkFooterMessage(harness)), 'Focus');
-
-    await harness.command('work', 'validate');
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      state: 'validation',
-      intent,
-    });
-    assert.equal(harness.titles.at(-1), `π  Validate › ${intent}`);
-    assert.equal(openSpecFooterText(latestWorkFooterMessage(harness)), 'Validate');
-
-    await harness.command('work', 'clear');
-    assert.deepEqual(harness.entries.at(-1)?.data, { state: 'clear' });
-    assert.equal(harness.titles.at(-1), 'π  Fallback session');
-    assert.equal(openSpecFooterText(latestWorkFooterMessage(harness)), undefined);
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('reload restores Session Work validation metadata before asynchronous refresh', async () => {
+test('reload restores legacy Session Work validation metadata before asynchronous refresh', async () => {
   const intent = 'Validate persistent Session Work metadata';
-  const first = new RuntimeHarness();
-  try {
-    await first.emit('session_start', { reason: 'startup' });
-    await first.command('work', `set ${intent}`);
-    await first.command('work', 'validate');
-  } finally {
-    await first.stop();
-  }
-
   const reloaded = new RuntimeHarness({
-    entries: first.entries,
+    entries: [seededWorkEntry(intent, 'validation')],
     sessionName: 'Fallback session',
   });
   try {
@@ -1487,44 +1442,15 @@ test('reload restores Session Work validation metadata before asynchronous refre
   }
 });
 
-test('non-persisted Session Work remains process-local without resume durability', async () => {
-  const intent = 'Keep ephemeral work in this process';
-  const active = new RuntimeHarness({ persisted: false });
-  try {
-    assert.equal(active.context.sessionManager.getSessionFile(), undefined);
-    await active.emit('session_start', { reason: 'startup' });
-    await active.command('work', `set ${intent}`);
-
-    const status = await active.tool('work_focus', { action: 'status' });
-    assert.deepEqual(status.details.focus, { state: 'active', intent });
-    assert.deepEqual(active.entries.at(-1)?.data, { state: 'active', intent });
-  } finally {
-    await active.stop();
-  }
-
-  const restarted = new RuntimeHarness({ persisted: false });
-  try {
-    await restarted.emit('session_start', { reason: 'startup' });
-    const status = await restarted.tool('work_focus', { action: 'status' });
-
-    assert.deepEqual(status.details.focus, { state: 'clear' });
-    assert.deepEqual(restarted.entries, []);
-  } finally {
-    await restarted.stop();
-  }
-});
-
-test('work_focus tool restores branch metadata and rejects hidden work under OpenSpec', async () => {
+test('OpenSpec acquisition clears restored legacy Session Work', async () => {
   const intent = 'Investigate an ad-hoc session concern';
-  const harness = new RuntimeHarness({ sessionName: 'Fallback session' });
+  const harness = new RuntimeHarness({
+    sessionName: 'Fallback session',
+    entries: [seededWorkEntry(intent)],
+  });
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    const setResult = await harness.tool('work_focus', {
-      action: 'set',
-      intent,
-    });
-    assert.equal(setResult.details.ok, true);
-    assert.deepEqual(setResult.details.focus, { state: 'active', intent });
+    assert.equal(harness.titles.at(-1), `π  ${intent}`);
 
     await harness.command('openspec-focus', `set ${change} ${taskId}`);
     assert.deepEqual(
@@ -1542,17 +1468,8 @@ test('work_focus tool restores branch metadata and rejects hidden work under Ope
           data: { mode: 'task', change, taskId, awaitingValidation: false },
         },
       ],
-      'OpenSpec acquisition must clear ephemeral work before taking precedence',
+      'OpenSpec acquisition must clear restored legacy work before taking precedence',
     );
-
-    const entriesBeforeConflict = harness.entries.length;
-    const conflict = await harness.tool('work_focus', {
-      action: 'set',
-      intent: 'Hidden conflicting work',
-    });
-    assert.equal(conflict.details.ok, false);
-    assert.match(conflict.content[0].text, /Error: OpenSpec focus/u);
-    assert.equal(harness.entries.length, entriesBeforeConflict);
   } finally {
     await harness.stop();
   }
@@ -1693,8 +1610,10 @@ test('subject titles fill the fallback before session name and yield to work', (
 
 test('openspec_focus shares safeguarded branch transitions with the slash command', async () => {
   const intent = 'Clear this work when OpenSpec focus is acquired';
-  const toolHarness = new RuntimeHarness();
-  const commandHarness = new RuntimeHarness();
+  const toolHarness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
+  const commandHarness = new RuntimeHarness({
+    entries: [seededWorkEntry(intent)],
+  });
   const branchState = (harness: RuntimeHarness) =>
     harness.entries.map(({ customType, data }) => ({ customType, data }));
 
@@ -1706,7 +1625,7 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
     });
     assert.equal(initialStatus.details.ok, true);
     assert.deepEqual(initialStatus.details.focus, { mode: 'none' });
-    assert.equal(toolHarness.entries.length, 0);
+    assert.equal(toolHarness.entries.length, 1, 'only the seeded legacy work entry');
 
     for (const params of [
       { action: 'set', change },
@@ -1716,10 +1635,9 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
       const invalid = await toolHarness.tool('openspec_focus', params);
       assert.equal(invalid.details.ok, false);
       assert.match(invalid.content[0].text, /Error:.*change and task/iu);
-      assert.equal(toolHarness.entries.length, 0);
+      assert.equal(toolHarness.entries.length, 1);
     }
 
-    await toolHarness.tool('work_focus', { action: 'set', intent });
     const acquired = await toolHarness.tool('openspec_focus', {
       action: 'set',
       change,
@@ -1779,7 +1697,6 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
     assert.equal(toolHarness.entries.length, entriesAfterClear);
 
     await commandHarness.emit('session_start', { reason: 'startup' });
-    await commandHarness.command('work', `set ${intent}`);
     await commandHarness.command('openspec-focus', `set ${change} ${taskId}`);
     await commandHarness.command(
       'openspec-focus',

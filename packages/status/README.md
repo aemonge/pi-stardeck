@@ -69,14 +69,16 @@ ephemeral Session Work state. Display priority is OpenSpec
 Task → Session Work → safe direct fallback. OpenSpec focus clears active Session
 Work when acquired, preventing hidden or stale work from resurfacing later.
 
-Session Work is stored only as versioned custom entries on the active Pi session branch;
-it never creates a repository status file. It supports this lifecycle:
+Session Work is a legacy surface: its writer tool and `/work` command are retired, and
+only old sessions' versioned custom entries remain, restored fail-soft on the active
+Pi session branch (never a repository status file). OpenSpec focus is stored the same
+way and supports this lifecycle:
 
 ```text
-/work
-/work set Implement session metadata
-/work validate
-/work clear
+/openspec-focus set <change> <task>
+/openspec-focus validate
+/openspec-focus replace <change> <task>
+/openspec-focus clear
 ```
 
 When no OpenSpec portfolio is available, the matching row-one footer fallback is the
@@ -84,10 +86,14 @@ compact `▶ Focus` or `◇ Validate`; an entirely empty
 project uses ` no OpenSpec`. The detailed Session Work intent remains in the header
 instead of being duplicated in the footer. Active and validation states also replace the
 fallback terminal title. Reload, resume, and tree navigation restore the newest valid
-branch entry. The agent-callable `work_focus` tool exposes the same `status`, `set`,
-`validate`, and `clear` actions. The agent-callable `openspec_focus` tool likewise
-shares the command's `status`, safeguarded `set`, deliberate `replace`, and persistent
-`clear` transitions.
+branch entry. The agent-callable `openspec_focus` tool shares the command's `status`,
+safeguarded `set`, deliberate `replace`, validating `validate`, and persistent `clear`
+transitions; the `awaitingValidation` flag marks a focused task as awaiting Human
+validation and auto-clears on the next `set`, `replace`, or `clear`. The
+agent-callable `title` tool sets the sanitized session title shown when no OpenSpec
+focus owns the row. The retired `work_focus` and `stage` instruments are gone: stages
+derive from events and Taskflow phases, and legacy `session-work` entries from old
+sessions still restore and render, fail-soft.
 
 Global routing belongs to native Ramona policy rather than this status package. This
 package does not inject parent routing prompts, block parent tools, create Session Work

@@ -26,7 +26,6 @@ import {
   type SessionSubject,
   type SessionWorkFocus,
   sessionSubject,
-  sessionWorkFocus,
   taskflowRunFocus,
   taskFocus,
 } from './src/active-work.ts';
@@ -78,7 +77,6 @@ import {
 } from './src/reducer.ts';
 import type {
   CockpitSnapshot,
-  StageValue,
   CommandRunner,
   DiagnosticsState,
   LoadedConfig,
@@ -764,20 +762,6 @@ class GalacticaStatusRuntime {
     this.publish();
   }
 
-  declareStage(stage: StageValue): boolean {
-    if (!this.currentTurnId) return false;
-    const changed = this.runtimeSpans.setStage(this.currentTurnId, stage, true);
-    this.recordEvent({
-      type: 'run/stage',
-      at: Date.now(),
-      id: this.currentTurnId,
-      stage,
-      declared: true,
-    });
-    this.setLiveProjection(stage);
-    return changed;
-  }
-
   setLiveProjection(lifecycle: HeaderLifecycle, activity?: HeaderActivity): void {
     if (
       this.liveLifecycle === lifecycle &&
@@ -1091,12 +1075,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     runtime?.setFocus(focus);
   }
 
-  function workStatus(focus: SessionWorkFocus): string {
-    return focus.state === 'clear'
-      ? 'Work focus: clear'
-      : `Work focus: ${focus.state} · ${focus.intent}`;
-  }
-
   function subjectStatus(subject: SessionSubject): string {
     return subject.state === 'clear' ? 'Title: clear' : `Title: ${subject.title}`;
   }
@@ -1121,63 +1099,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     }
     if (!sameSessionSubject(current, next)) persistAndApplySubject(next);
     return { ok: true, message: subjectStatus(next), subject: next };
-  }
-
-  function applyWorkAction(
-    action: 'status' | 'set' | 'validate' | 'clear',
-    intent?: string,
-  ): { ok: boolean; message: string; focus: SessionWorkFocus } {
-    const current = runtime?.currentWorkFocus() ?? NO_SESSION_WORK_FOCUS;
-    const openSpec = runtime?.currentFocus() ?? NO_OPEN_SPEC_FOCUS;
-
-    if (action === 'status') {
-      return { ok: true, message: workStatus(current), focus: current };
-    }
-    if (action === 'clear') {
-      if (current.state !== 'clear') persistAndApplyWorkFocus(NO_SESSION_WORK_FOCUS);
-      return {
-        ok: true,
-        message: 'Work focus cleared',
-        focus: NO_SESSION_WORK_FOCUS,
-      };
-    }
-    if (openSpec.mode === 'task') {
-      return {
-        ok: false,
-        message:
-          `OpenSpec focus is ${openSpec.change} › ${openSpec.taskId}; ` +
-          'clear it before setting ephemeral work',
-        focus: current,
-      };
-    }
-    if (action === 'validate') {
-      if (current.state === 'clear') {
-        return {
-          ok: false,
-          message: 'No active Work focus to validate',
-          focus: current,
-        };
-      }
-      const validation = sessionWorkFocus('validation', current.intent);
-      if (!validation) {
-        return { ok: false, message: 'Invalid Work focus', focus: current };
-      }
-      if (!sameSessionWorkFocus(current, validation)) {
-        persistAndApplyWorkFocus(validation);
-      }
-      return { ok: true, message: workStatus(validation), focus: validation };
-    }
-
-    const active = sessionWorkFocus('active', intent);
-    if (!active) {
-      return {
-        ok: false,
-        message: 'Work focus requires a non-empty intent',
-        focus: current,
-      };
-    }
-    if (!sameSessionWorkFocus(current, active)) persistAndApplyWorkFocus(active);
-    return { ok: true, message: workStatus(active), focus: active };
   }
 
   function applyOpenSpecFocusAction(
@@ -1378,72 +1299,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: 'work_focus',
-    label: 'Work Focus',
-    description:
-      'Show, set, mark for validation, or clear explicit ephemeral work metadata for this Pi session',
-    promptSnippet: 'Manage explicit ephemeral Session Work focus metadata',
-    parameters: Type.Object({
-      action: StringEnum(['status', 'set', 'validate', 'clear'] as const),
-      intent: Type.Optional(
-        Type.String({
-          description: 'Required only for set: the concise current intent',
-        }),
-      ),
-    }),
-    async execute(_toolCallId, params) {
-      const result = applyWorkAction(params.action, params.intent);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: result.ok ? result.message : `Error: ${result.message}`,
-          },
-        ],
-        details: {
-          ok: result.ok,
-          focus: result.focus,
-        },
-      };
-    },
-  });
-
-  pi.registerTool({
-    name: 'stage',
-    label: 'Stage',
-    description:
-      'Declare the current stage of the Ramona loop (status truth; one call per transition)',
-    promptSnippet: 'Declare the current loop stage for status truth',
-    parameters: Type.Object({
-      stage: StringEnum([
-        'understanding',
-        'working',
-        'assuring',
-        'learning',
-        'answering',
-        'waiting',
-        'blocked',
-        'listening',
-        'aborted',
-      ] as const),
-    }),
-    async execute(_toolCallId, params) {
-      const declared = runtime?.declareStage(params.stage) ?? false;
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: declared
-              ? `Stage declared: ${params.stage}`
-              : `Stage recorded: ${params.stage} (no active turn span)`,
-          },
-        ],
-        details: { kind: 'stage-declaration', stage: params.stage },
-      };
-    },
-  });
-
-  pi.registerTool({
     name: 'title',
     label: 'Session Title',
     description:
@@ -1512,32 +1367,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
           focus: result.focus,
         },
       };
-    },
-  });
-
-  pi.registerCommand('work', {
-    description: "Show, set, validate, or clear this session's ephemeral Work focus",
-    handler: async (args, ctx) => {
-      const trimmed = args.trim();
-      if (!trimmed || trimmed.toLowerCase() === 'status') {
-        ctx.ui.notify(applyWorkAction('status').message, 'info');
-        return;
-      }
-
-      const [rawAction, ...rest] = trimmed.split(/\s+/u);
-      const action = rawAction?.toLowerCase();
-      if (action === 'set') {
-        const result = applyWorkAction('set', rest.join(' '));
-        ctx.ui.notify(result.message, result.ok ? 'info' : 'warning');
-        return;
-      }
-      if ((action === 'validate' || action === 'clear') && rest.length === 0) {
-        const result = applyWorkAction(action);
-        ctx.ui.notify(result.message, result.ok ? 'info' : 'warning');
-        return;
-      }
-
-      ctx.ui.notify('Usage: /work [status|set <intent>|validate|clear]', 'warning');
     },
   });
 

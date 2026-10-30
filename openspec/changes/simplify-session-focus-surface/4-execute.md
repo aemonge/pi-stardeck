@@ -30,6 +30,21 @@
 - [x] tests: enum + description regression pins (the systematic-bug tombstone); sanitizer cap unchanged; local-load-probe EXPECTED_TOOLS updated
       started_at: 2026-10-30T12:28:00Z · ended_at: 2026-10-30T12:36:00Z · total: — · check: 173/173 + 24/24 · paths: packages/status/test/active-work.test.ts, test/local-load-probe.test.ts
 - [x] feat(status): rename subject to title and carry rules in tool descriptions
+      hash: e9e557770486c846a8bf2e5316d60568fa107e71
+
+## Slice 3 — Retire work_focus and stage instruments
+
+- [x] registrations, `applyWorkAction`, `declareStage`, `workStatus`, `/work` command deleted; unused imports dropped (`sessionWorkFocus`, `StageValue`)
+      started_at: 2026-10-30T12:40:00Z · ended_at: 2026-10-30T13:05:00Z · total: ~25m · check: tsc clean · prettier clean · 171 status + 24 tooling tests · composition probe PASS (2 tools, 6 commands) · paths: packages/status/index.ts
+- [x] restore readers and runtime render kept for legacy `session-work.v1` entries; `persistAndApplyWorkFocus` kept (acquisition-clearing of restored legacy work)
+      started_at: 2026-10-30T12:40:00Z · ended_at: 2026-10-30T13:05:00Z · total: — · check: rewritten legacy tests (seeded entries) green · paths: packages/status/test/active-work.test.ts
+- [x] `runtimeSpans.setStage` inference untouched; taskflow phase projection intact
+      started_at: 2026-10-30T12:40:00Z · ended_at: 2026-10-30T13:05:00Z · total: — · check: taskflow live-activity tests green · paths: —
+- [x] README + status-architecture updated; out-of-scope locksteps noted (gate `accountingTools`, loop prompt in ~/.pi/agent)
+      started_at: 2026-10-30T12:40:00Z · ended_at: 2026-10-30T13:05:00Z · total: — · check: prettier clean · paths: packages/status/README.md, docs/status-architecture.md
+- [x] tests: retirement assertions, legacy restore, local-load-probe expectations (2 tools, 6 commands)
+      started_at: 2026-10-30T12:40:00Z · ended_at: 2026-10-30T13:05:00Z · total: — · check: 195/195 across suites · paths: packages/status/test/, test/local-load-probe.test.ts
+- [x] feat(status): retire work_focus and stage instruments
       hash: pending — commit follows this ledger write
 
 - [ ] Human validation — response: · outcome: · surfaced:
@@ -59,3 +74,61 @@
   gate-attributed · tool: bash · paths: — · at 2026-10-30T12:28:47Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-30T12:29:25Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:30:45Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:30:57Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:31:09Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:32:05Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:32:55Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:33:06Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:33:49Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:34:03Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:34:42Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:35:02Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:35:20Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:35:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:35:31Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:35:53Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:36:05Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:36:12Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:36:28Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:36:53Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/test/local-load-probe.test.ts · at 2026-10-30T12:37:02Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:37:07Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/README.md · at 2026-10-30T12:37:37Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/README.md · at 2026-10-30T12:38:05Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/README.md · at 2026-10-30T12:38:44Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:39:23Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:40:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:40:48Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/test/local-load-probe.test.ts · at 2026-10-30T12:42:08Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:42:12Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:42:37Z

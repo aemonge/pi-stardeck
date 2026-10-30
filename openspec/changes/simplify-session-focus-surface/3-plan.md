@@ -42,12 +42,12 @@ Ordering: the validation flag lands before `work_focus` dies so the `waiting · 
 
 ### Slice 3 — Retire work_focus and stage instruments
 
-- [ ] delete `work_focus` + `stage` registrations, `applyWorkAction`, the `declareStage` call path, `/work` command
-- [ ] keep restore readers and runtime render for legacy `session-work.v1` entries (old sessions still show their row, fail-soft)
-- [ ] keep `runtimeSpans.setStage` inference (taskflow phases); delete nothing it needs
-- [ ] update `packages/status/README.md` + `docs/status-architecture.md`; out-of-scope locksteps recorded as notes (gate `accountingTools`, loop prompt)
-- [ ] tests: removed tools absent from registrations, legacy restore still renders, stage inference intact
-- [ ] commit `feat(status): retire work_focus and stage instruments` · validation: live session — no `work_focus`/`stage` tools registered; taskflow-driven stage still shows; old session renders legacy focus
+- [x] delete `work_focus` + `stage` registrations, `applyWorkAction`, the `declareStage` call path, `/work` command
+- [x] keep restore readers and runtime render for legacy `session-work.v1` entries (old sessions still show their row, fail-soft)
+- [x] keep `runtimeSpans.setStage` inference (taskflow phases); delete nothing it needs
+- [x] update `packages/status/README.md` + `docs/status-architecture.md`; out-of-scope locksteps recorded as notes (gate `accountingTools`, loop prompt)
+- [x] tests: removed tools absent from registrations, legacy restore still renders, stage inference intact
+- [x] commit `feat(status): retire work_focus and stage instruments` · validation: live session — no `work_focus`/`stage` tools registered; taskflow-driven stage still shows; old session renders legacy focus
 
 ## Verification
 
