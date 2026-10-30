@@ -1,6 +1,6 @@
 {
   "name": "@aemonge-dev/pi-stardeck",
-  "version": "0.9.4",
+  "version": "0.10.0",
   "description": "A Vim- and tmux-inspired command deck for Pi",
   "type": "module",
   "keywords": [
