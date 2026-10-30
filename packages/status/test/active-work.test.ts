@@ -8,8 +8,15 @@ import galacticaStatus from '../index.ts';
 import {
   formatActiveWorkTitle,
   NO_SESSION_SUBJECT,
+  OPEN_SPEC_FOCUS_ENTRY_TYPE,
+  parseOpenSpecFocus,
+  restoreOpenSpecFocus,
   restoreSessionSubject,
   restoreSessionWorkFocus,
+  sameOpenSpecFocus,
+  sameSessionSubject,
+  sameSessionWorkFocus,
+  sameTaskFocus,
   sessionSubject,
   sessionWorkFocus,
   taskflowRunFocus,
@@ -602,7 +609,12 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
     await harness.command('galactica-status-refresh', '');
 
     assert.equal(harness.entries.at(-1), focusEntry);
-    assert.deepEqual(focusEntry?.data, { mode: 'task', change, taskId });
+    assert.deepEqual(focusEntry?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
     assert.equal(
       harness.titles.at(-1),
       `π  ${change} › ${taskId}`,
@@ -826,7 +838,7 @@ test('openspec_focus exposes one provider-safe string action enum', () => {
   assert.equal(action.type, 'string');
   assert.deepEqual(
     new Set(action.enum),
-    new Set(['status', 'set', 'replace', 'clear']),
+    new Set(['status', 'set', 'replace', 'validate', 'clear']),
   );
   assert.equal('anyOf' in action, false);
 });
@@ -1359,6 +1371,7 @@ test('specialized Taskflow focus remains exact and conflict-aware', async () => 
       mode: 'task',
       change,
       taskId,
+      awaitingValidation: false,
     });
     assert.equal(
       await harness.emit('tool_call', {
@@ -1372,6 +1385,7 @@ test('specialized Taskflow focus remains exact and conflict-aware', async () => 
       mode: 'task',
       change,
       taskId,
+      awaitingValidation: false,
     });
   } finally {
     await harness.stop();
@@ -1492,7 +1506,7 @@ test('work_focus tool restores branch metadata and rejects hidden work under Ope
         },
         {
           customType: 'galactica-status.openspec-focus.v1',
-          data: { mode: 'task', change, taskId },
+          data: { mode: 'task', change, taskId, awaitingValidation: false },
         },
       ],
       'OpenSpec acquisition must clear ephemeral work before taking precedence',
@@ -1641,7 +1655,7 @@ test('subject titles fill the fallback before session name and yield to work', (
     formatActiveWorkTitle({
       ...common,
       subject,
-      focus: { mode: 'task', change, taskId },
+      focus: { mode: 'task', change, taskId, awaitingValidation: false },
     }),
     `π  ${change} › ${taskId}`,
   );
@@ -1682,7 +1696,12 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
       task: taskId,
     });
     assert.equal(acquired.details.ok, true);
-    assert.deepEqual(acquired.details.focus, { mode: 'task', change, taskId });
+    assert.deepEqual(acquired.details.focus, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
     assert.deepEqual(branchState(toolHarness).slice(-2), [
       {
         customType: 'galactica-status.session-work.v1',
@@ -1690,7 +1709,7 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
       },
       {
         customType: 'galactica-status.openspec-focus.v1',
-        data: { mode: 'task', change, taskId },
+        data: { mode: 'task', change, taskId, awaitingValidation: false },
       },
     ]);
 
@@ -1714,6 +1733,7 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
       mode: 'task',
       change: replacementChange,
       taskId: replacementTaskId,
+      awaitingValidation: false,
     });
 
     const cleared = await toolHarness.tool('openspec_focus', { action: 'clear' });
@@ -1748,6 +1768,113 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
   }
 });
 
+test('openspec focus validation flag round-trips and degrades for legacy entries', () => {
+  const legacy = parseOpenSpecFocus({ mode: 'task', change, taskId });
+  assert.ok(legacy);
+  assert.deepEqual(legacy, { mode: 'task', change, taskId, awaitingValidation: false });
+
+  const validated = parseOpenSpecFocus({
+    mode: 'task',
+    change,
+    taskId,
+    awaitingValidation: true,
+  });
+  assert.ok(validated?.mode === 'task');
+  assert.equal(validated.awaitingValidation, true);
+  assert.equal(sameOpenSpecFocus(legacy, validated), false);
+  assert.equal(sameTaskFocus(legacy, validated), true);
+
+  const restored = restoreOpenSpecFocus([
+    { type: 'custom', customType: OPEN_SPEC_FOCUS_ENTRY_TYPE, data: { mode: 'none' } },
+    {
+      type: 'custom',
+      customType: OPEN_SPEC_FOCUS_ENTRY_TYPE,
+      data: { mode: 'task', change, taskId, awaitingValidation: true },
+    },
+  ]);
+  assert.deepEqual(restored, {
+    mode: 'task',
+    change,
+    taskId,
+    awaitingValidation: true,
+  });
+});
+
+test('openspec_focus validate marks awaiting Human validation and auto-clears', async () => {
+  const harness = new RuntimeHarness();
+  const commandHarness = new RuntimeHarness();
+  try {
+    await harness.emit('session_start', { reason: 'startup' });
+
+    const bare = await harness.tool('openspec_focus', { action: 'validate' });
+    assert.equal(bare.details.ok, false);
+    assert.match(bare.content[0].text, /Error:.*no task to validate/iu);
+
+    const focused = await harness.tool('openspec_focus', {
+      action: 'set',
+      change,
+      task: taskId,
+    });
+    assert.equal(focused.details.ok, true);
+    assert.equal(focused.details.focus.awaitingValidation, false);
+
+    const validated = await harness.tool('openspec_focus', { action: 'validate' });
+    assert.equal(validated.details.ok, true);
+    assert.match(validated.content[0].text, /awaiting Human validation/u);
+    assert.equal(validated.details.focus.awaitingValidation, true);
+    assert.deepEqual(harness.entries.at(-1)?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: true,
+    });
+    assert.equal(latestHeaderWork(harness)?.lifecycle, 'waiting');
+
+    const resecured = await harness.tool('openspec_focus', {
+      action: 'set',
+      change,
+      task: taskId,
+    });
+    assert.equal(resecured.details.ok, true);
+    assert.equal(resecured.details.focus.awaitingValidation, false);
+    assert.deepEqual(harness.entries.at(-1)?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
+
+    const conflict = await harness.tool('openspec_focus', {
+      action: 'set',
+      change: replacementChange,
+      task: replacementTaskId,
+    });
+    assert.equal(conflict.details.ok, false);
+    assert.match(conflict.content[0].text, /use replace/iu);
+
+    const replaced = await harness.tool('openspec_focus', {
+      action: 'replace',
+      change: replacementChange,
+      task: replacementTaskId,
+    });
+    assert.equal(replaced.details.ok, true);
+    assert.equal(replaced.details.focus.awaitingValidation, false);
+
+    await commandHarness.emit('session_start', { reason: 'startup' });
+    await commandHarness.command('openspec-focus', `set ${change} ${taskId}`);
+    await commandHarness.command('openspec-focus', 'validate');
+    assert.deepEqual(commandHarness.entries.at(-1)?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: true,
+    });
+  } finally {
+    await harness.stop();
+    await commandHarness.stop();
+  }
+});
+
 test('/openspec-focus set acquires focus and replace changes it explicitly', async () => {
   const harness = new RuntimeHarness();
   try {
@@ -1758,6 +1885,7 @@ test('/openspec-focus set acquires focus and replace changes it explicitly', asy
       mode: 'task',
       change,
       taskId,
+      awaitingValidation: false,
     });
     await waitFor(
       () => harness.titles.includes(activeTitle),
@@ -1772,6 +1900,7 @@ test('/openspec-focus set acquires focus and replace changes it explicitly', asy
       mode: 'task',
       change: replacementChange,
       taskId: replacementTaskId,
+      awaitingValidation: false,
     });
     await waitFor(
       () => harness.titles.includes(replacementActiveTitle),
@@ -1804,7 +1933,12 @@ test('conflicting /openspec-focus set requires explicit replace', async () => {
       originalFocusEntry,
       'conflicting set must not persist a replacement focus',
     );
-    assert.deepEqual(originalFocusEntry?.data, { mode: 'task', change, taskId });
+    assert.deepEqual(originalFocusEntry?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
     assert.equal(harness.titles.at(-1), activeTitle);
 
     await harness.command(
@@ -1815,6 +1949,7 @@ test('conflicting /openspec-focus set requires explicit replace', async () => {
       mode: 'task',
       change: replacementChange,
       taskId: replacementTaskId,
+      awaitingValidation: false,
     });
     await waitFor(
       () => harness.titles.includes(replacementActiveTitle),
@@ -1989,7 +2124,12 @@ test('malformed Taskflow run inputs preserve an existing focused session', async
 
         assert.equal(result, undefined);
         assert.equal(harness.entries.at(-1), focusEntry);
-        assert.deepEqual(focusEntry?.data, { mode: 'task', change, taskId });
+        assert.deepEqual(focusEntry?.data, {
+          mode: 'task',
+          change,
+          taskId,
+          awaitingValidation: false,
+        });
         assert.equal(harness.titles.at(-1), focusedTitle);
         assert.deepEqual(latestOpenSpecFooterMessage(harness), focusedFooter);
       } finally {
@@ -2020,6 +2160,7 @@ test('nameless Taskflow focus propagates the resolved title once and rejects a c
       mode: 'task',
       change,
       taskId,
+      awaitingValidation: false,
     });
 
     await waitFor(
@@ -2148,7 +2289,12 @@ test('Taskflow success, pause, and approval waiting preserve focus, title, and f
         await harness.emit(scenario.eventName, scenario.event);
 
         assert.equal(harness.entries.at(-1), focusEntry);
-        assert.deepEqual(focusEntry?.data, { mode: 'task', change, taskId });
+        assert.deepEqual(focusEntry?.data, {
+          mode: 'task',
+          change,
+          taskId,
+          awaitingValidation: false,
+        });
         assert.equal(
           harness.titles.at(-1),
           activeTitle,
@@ -2215,7 +2361,12 @@ test('unrelated and failed or blocked Taskflow-adjacent events retain focus', as
 
     assert.equal((blocked as { block?: boolean } | undefined)?.block, true);
     assert.equal(harness.entries.at(-1), focusEntry);
-    assert.deepEqual(focusEntry?.data, { mode: 'task', change, taskId });
+    assert.deepEqual(focusEntry?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
     assert.equal(harness.titles.at(-1), activeTitle);
   } finally {
     await harness.stop();
@@ -2388,7 +2539,7 @@ test('OpenSpec, Session Work, and fallback title precedence stays explicit', () 
   );
   assert.equal(
     formatActiveWorkTitle({
-      focus: { mode: 'task', change, taskId },
+      focus: { mode: 'task', change, taskId, awaitingValidation: false },
       ...common,
     }),
     `π  ${change} › ${taskId}`,
@@ -2404,7 +2555,7 @@ test('OpenSpec stays authoritative over Session Work title focus', () => {
 
   assert.equal(
     formatActiveWorkTitle({
-      focus: { mode: 'task', change, taskId },
+      focus: { mode: 'task', change, taskId, awaitingValidation: false },
       ...common,
     }),
     `π  ${change} › ${taskId}`,
@@ -2454,7 +2605,12 @@ test('focused hostile headlines are sanitized and bounded independently', async 
 
 test('the overall title bound is exactly 180 Unicode code points', () => {
   const title = formatActiveWorkTitle({
-    focus: { mode: 'task', change: '🛰'.repeat(500), taskId },
+    focus: {
+      mode: 'task',
+      change: '🛰'.repeat(500),
+      taskId,
+      awaitingValidation: false,
+    },
     cwd: '/work/cwd-choice',
   });
 

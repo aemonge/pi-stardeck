@@ -1,0 +1,14 @@
+schema: spec
+created: 2026-10-30
+goal: Consolidate the session cockpit to openspec_focus + title, fold validation
+  into focus, make stages inference-only, and move enforcement into
+  agent-visible channels
+x-status: proposed
+x-created-by: assistant
+
+granted: brainstorm,investigate,plan
+granted_brainstorm: 2026-10-30T12:00:10Z
+
+granted_investigate: 2026-10-30T12:01:45Z
+
+granted_plan: 2026-10-30T12:04:35Z

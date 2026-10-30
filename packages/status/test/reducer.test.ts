@@ -44,7 +44,12 @@ test('resolver priority: openspec-task beats all others', () => {
     {
       type: 'focus/openspec',
       at: 4,
-      focus: { mode: 'task', change: 'chg', taskId: '2' },
+      focus: {
+        mode: 'task',
+        change: 'chg',
+        taskId: '2',
+        awaitingValidation: false,
+      },
     },
   ]);
   assert.deepEqual(snapshot.selection, {
@@ -102,7 +107,12 @@ test('derived title projects each selection kind (derived-only rule)', () => {
         {
           type: 'focus/openspec',
           at: 1,
-          focus: { mode: 'task', change: 'chg', taskId: '3' },
+          focus: {
+            mode: 'task',
+            change: 'chg',
+            taskId: '3',
+            awaitingValidation: false,
+          },
         },
       ]),
     ),

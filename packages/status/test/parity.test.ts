@@ -33,7 +33,12 @@ const openSpec: OpenSpecState = {
 const subject = { state: 'set' as const, title: 'Session subject' };
 const work = { state: 'active' as const, intent: 'Freeze the contract' };
 const workValidation = { state: 'validation' as const, intent: 'Freeze the contract' };
-const taskFocus = { mode: 'task' as const, change: 'closed-loop', taskId: '2' };
+const taskFocus = {
+  mode: 'task' as const,
+  change: 'closed-loop',
+  taskId: '2',
+  awaitingValidation: false,
+};
 
 function span(overrides: Partial<RunSpan> = {}): RunSpan {
   return {

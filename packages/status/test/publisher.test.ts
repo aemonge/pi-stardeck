@@ -809,7 +809,12 @@ test('header events carry the title state only when provided', () => {
   });
   const midWork = buildTitleState({
     subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
-    focus: { mode: 'task', change: 'closed-loop', taskId: '1.2' },
+    focus: {
+      mode: 'task',
+      change: 'closed-loop',
+      taskId: '1.2',
+      awaitingValidation: false,
+    },
     openspec: openSpec,
     activity: {
       class: 'editing',

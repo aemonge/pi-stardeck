@@ -222,21 +222,36 @@ test('builder reads the subject entry and renders idle work as null', () => {
 test('builder derives task-focused work with hierarchy counts', () => {
   assert.deepEqual(
     deriveTitleWork(
-      { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
+      {
+        mode: 'task',
+        change: 'eight-section-deck',
+        taskId: '1.2',
+        awaitingValidation: false,
+      },
       openSpec,
     ),
     { change: 'eight-section-deck', task: '1.2', done: 1, total: 4 },
   );
   assert.deepEqual(
     deriveTitleWork(
-      { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
+      {
+        mode: 'task',
+        change: 'eight-section-deck',
+        taskId: '1.2',
+        awaitingValidation: false,
+      },
       { ...openSpec, changeId: 'other-change' },
     ),
     { change: 'eight-section-deck', task: '1.2' },
   );
   assert.deepEqual(
     deriveTitleWork(
-      { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
+      {
+        mode: 'task',
+        change: 'eight-section-deck',
+        taskId: '1.2',
+        awaitingValidation: false,
+      },
       undefined,
     ),
     { change: 'eight-section-deck', task: '1.2' },
@@ -251,7 +266,12 @@ test('derives work with schema and the OpenSpec-named rung', () => {
   };
   assert.deepEqual(
     deriveTitleWork(
-      { mode: 'task', change: 'eight-section-deck', taskId: '1.2' },
+      {
+        mode: 'task',
+        change: 'eight-section-deck',
+        taskId: '1.2',
+        awaitingValidation: false,
+      },
       rich,
     ),
     {
@@ -303,7 +323,12 @@ test('shortenTitleTarget bounds live labels to 120 characters', () => {
 test('builder output round-trips through the defensive parser', () => {
   const built = buildTitleState({
     subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
-    focus: { mode: 'task', change: 'eight-section-deck', taskId: '1.1' },
+    focus: {
+      mode: 'task',
+      change: 'eight-section-deck',
+      taskId: '1.1',
+      awaitingValidation: false,
+    },
     openspec: openSpec,
     activity: {
       class: 'editing',
@@ -324,7 +349,12 @@ test('builder output round-trips through the defensive parser', () => {
 test('debug line prints the compact live title-state JSON', () => {
   const built = buildTitleState({
     subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
-    focus: { mode: 'task', change: 'eight-section-deck', taskId: '1.1' },
+    focus: {
+      mode: 'task',
+      change: 'eight-section-deck',
+      taskId: '1.1',
+      awaitingValidation: false,
+    },
     openspec: openSpec,
     activity: {
       class: 'editing',

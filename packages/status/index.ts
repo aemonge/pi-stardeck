@@ -20,6 +20,7 @@ import {
   sameOpenSpecFocus,
   sameSessionSubject,
   sameSessionWorkFocus,
+  sameTaskFocus,
   SESSION_SUBJECT_ENTRY_TYPE,
   SESSION_WORK_FOCUS_ENTRY_TYPE,
   type SessionSubject,
@@ -90,7 +91,7 @@ import type {
 
 type SessionContext = ExtensionContext | ExtensionCommandContext;
 type Domain = RuntimeErrorRecord['domain'];
-type OpenSpecFocusAction = 'status' | 'set' | 'replace' | 'clear';
+type OpenSpecFocusAction = 'status' | 'set' | 'replace' | 'validate' | 'clear';
 
 type StatusHealthCondition = {
   id: string;
@@ -229,9 +230,13 @@ class GalacticaStatusRuntime {
     this.workFocus = workFocus;
     this.subject = subject;
     this.sessionName = sessionName;
-    this.liveLifecycle = workFocus.state === 'validation' ? 'waiting' : 'listening';
-    this.liveActivity =
-      workFocus.state === 'validation' ? { kind: 'awaiting-validation' } : undefined;
+    const restoredAwaitingValidation =
+      (focus.mode === 'task' && focus.awaitingValidation) ||
+      workFocus.state === 'validation';
+    this.liveLifecycle = restoredAwaitingValidation ? 'waiting' : 'listening';
+    this.liveActivity = restoredAwaitingValidation
+      ? { kind: 'awaiting-validation' }
+      : undefined;
     this.store = new AtomicStatusStore({
       cwd: ctx.cwd,
       projectRoot: ctx.cwd,
@@ -729,6 +734,11 @@ class GalacticaStatusRuntime {
     this.focus = focus;
     this.recordEvent({ type: 'focus/openspec', at: Date.now(), focus });
     this.store.clearOpenSpec();
+    if (focus.mode === 'task' && focus.awaitingValidation) {
+      this.setLiveProjection('waiting', { kind: 'awaiting-validation' });
+    } else if (focus.mode === 'none' && this.workFocus.state === 'clear') {
+      this.setLiveProjection('listening');
+    }
     this.publish();
     this.launch(this.refresh(false), 'openspec');
   }
@@ -1178,16 +1188,14 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     taskId?: string,
   ): { ok: boolean; message: string; focus: OpenSpecFocus } {
     const current = runtime?.currentFocus() ?? NO_OPEN_SPEC_FOCUS;
+    const statusMessage = (focus: OpenSpecFocus): string =>
+      focus.mode === 'task'
+        ? `OpenSpec focus: ${focus.change} › ${focus.taskId}` +
+          (focus.awaitingValidation ? ' — awaiting Human validation' : '')
+        : 'OpenSpec focus: none';
 
     if (action === 'status') {
-      return {
-        ok: true,
-        message:
-          current.mode === 'task'
-            ? `OpenSpec focus: ${current.change} › ${current.taskId}`
-            : 'OpenSpec focus: none',
-        focus: current,
-      };
+      return { ok: true, message: statusMessage(current), focus: current };
     }
     if (action === 'clear') {
       persistAndApplyFocus(NO_OPEN_SPEC_FOCUS);
@@ -1196,6 +1204,18 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
         message: 'OpenSpec focus cleared',
         focus: NO_OPEN_SPEC_FOCUS,
       };
+    }
+    if (action === 'validate') {
+      if (current.mode !== 'task') {
+        return {
+          ok: false,
+          message: 'OpenSpec focus has no task to validate',
+          focus: current,
+        };
+      }
+      const validated = { ...current, awaitingValidation: true };
+      if (!sameOpenSpecFocus(current, validated)) persistAndApplyFocus(validated);
+      return { ok: true, message: statusMessage(validated), focus: validated };
     }
 
     const requested = taskFocus(change, taskId);
@@ -1209,7 +1229,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     if (
       action === 'set' &&
       current.mode === 'task' &&
-      !sameOpenSpecFocus(current, requested)
+      !sameTaskFocus(current, requested)
     ) {
       return {
         ok: false,
@@ -1222,7 +1242,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     if (!sameOpenSpecFocus(current, requested)) persistAndApplyFocus(requested);
     return {
       ok: true,
-      message: `OpenSpec focus: ${requested.change} › ${requested.taskId}`,
+      message: statusMessage(requested),
       focus: requested,
     };
   }
@@ -1463,14 +1483,14 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     name: 'openspec_focus',
     label: 'OpenSpec Focus',
     description:
-      'Show, safely set, deliberately replace, or clear branch-local OpenSpec Task focus',
+      'Show, safely set, deliberately replace, validate, or clear branch-local OpenSpec Task focus',
     promptSnippet:
       'Manage exact branch-local OpenSpec Task focus with replacement safeguards',
     promptGuidelines: [
       'Use openspec_focus only for explicit Human direction or an exact declared OpenSpec Task handoff; never infer material Plan selection or Human validation.',
     ],
     parameters: Type.Object({
-      action: StringEnum(['status', 'set', 'replace', 'clear'] as const),
+      action: StringEnum(['status', 'set', 'replace', 'validate', 'clear'] as const),
       change: Type.Optional(
         Type.String({
           description: 'Required for set and replace: the exact OpenSpec change ID',
@@ -1541,6 +1561,12 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
       if (parts.length === 1 && parts[0]?.toLowerCase() === 'clear') {
         const result = applyOpenSpecFocusAction('clear');
         ctx.ui.notify(result.message, 'info');
+        return;
+      }
+
+      if (parts.length === 1 && parts[0]?.toLowerCase() === 'validate') {
+        const result = applyOpenSpecFocusAction('validate');
+        ctx.ui.notify(result.message, result.ok ? 'info' : 'warning');
         return;
       }
 

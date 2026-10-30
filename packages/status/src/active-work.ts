@@ -8,6 +8,7 @@ export type TaskOpenSpecFocus = {
   mode: 'task';
   change: string;
   taskId: string;
+  awaitingValidation: boolean;
 };
 
 export type OpenSpecFocus = { mode: 'none' } | TaskOpenSpecFocus;
@@ -52,18 +53,24 @@ function explicitId(value: unknown): string | undefined {
 export function taskFocus(
   change: unknown,
   taskId: unknown,
+  awaitingValidation?: unknown,
 ): TaskOpenSpecFocus | undefined {
   const normalizedChange = explicitId(change);
   const normalizedTaskId = explicitId(taskId);
   if (!normalizedChange || !normalizedTaskId) return undefined;
-  return { mode: 'task', change: normalizedChange, taskId: normalizedTaskId };
+  return {
+    mode: 'task',
+    change: normalizedChange,
+    taskId: normalizedTaskId,
+    awaitingValidation: awaitingValidation === true,
+  };
 }
 
 export function parseOpenSpecFocus(value: unknown): OpenSpecFocus | undefined {
   if (!isRecord(value)) return undefined;
   if (value.mode === 'none') return NO_OPEN_SPEC_FOCUS;
   if (value.mode !== 'task') return undefined;
-  return taskFocus(value.change, value.taskId);
+  return taskFocus(value.change, value.taskId, value.awaitingValidation);
 }
 
 export function sessionWorkFocus(
@@ -162,13 +169,26 @@ export function taskflowRunFocus(input: unknown): TaskOpenSpecFocus | undefined 
     : undefined;
 }
 
-export function sameOpenSpecFocus(left: OpenSpecFocus, right: OpenSpecFocus): boolean {
+/** Task identity (mode · change · taskId) — the replace-safeguard's
+ *  question; the validation flag is state, not identity. */
+export function sameTaskFocus(left: OpenSpecFocus, right: OpenSpecFocus): boolean {
   if (left.mode !== right.mode) return false;
   return (
     left.mode === 'none' ||
     (right.mode === 'task' &&
       left.change === right.change &&
       left.taskId === right.taskId)
+  );
+}
+
+export function sameOpenSpecFocus(left: OpenSpecFocus, right: OpenSpecFocus): boolean {
+  if (left.mode !== right.mode) return false;
+  return (
+    left.mode === 'none' ||
+    (right.mode === 'task' &&
+      left.change === right.change &&
+      left.taskId === right.taskId &&
+      left.awaitingValidation === right.awaitingValidation)
   );
 }
 
