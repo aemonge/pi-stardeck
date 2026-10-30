@@ -1098,12 +1098,10 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   }
 
   function subjectStatus(subject: SessionSubject): string {
-    return subject.state === 'clear'
-      ? 'Session subject: clear'
-      : `Session subject: ${subject.title}`;
+    return subject.state === 'clear' ? 'Title: clear' : `Title: ${subject.title}`;
   }
 
-  function applySubjectAction(
+  function applyTitleAction(
     action: 'status' | 'set',
     title?: string,
   ): { ok: boolean; message: string; subject: SessionSubject } {
@@ -1117,7 +1115,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     if (!next || next.state !== 'set') {
       return {
         ok: false,
-        message: 'Session subject requires a non-empty title',
+        message: 'Title requires a non-empty title',
         subject: current,
       };
     }
@@ -1446,14 +1444,11 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: 'subject',
-    label: 'Session Subject',
+    name: 'title',
+    label: 'Session Title',
     description:
-      'Show or set the sanitized session subject that keeps the focus row populated beneath OpenSpec and Session Work',
-    promptSnippet: 'Manage the automatic session subject title',
-    promptGuidelines: [
-      'Author a short sanitized subject (at most 120 characters, never raw prompt text) at the first conversational turn; revise it only when the topic clearly shifts. Never require Human action for it.',
-    ],
+      'Show or set the sanitized session title that keeps the focus row populated beneath OpenSpec and Session Work. Call this at the first conversational turn with a short sanitized title (at most 120 characters, never raw prompt text) and revise it only when the topic clearly shifts; never require Human action for it',
+    promptSnippet: 'Manage the automatic session title',
     parameters: Type.Object({
       action: StringEnum(['status', 'set'] as const),
       title: Type.Optional(
@@ -1463,7 +1458,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
       ),
     }),
     async execute(_toolCallId, params) {
-      const result = applySubjectAction(params.action, params.title);
+      const result = applyTitleAction(params.action, params.title);
       return {
         content: [
           {
@@ -1483,12 +1478,9 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     name: 'openspec_focus',
     label: 'OpenSpec Focus',
     description:
-      'Show, safely set, deliberately replace, validate, or clear branch-local OpenSpec Task focus',
+      'Show, safely set, deliberately replace, validate, or clear branch-local OpenSpec Task focus. Use only for explicit Human direction or an exact declared OpenSpec Task handoff; never infer material Plan selection or Human validation',
     promptSnippet:
       'Manage exact branch-local OpenSpec Task focus with replacement safeguards',
-    promptGuidelines: [
-      'Use openspec_focus only for explicit Human direction or an exact declared OpenSpec Task handoff; never infer material Plan selection or Human validation.',
-    ],
     parameters: Type.Object({
       action: StringEnum(['status', 'set', 'replace', 'validate', 'clear'] as const),
       change: Type.Optional(

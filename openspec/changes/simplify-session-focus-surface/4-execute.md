@@ -17,8 +17,45 @@
 - [x] flag lifecycle, projection wiring, old-entry compat tests
       started_at: 2026-10-30T12:08:00Z · ended_at: 2026-10-30T12:26:00Z · total: — · check: 2 new tests + 16 updated assertions across parity/publisher/reducer/title-state suites, all green · paths: packages/status/test/
 - [x] feat(status): fold awaiting-validation into openspec focus
+      hash: 20b47ad9105bcfc28f213b7dac9dcd0e485a11de
+
+## Slice 2 — Rename subject to title; rules move into descriptions
+
+- [x] registration renamed to `title`; description carries the first-turn rule
+      started_at: 2026-10-30T12:28:00Z · ended_at: 2026-10-30T12:36:00Z · total: ~8m · check: tsc clean · prettier clean · 173 status tests · description-content pins green · paths: packages/status/index.ts
+- [x] both `promptGuidelines` arrays dropped; rules live in descriptions only (single source, per-request salience)
+      started_at: 2026-10-30T12:28:00Z · ended_at: 2026-10-30T12:36:00Z · total: — · check: registration inspection tests · paths: packages/status/index.ts
+- [x] `applySubjectAction`→`applyTitleAction`; messages `Title: …`; promptSnippet updated; persisted entry type unchanged for old-session compat
+      started_at: 2026-10-30T12:28:00Z · ended_at: 2026-10-30T12:36:00Z · total: — · check: title tool test green · paths: packages/status/index.ts, packages/status/test/active-work.test.ts
+- [x] tests: enum + description regression pins (the systematic-bug tombstone); sanitizer cap unchanged; local-load-probe EXPECTED_TOOLS updated
+      started_at: 2026-10-30T12:28:00Z · ended_at: 2026-10-30T12:36:00Z · total: — · check: 173/173 + 24/24 · paths: packages/status/test/active-work.test.ts, test/local-load-probe.test.ts
+- [x] feat(status): rename subject to title and carry rules in tool descriptions
       hash: pending — commit follows this ledger write
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
   gate-attributed · tool: bash · paths: — · at 2026-10-30T12:26:02Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:26:09Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:26:57Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-10-30T12:27:07Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:27:27Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:27:39Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/test/local-load-probe.test.ts · at 2026-10-30T12:27:45Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:27:51Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:28:17Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:28:22Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-10-30T12:28:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:28:47Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T12:29:25Z

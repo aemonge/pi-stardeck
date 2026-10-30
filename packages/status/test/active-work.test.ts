@@ -30,6 +30,7 @@ type Command = {
 };
 type Tool = {
   parameters: any;
+  description?: string;
   execute: (
     toolCallId: string,
     params: any,
@@ -805,6 +806,38 @@ test('session_info_changed immediately propagates an unfocused session rename', 
   } finally {
     await harness.stop();
   }
+});
+
+test('title exposes one provider-safe string action enum and carries the first-turn rule in its description', () => {
+  const harness = new RuntimeHarness();
+  const tool = harness.tools.get('title');
+  assert.ok(tool, 'title should be registered');
+  assert.equal(harness.tools.has('subject'), false, 'subject is retired');
+
+  const action = tool.parameters.properties.action as {
+    type?: string;
+    enum?: unknown[];
+    anyOf?: unknown;
+  };
+  assert.equal(action.type, 'string');
+  assert.deepEqual(new Set(action.enum), new Set(['status', 'set']));
+  assert.equal('anyOf' in action, false);
+
+  // The systematic-bug tombstone: the first-turn behavioral rule must live in
+  // the description (per-request salience), never only in promptGuidelines.
+  const description = tool.description ?? '';
+  assert.match(description, /first conversational turn/iu);
+  assert.match(description, /120/u);
+  assert.match(description, /never raw prompt text/u);
+});
+
+test('openspec_focus carries the explicit-direction rule in its description', () => {
+  const harness = new RuntimeHarness();
+  const tool = harness.tools.get('openspec_focus');
+  assert.ok(tool, 'openspec_focus should be registered');
+  const description = tool.description ?? '';
+  assert.match(description, /explicit Human direction/u);
+  assert.match(description, /never infer/u);
 });
 
 test('work_focus exposes one provider-safe string action enum', () => {
@@ -1588,16 +1621,16 @@ test('restoreSessionSubject prefers the latest valid subject entry', () => {
   assert.deepEqual(restoreSessionSubject([]), NO_SESSION_SUBJECT);
 });
 
-test('subject tool persists sanitized subjects and restores them on resume', async () => {
+test('title tool persists sanitized titles and restores them on resume', async () => {
   const harness = new RuntimeHarness();
   try {
     await harness.emit('session_start', { reason: 'startup' });
 
-    const missing = await harness.tool('subject', { action: 'set', title: '   ' });
+    const missing = await harness.tool('title', { action: 'set', title: '   ' });
     assert.equal(missing.details.ok, false);
     assert.match(missing.content[0].text, /requires a non-empty title/u);
 
-    const set = await harness.tool('subject', {
+    const set = await harness.tool('title', {
       action: 'set',
       title: '  Shape the never-empty focus row  ',
     });
@@ -1607,17 +1640,14 @@ test('subject tool persists sanitized subjects and restores them on resume', asy
       title: 'Shape the never-empty focus row',
     });
 
-    const stable = await harness.tool('subject', {
+    const stable = await harness.tool('title', {
       action: 'set',
       title: 'Shape the never-empty focus row',
     });
     assert.equal(stable.details.ok, true);
 
-    const status = await harness.tool('subject', { action: 'status' });
-    assert.equal(
-      status.content[0].text,
-      'Session subject: Shape the never-empty focus row',
-    );
+    const status = await harness.tool('title', { action: 'status' });
+    assert.equal(status.content[0].text, 'Title: Shape the never-empty focus row');
 
     const subjectEntries = harness.entries.filter(
       (entry) => entry.customType === 'galactica-status.session-subject.v1',

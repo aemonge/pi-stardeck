@@ -15,7 +15,7 @@ const EXPECTED_COMMANDS = [
   'stardeck-health',
   'work',
 ];
-const EXPECTED_TOOLS = ['openspec_focus', 'stage', 'subject', 'work_focus'];
+const EXPECTED_TOOLS = ['openspec_focus', 'stage', 'title', 'work_focus'];
 
 test('chrome-only deck composition activates header footer and status', () => {
   assert.equal(COCKPIT_SURFACES.contextHeader, 'deck');

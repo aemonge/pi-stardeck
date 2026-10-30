@@ -34,11 +34,11 @@ Ordering: the validation flag lands before `work_focus` dies so the `waiting · 
 
 ### Slice 2 — Rename subject to title; rules move into descriptions
 
-- [ ] rename the registration to `title`; `description` carries the first-turn behavioral rule (≤120 chars, never raw prompt text, revise only on topic shift)
-- [ ] drop both `promptGuidelines` arrays (subject's and openspec_focus's — the explicit-Human-direction rule moves into its description)
-- [ ] rename `applySubjectAction`→`applyTitleAction`, messages `Session subject:`→`Title:`, promptSnippet updated
-- [ ] tests: tool enum, description-content regression pin (the first-turn rule present), sanitizer cap unchanged
-- [ ] commit `feat(status): rename subject to title and carry rules in tool descriptions` · validation: new session, first turn, agent calls `title` unprompted; row renders
+- [x] rename the registration to `title`; `description` carries the first-turn behavioral rule (≤120 chars, never raw prompt text, revise only on topic shift)
+- [x] drop both `promptGuidelines` arrays (subject's and openspec_focus's — the explicit-Human-direction rule moves into its description)
+- [x] rename `applySubjectAction`→`applyTitleAction`, messages `Session subject:`→`Title:`, promptSnippet updated
+- [x] tests: tool enum, description-content regression pin (the first-turn rule present), sanitizer cap unchanged
+- [x] commit `feat(status): rename subject to title and carry rules in tool descriptions` · validation: new session, first turn, agent calls `title` unprompted; row renders
 
 ### Slice 3 — Retire work_focus and stage instruments
 
