@@ -45,9 +45,9 @@
 - [x] tests: retirement assertions, legacy restore, local-load-probe expectations (2 tools, 6 commands)
       started_at: 2026-10-30T12:40:00Z · ended_at: 2026-10-30T13:05:00Z · total: — · check: 195/195 across suites · paths: packages/status/test/, test/local-load-probe.test.ts
 - [x] feat(status): retire work_focus and stage instruments
-      hash: pending — commit follows this ledger write
+      hash: 566bfbec7368630decb0f49cea80f89e74e93126
 
-- [ ] Human validation — response: · outcome: · surfaced:
+- [x] Human validation — response: VALID (Human reply: "VALID - commit and i'll push and publish") · outcome: change accepted; push and publish owned by the Human · surfaced: lint debt (eslint/biome need a real pnpm install), gate `accountingTools` + loop-prompt locksteps still open as follow-up briefs, ephemeral gitignored `node_modules` symlinks are local check scaffolding
 
   gate-attributed · tool: bash · paths: — · at 2026-10-30T12:26:02Z
 
@@ -132,3 +132,13 @@
   gate-attributed · tool: bash · paths: — · at 2026-10-30T12:42:12Z
 
   gate-attributed · tool: bash · paths: — · at 2026-10-30T12:42:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T13:22:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T13:22:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T13:22:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T13:22:32Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-10-30T13:23:17Z
