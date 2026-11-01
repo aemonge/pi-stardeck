@@ -14,8 +14,6 @@ import {
   restoreSessionSubject,
   restoreSessionWorkFocus,
   sameOpenSpecFocus,
-  sameSessionSubject,
-  sameSessionWorkFocus,
   sameTaskFocus,
   sessionSubject,
   sessionWorkFocus,

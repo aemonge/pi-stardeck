@@ -5,7 +5,6 @@ import type { LspCapability, McpCapability } from './capabilities.ts';
 import type {
   FooterTelemetrySnapshot,
   GitStatusSummary,
-  HeaderActivity,
   HeaderSnapshot,
   PiStatusSnapshot,
   VimMode,
