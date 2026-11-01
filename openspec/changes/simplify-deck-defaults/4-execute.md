@@ -5,10 +5,10 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 
 ## Slice 1 — A: restore Pi's default working indicator
 
-- [ ] delete `ctx.ui.setWorkingVisible(false)`; keep the TUI-guarded timer setup
-- [ ] README hide-working paragraph rewritten
-- [ ] Commit — fix(pi-stardeck): restore Pi's default working indicator
-      hash:
+- [x] delete `ctx.ui.setWorkingVisible(false)`; keep the TUI-guarded timer setup
+- [x] README hide-working paragraph rewritten
+- [x] Commit — fix(pi-stardeck): restore Pi's default working indicator
+      hash: b636a3a
 
 ## Slice 2 — B: auto-set the session title from the first user prompt
 
@@ -74,3 +74,35 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:27:09Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:27:19Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/deck.ts · at 2026-11-01T10:27:55Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:28:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:28:23Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:28:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:28:40Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:28:59Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-01T10:32:09Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-01T10:32:40Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/gauge.test.ts · at 2026-11-01T10:32:40Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-01T10:33:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:33:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:33:40Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:33:49Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-01T10:34:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:34:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:34:37Z

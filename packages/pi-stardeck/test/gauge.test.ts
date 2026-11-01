@@ -336,9 +336,11 @@ test('extension never converts Human prompt text into title focus', () => {
   );
 });
 
-test('hides Pi working row and wires foreground activity-age lifecycle', () => {
+test('leaves Pi working row as-is and wires foreground activity-age lifecycle', () => {
   const extensionSource = readFileSync(new URL('../index.ts', import.meta.url), 'utf8');
-  assert.match(extensionSource, /ctx\.ui\.setWorkingVisible\(false\)/u);
+  // simplify-deck-defaults: Pi's native Working… row stays exactly as the
+  // core renders it — the deck never suppresses native indicators.
+  assert.doesNotMatch(extensionSource, /setWorkingVisible/u);
   for (const event of [
     'turn_start',
     'before_provider_request',

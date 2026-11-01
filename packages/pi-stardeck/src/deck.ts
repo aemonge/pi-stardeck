@@ -279,82 +279,34 @@ function spanTreeRows(state: HeaderDeckState, width: number, theme: Theme): stri
   });
 }
 
-const ACTIVITY_LABELS: Record<HeaderActivity['kind'], string> = {
-  understanding: 'interpreting',
-  inspection: 'inspecting',
-  synthesis: 'synthesizing',
-  planning: 'planning',
-  'skill-proposal': 'proposing skill',
-  mutation: 'updating',
-  implementation: 'implementing',
-  'change-review': 'reviewing change',
-  regression: 'testing',
-  verification: 'checking',
-  'result-review': 'reviewing result',
-  answering: 'answering',
-  recovery: 'recovering',
-  'awaiting-validation': 'validation',
-  'awaiting-input': 'input',
-  'operation-aborted': 'stopped',
-};
-
-function activityLabel(state: HeaderDeckState): string {
-  const pathActivity = state.header?.work?.activityPath?.at(-1);
-  const pathLabel = safeText(pathActivity?.compact || pathActivity?.label || '');
-  if (pathLabel) return pathLabel;
-  const activity = state.header?.work?.activity;
-  // `awaiting-*` kinds are the rest face — they never speak for the band
-  // (a focused session still retires; quiet-activity-row amendment).
-  if (!activity || activity.kind.startsWith('awaiting-')) return '';
-  return ACTIVITY_LABELS[activity.kind];
-}
-
-/** `editing deck.ts` / `reading schema.yaml` / `subagent: scout`. */
+/** The band speaks only when an observed activity is live — one of the
+ * five title-state classes (editing/reading/grepping/bash/subagent).
+ * Fabricated phase words (`interpreting`, `planning`, …), the legacy
+ * activity projection, and the `awaiting Human` placeholder are gone
+ * (Human-directed simplify-deck-defaults): Pi's restored native working
+ * indicator owns mid-turn liveness, and the deck narrates only observed
+ * reality. */
 function titleActivityLabel(activity: { class: string; target: string }): string {
   return activity.class === 'subagent'
     ? `subagent: ${activity.target}`
     : `${activity.class} ${activity.target}`;
 }
 
-/** The line-3 band speaks when either side carries a real signal:
- * an observed activity (title-state or legacy) or a turn meter that
- * cost tokens or time. Both idle (`awaiting Human` + `— · 0 tok` or
- * no meter) is zero activity — the band and its seam retire
- * (Human-directed 2026-10-20, quiet-activity-row). */
-/** Live phase word from the header's kind-based activity projection —
- * fills the gaps between tools (thinking, planning, checking) so the
- * band never claims `awaiting Human` mid-turn. The `awaiting-*` kinds
- * are the REST face (awaiting Human review/input after settle): they
- * never speak for the band, or a focused session would never rest
- * (quiet-activity-row amendment). */
-function liveKindLabel(state: HeaderDeckState): string {
-  const activity = state.header?.activity ?? null;
-  if (!activity || activity.kind.startsWith('awaiting-')) return '';
-  return ACTIVITY_LABELS[activity.kind] ?? '';
-}
-
-/** The band's current left label: the precise title-state activity when a
- * tool is observed, else the live phase word; empty when truly idle. */
+/** The band's current label: the live observed activity; empty when
+ * nothing is observed — the band then retires wholesale. */
 function observedActivityLabel(state: HeaderDeckState): string {
-  const title = state.header?.title ?? null;
-  if (title) {
-    return title.activity ? titleActivityLabel(title.activity) : liveKindLabel(state);
-  }
-  return activityLabel(state) || liveKindLabel(state);
+  const activity = state.header?.title?.activity ?? null;
+  return activity ? titleActivityLabel(activity) : '';
 }
 
 function activityBandSpeaks(state: HeaderDeckState): boolean {
-  const activitySpeaks = observedActivityLabel(state) !== '';
-  const turn = state.header?.turn ?? null;
-  const costSpeaks = turn !== null && (turn.tokens > 0 || turn.elapsedMs > 0);
-  return activitySpeaks || costSpeaks;
+  return observedActivityLabel(state) !== '';
 }
 
 function activityTile(state: HeaderDeckState, theme: Theme): string {
-  // Line 3 left: the observed activity owns the slot — the live phase word
-  // between tools, `awaiting Human` only when the session truly rests.
-  const label = observedActivityLabel(state);
-  return label ? color(theme, 'text', label) : color(theme, 'dim', 'awaiting Human');
+  // Line 3 left: the observed activity owns the slot; the turn cluster
+  // rides its right side and retires with it.
+  return color(theme, 'text', observedActivityLabel(state));
 }
 
 function turnCostTile(state: HeaderDeckState, theme: Theme): string {

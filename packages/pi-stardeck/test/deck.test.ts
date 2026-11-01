@@ -407,16 +407,12 @@ test('keeps activity and focus distinct on the title row', () => {
   state.header!.suggestion = 'requesting-validation';
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const activityRow = plain(lines[4] ?? '');
-  // Line 3 (four-line deck): the legacy observed activity owns the slot —
-  // the stage label and suggestion cue are gone (accepted mockups).
-  assert.ok(activityRow.trimEnd().endsWith('verify'));
-  assert.equal(activityRow.includes('assuring'), false);
-  assert.equal(activityRow.includes('requesting validation or redirection'), false);
+  // Pure band: the legacy activity projection no longer narrates line 3 —
+  // the row retires and the title row stays the only narrative surface.
+  assert.equal(lines.some((line) => plain(line).includes('verify')), false);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith('Plan title › Current task'));
   assert.equal(titleRow.includes("000:07'00"), false);
-  assert.equal(lines.join('\n').split('Running checks').length - 1, 0);
 });
 
 test('gives the complete selected scope a bounded full-width focus canvas', () => {
@@ -530,21 +526,13 @@ test('bolds only current control and status anchors', () => {
   }
 });
 
-test('colors the legacy activity label on line 3 and keeps nothing bold', () => {
-  const state = fixture();
-  state.header!.work = {
-    lifecycle: 'assuring',
-    titles: ['Plan title', 'Current task'],
-    color: 'accent',
-    activityPath: [{ id: 'verification', label: 'Running checks', compact: 'verify' }],
-  };
-  state.header!.selection = {
-    source: 'openspec',
-    titles: ['Plan title', 'Current task'],
-    color: 'accent',
-  };
-  state.header!.suggestion = 'requesting-validation';
-  state.header!.approvalRequired = false;
+test('colors the observed activity label on line 3 and keeps nothing bold', () => {
+  const state = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      activity: { class: 'grepping', target: 'verify', span: 'g1', parent: null },
+    },
+  });
   const colors: string[] = [];
   const bolded: string[] = [];
   const theme = {
@@ -560,57 +548,62 @@ test('colors the legacy activity label on line 3 and keeps nothing bold', () => 
 
   renderHeaderDeck(state, 160, theme as never);
 
-  assert.ok(colors.includes('text:verify'));
-  assert.ok(colors.includes('accent:Plan title › Current task'));
-  assert.equal(bolded.includes('verify'), false);
-  assert.equal(bolded.includes('assuring'), false);
+  assert.ok(colors.includes('text:grepping verify'));
+  assert.ok(colors.some((entry) => entry.startsWith('accent:Pivot cockpit')));
+  assert.equal(bolded.includes('grepping verify'), false);
 });
 
-test('renders every legacy activity class on line 3 without stage narration', () => {
-  const state = fixture();
-  state.header!.selection = null;
-  state.header!.work = {
+test('renders every observed activity class on line 3 without narration', () => {
+  for (const [class_, target, expected] of [
+    ['editing', 'deck.ts', 'editing deck.ts'],
+    ['reading', 'schema.yaml', 'reading schema.yaml'],
+    ['grepping', 'title-state', 'grepping title-state'],
+    ['bash', 'npm test', 'bash npm test'],
+    ['subagent', 'scout', 'subagent: scout'],
+  ] as const) {
+    const state = titleFixture({
+      title: {
+        ...IDLE_TITLE,
+        activity: { class: class_, target, span: 't1', parent: null },
+      },
+    });
+    const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+    assert.ok(lines.some((line) => line.includes(expected)), expected);
+    assert.equal(lines.some((line) => line.includes('working')), false);
+  }
+
+  // The legacy work-activity projection never narrates: a kind word is
+  // not an observation.
+  const legacy = fixture();
+  legacy.header!.work = {
     lifecycle: 'working',
     titles: ['Repair runtime state'],
     color: 'accent',
     activity: { kind: 'recovery' },
   };
-  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const activityRow = lines[4] ?? '';
-  assert.ok(activityRow.includes('recovering'));
-  assert.equal(activityRow.includes('working'), false);
-
-  // quiet-activity-row: idle without observed activity retires the band.
-  state.header!.work = null;
-  const idle = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  assert.equal(
-    idle.some((line) => line.includes('awaiting Human')),
-    false,
-  );
+  const idle = renderHeaderDeck(legacy, 160, plainTheme as never).map(plain);
+  assert.equal(idle.some((line) => line.includes('recovering')), false);
+  assert.equal(idle.some((line) => line.includes('awaiting Human')), false);
 });
 
 test('reports the observed activity on line 3 while active without a cue', () => {
-  const state = fixture();
-  state.header!.work = {
-    lifecycle: 'working',
-    titles: ['Plan title', 'Current task'],
-    color: 'accent',
-    activity: { kind: 'implementation' },
-  };
-  state.header!.selection = null;
+  const state = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      activity: { class: 'bash', target: 'npm run build', span: 'b1', parent: null },
+    },
+  });
   state.header!.suggestion = null;
-  state.header!.approvalRequired = false;
-  state.header!.blocked = false;
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
   const activityRow = plain(lines[4] ?? '');
 
-  assert.ok(activityRow.trimEnd().endsWith('implementing'));
+  assert.ok(activityRow.includes('bash npm run build'));
   assert.equal(activityRow.includes('step 7/16'), false);
   assert.equal(activityRow.includes('requesting'), false);
-  // Without a selection the dim no-subject hint leads line 2.
-  assert.ok(plain(lines[2] ?? '').startsWith('— no subject'));
-  assert.doesNotMatch(plain(lines[2] ?? ''), /Plan title/u);
+  // The subject leads line 2; the activity never echoes onto it.
+  assert.ok(plain(lines[2] ?? '').startsWith('Pivot cockpit'));
+  assert.doesNotMatch(plain(lines[2] ?? ''), /npm run build/u);
 });
 
 test('renders the selected work title exactly once across the deck', () => {
@@ -1179,9 +1172,9 @@ test('wraps a long subject onto a continuation line', () => {
 
 const TURN_MIDWORK = { tokens: 4_200, elapsedMs: 38_000 };
 
-test('hides the idle line-3 band; a speaking meter restores it', () => {
-  // quiet-activity-row: `awaiting Human` + `— · 0 tok` is zero activity —
-  // the band and its seam retire; real cost keeps the band speaking.
+test('hides the idle line-3 band; cost alone no longer restores it', () => {
+  // pure-activity-band: `awaiting Human` + `— · 0 tok` is zero activity,
+  // and cost alone never narrates — only a live observed activity speaks.
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
@@ -1200,20 +1193,28 @@ test('hides the idle line-3 band; a speaking meter restores it', () => {
   const seams = idle.filter((line) => /^┈+$/u.test(line));
   assert.equal(seams.length, 1, 'one seam remains — the status seam');
 
-  const costly = titleFixture({ title: IDLE_TITLE });
+  const costly = titleFixture({
+    title: {
+      ...IDLE_TITLE,
+      activity: { class: 'bash', target: 'npm test', span: 't1', parent: null },
+    },
+  });
   costly.header = {
     ...(costly.header as NonNullable<typeof state.header>),
     turn: TURN_MIDWORK,
   };
   const lines = renderHeaderDeck(costly, 100, plainTheme as never).map(plain);
-  const activityRow = lines.find((line) => line.includes('awaiting Human')) ?? '';
-  assert.ok(activityRow.trimEnd().endsWith("000:38'00 · 4.2k"), 'cost keeps the band');
+  const activityRow = lines.find((line) => line.includes('bash npm test')) ?? '';
+  assert.ok(
+    activityRow.trimEnd().endsWith("000:38'00 · 4.2k"),
+    'the meter rides the live activity',
+  );
 });
 
-test('renders live phase words between tools, never awaiting Human mid-turn', () => {
-  // quiet-activity-row amendment: thinking gaps fall back to the header's
-  // kind-based activity projection — the band appears at turn start with
-  // the phase word and never claims `awaiting Human` while a turn runs.
+test('retires the band between tools; no phase words, never awaiting Human', () => {
+  // pure-activity-band: kind-based phase words are gone. A title without
+  // a live observed activity (thinking gaps, prose streaming) retires
+  // the band — Pi's native working indicator owns those moments.
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
@@ -1221,15 +1222,13 @@ test('renders live phase words between tools, never awaiting Human mid-turn', ()
     turn: { tokens: 0, elapsedMs: 0 },
   };
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  const activityRow = lines.find((line) => line.includes('interpreting')) ?? '';
-  assert.ok(activityRow.length > 0, 'the phase word renders at turn start');
+  assert.equal(lines.some((line) => line.includes('interpreting')), false);
   assert.equal(
     lines.some((line) => line.includes('awaiting Human')),
     false,
   );
 
-  // A tool observation outranks the phase word; a settled session (no
-  // activity projection, no cost) keeps retiring the band.
+  // A live observed activity outranks everything else.
   const toolState = titleFixture({
     title: {
       ...IDLE_TITLE,
@@ -1249,8 +1248,8 @@ test('renders live phase words between tools, never awaiting Human mid-turn', ()
     false,
   );
 
-  // answering-activity-kind: prose streaming keeps an honest label —
-  // `answering` with the live meter, never `awaiting Human` mid-turn.
+  // Cost alone does not resurrect the band mid-turn (the answering gap):
+  // no label, no meter, no narration.
   const answering = titleFixture({ title: IDLE_TITLE });
   answering.header = {
     ...(answering.header as NonNullable<typeof answering.header>),
@@ -1260,8 +1259,10 @@ test('renders live phase words between tools, never awaiting Human mid-turn', ()
   const answeringLines = renderHeaderDeck(answering, 100, plainTheme as never).map(
     plain,
   );
-  const answeringRow = answeringLines.find((line) => /\banswering\b/u.test(line)) ?? '';
-  assert.ok(answeringRow.includes('· 4.2k'), 'the meter rides beside it');
+  assert.equal(
+    answeringLines.some((line) => /\banswering\b/u.test(line)),
+    false,
+  );
   assert.equal(
     answeringLines.some((line) => line.includes('awaiting Human')),
     false,
@@ -1361,9 +1362,10 @@ test('renders every observed activity class with its target', () => {
   }
 });
 
-test('keeps the turn-cost slot silent for pre-title publishers', () => {
-  // quiet-activity-row: idle + meterless retires the band wholesale; a
-  // speaking legacy activity renders its label with no cost narration.
+test('keeps the line-3 slot silent for pre-title publishers', () => {
+  // pure-activity-band: pre-title publishers have no observed activity —
+  // the band retires wholesale; no `awaiting Human`, no cost narration,
+  // and legacy kind words never speak.
   const idle = renderHeaderDeck(fixture(), 100, plainTheme as never).map(plain);
   assert.equal(
     idle.some((line) => line.includes('awaiting Human')),
@@ -1382,10 +1384,7 @@ test('keeps the turn-cost slot silent for pre-title publishers', () => {
     activity: { kind: 'verification' },
   };
   const lines = renderHeaderDeck(active, 100, plainTheme as never).map(plain);
-  const activityRow = lines.find((line) => line.includes('checking')) ?? '';
-  assert.ok(activityRow.includes('checking'));
-  assert.equal(activityRow.includes('0 tok'), false);
-  assert.equal(activityRow.includes('this turn'), false);
+  assert.equal(lines.some((line) => line.includes('checking')), false);
 });
 
 test('colors the activity and turn meter by liveness', () => {
