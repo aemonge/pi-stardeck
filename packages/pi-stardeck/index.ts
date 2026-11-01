@@ -3,32 +3,16 @@ import type {
   ExtensionContext,
   Theme,
 } from '@earendil-works/pi-coding-agent';
-import { truncateToWidth } from '@earendil-works/pi-tui';
 
 import {
-  buildAgentFooterWidgets,
-  buildPromptStatusSnapshot,
-  COMPACTION_WIDGET_ID,
-  CONTEXT_WIDGET_ID,
   countCompactions,
-  ENVIRONMENT_WIDGET_ID,
-  FANCY_FOOTER_READY_CHANNEL,
   FOOTER_TELEMETRY_CHANNEL,
-  FANCY_FOOTER_WIDGET_CHANNEL,
   formatFooterBranch,
   formatFooterPath,
   GALACTICA_HEADER_CHANNEL,
-  GIT_BRANCH_WIDGET_ID,
-  GIT_CONFLICT_WIDGET_ID,
-  GIT_SCOPE_SEPARATOR_WIDGET_ID,
-  GIT_MODIFIED_WIDGET_ID,
-  GIT_STAGED_WIDGET_ID,
-  GIT_UNTRACKED_WIDGET_ID,
   type FooterTelemetrySnapshot,
   type GitStatusSummary,
   type HeaderSnapshot,
-  LEGACY_GIT_WIDGET_ID,
-  LOCATION_WIDGET_ID,
   normalizeContextPercent,
   parseFooterTelemetry,
   parseGitBranch,
@@ -37,24 +21,12 @@ import {
   parsePiStatusSnapshot,
   PI_NATIVE_STATUS_CHANNEL,
   PI_STATUS_SNAPSHOT_CHANNEL,
-  PROMPT_STATUS_CHANNEL,
-  REASONING_WIDGET_ID,
-  SCOPE_SEPARATOR_WIDGET_ID,
-  runtimeHeaderWork,
   parseVimMode,
   VIM_MODE_CHANNEL,
   type PiStatusSnapshot,
   type VimMode,
 } from './src/gauge.ts';
 import {
-  buildRuntimeFooterWidgets,
-  formatRailChronometer,
-  RUNTIME_SCOPE_SEPARATOR_WIDGET_ID,
-  RUNTIME_STATUS_WIDGET_ID,
-} from './src/activity-age.ts';
-import {
-  buildCapabilityFooterWidget,
-  CAPABILITY_WIDGET_ID,
   LSP_STATUS_EVENT,
   MCP_STATUS_EVENT,
   parseLspCapability,
@@ -64,11 +36,8 @@ import {
 } from './src/capabilities.ts';
 import { shouldRefreshGitAfterTool } from './src/git-refresh.ts';
 import {
-  buildResourceFooterWidgets,
   buildResourceTelemetry,
   calculateCpuPercent,
-  CPU_WIDGET_ID,
-  MEMORY_WIDGET_ID,
   RESOURCE_REFRESH_MS,
   sampleProcessTreeResources,
   updateCpuSmoothing,
@@ -77,7 +46,6 @@ import {
   type ResourceTelemetry,
 } from './src/process-resources.ts';
 import { renderHeaderDeck } from './src/deck.ts';
-import { layoutLifecycleTitle, renderLifecycleTitleSections } from './src/title.ts';
 
 const WIDGET_KEY = 'galactica.work-identity';
 const PI_STATUS_SOURCE_CHANNEL = 'pi-stardeck:status-source/v1';
@@ -103,7 +71,11 @@ export interface ContextHeaderDeckSurface {
 }
 
 export interface ContextHeaderOptions {
-  surface?: 'legacy' | 'deck' | 'editor-deck';
+  /** The deck surface is the product: `'deck'` registers the above-editor
+   * widget, `'editor-deck'` renders into an embedder's component instead
+   * (vim border). The pre-deck legacy title line is retired
+   * (simplify-deck-defaults). */
+  surface?: 'deck' | 'editor-deck';
   deckSurface?: ContextHeaderDeckSurface;
 }
 
@@ -164,7 +136,6 @@ export default function galacticaContextHeader(
   pi: ExtensionAPI,
   options: ContextHeaderOptions = {},
 ): void {
-  const deckMode = options.surface === 'deck' || options.surface === 'editor-deck';
   const editorDeckSurface =
     options.surface === 'editor-deck' ? options.deckSurface : undefined;
   let clearWidget: (() => void) | undefined;
@@ -176,7 +147,6 @@ export default function galacticaContextHeader(
   let header: HeaderSnapshot | null = null;
   let agentBusy = false;
   let lastObservedActivityAt: number | null = null;
-  let lastActivityAgeSignature = '';
   let activityAgeTimer: ReturnType<typeof setInterval> | undefined;
   let sessionGeneration = 0;
   let sessionShortId: string | undefined;
@@ -196,63 +166,8 @@ export default function galacticaContextHeader(
   let piStatus: PiStatusSnapshot | undefined;
   let nativeStatusBridgeAvailable = true;
   let vimMode: VimMode = 'insert';
-  let lastCapabilitySignature = '';
 
   const currentHeader = () => header;
-
-  const publishPromptStatus = () => {
-    if (deckMode) return;
-    pi.events.emit(
-      PROMPT_STATUS_CHANNEL,
-      buildPromptStatusSnapshot(currentHeader(), branch, gitStatus),
-    );
-  };
-
-  const publishFooter = () => {
-    if (deckMode) return;
-    const ctx = activeCtx;
-    if (!ctx) return;
-    const usage = ctx.getContextUsage();
-    const contextPercent = normalizeContextPercent(
-      usage?.percent,
-      usage?.tokens,
-      usage?.contextWindow ?? ctx.model?.contextWindow,
-    );
-    const thinking = pi.getThinkingLevel();
-    for (const message of buildAgentFooterWidgets({
-      cwd: formatFooterPath(activeCwd || ctx.cwd, process.env.HOME),
-      devbox: process.env.DEVBOX_PROJECT_ROOT !== undefined,
-      branch: formatFooterBranch(branch),
-      git: gitStatus,
-      gitAvailable,
-      model: ctx.model?.name || ctx.model?.id || 'no model',
-      ...(thinking && thinking !== 'off' ? { thinking } : {}),
-      contextPercent,
-      compactionCount: countCompactions(ctx.sessionManager.getBranch()),
-    })) {
-      pi.events.emit(FANCY_FOOTER_WIDGET_CHANNEL, message);
-    }
-  };
-
-  const publishLatestResourceFooter = () => {
-    if (deckMode || !latestResourceTelemetry) return;
-    for (const message of buildResourceFooterWidgets(latestResourceTelemetry)) {
-      pi.events.emit(FANCY_FOOTER_WIDGET_CHANNEL, message);
-    }
-  };
-
-  const publishCapabilityFooter = (force = false) => {
-    if (deckMode) return;
-    const signature = [mcpCapability?.healthy ?? '', mcpCapability?.total ?? ''].join(
-      ':',
-    );
-    if (!force && signature === lastCapabilitySignature) return;
-    lastCapabilitySignature = signature;
-    pi.events.emit(
-      FANCY_FOOTER_WIDGET_CHANNEL,
-      buildCapabilityFooterWidget(mcpCapability),
-    );
-  };
 
   const refreshResources = async (): Promise<void> => {
     if (!activeCtx || resourceRefreshInFlight) return;
@@ -274,39 +189,9 @@ export default function galacticaContextHeader(
       latestResourceTelemetry = telemetry;
       if (signature === lastResourceSignature) return;
       lastResourceSignature = signature;
-      if (deckMode) requestRender?.();
-      else publishLatestResourceFooter();
+      requestRender?.();
     } finally {
       resourceRefreshInFlight = false;
-    }
-  };
-
-  const removeFooterWidgets = () => {
-    for (const id of [
-      LOCATION_WIDGET_ID,
-      LEGACY_GIT_WIDGET_ID,
-      GIT_BRANCH_WIDGET_ID,
-      GIT_SCOPE_SEPARATOR_WIDGET_ID,
-      GIT_STAGED_WIDGET_ID,
-      GIT_MODIFIED_WIDGET_ID,
-      GIT_UNTRACKED_WIDGET_ID,
-      GIT_CONFLICT_WIDGET_ID,
-      ENVIRONMENT_WIDGET_ID,
-      REASONING_WIDGET_ID,
-      CONTEXT_WIDGET_ID,
-      COMPACTION_WIDGET_ID,
-      CPU_WIDGET_ID,
-      MEMORY_WIDGET_ID,
-      RUNTIME_STATUS_WIDGET_ID,
-      RUNTIME_SCOPE_SEPARATOR_WIDGET_ID,
-      SCOPE_SEPARATOR_WIDGET_ID,
-      CAPABILITY_WIDGET_ID,
-    ]) {
-      pi.events.emit(FANCY_FOOTER_WIDGET_CHANNEL, {
-        protocol: 1,
-        type: 'remove',
-        id,
-      });
     }
   };
 
@@ -315,17 +200,17 @@ export default function galacticaContextHeader(
       ? Math.max(0, Date.now() - lastObservedActivityAt)
       : null;
 
-  const publishRuntimeFooter = () => {
-    if (deckMode) return;
-    const activityAge = currentActivityAge();
-    const status = formatRailChronometer(activityAge);
-    const active = activityAge !== null;
-    const signature = `${active ? 'active' : 'idle'}:${status}`;
-    if (signature === lastActivityAgeSignature) return;
-    lastActivityAgeSignature = signature;
-    for (const message of buildRuntimeFooterWidgets(status, active)) {
-      pi.events.emit(FANCY_FOOTER_WIDGET_CHANNEL, message);
-    }
+  const startActivityTicker = (): void => {
+    // Duty-cycled: the 50 ms chronometer ticks only while an activity can
+    // render — idle sessions cost zero wakeups (simplify-deck-defaults).
+    if (activityAgeTimer) return;
+    activityAgeTimer = setInterval(refreshActivityAge, 50);
+  };
+
+  const stopActivityTicker = (): void => {
+    if (activityAgeTimer === undefined) return;
+    clearInterval(activityAgeTimer);
+    activityAgeTimer = undefined;
   };
 
   const publishCapabilityHealth = () => {
@@ -363,12 +248,6 @@ export default function galacticaContextHeader(
     });
   };
 
-  const stopReady = pi.events.on(FANCY_FOOTER_READY_CHANNEL, () => {
-    publishFooter();
-    publishLatestResourceFooter();
-    publishRuntimeFooter();
-    publishCapabilityFooter(true);
-  });
   const stopLspStatus = pi.events.on(LSP_STATUS_EVENT, (raw) => {
     lspCapability = parseLspCapability(raw);
     requestRender?.();
@@ -377,7 +256,6 @@ export default function galacticaContextHeader(
   const stopMcpStatus = pi.events.on(MCP_STATUS_EVENT, (raw) => {
     mcpCapability = parseMcpCapability(raw);
     requestRender?.();
-    publishCapabilityFooter();
     publishCapabilityHealth();
   });
   const stopFooterTelemetry = pi.events.on(FOOTER_TELEMETRY_CHANNEL, (raw) => {
@@ -401,33 +279,28 @@ export default function galacticaContextHeader(
   const stopHeader = pi.events.on(GALACTICA_HEADER_CHANNEL, (raw) => {
     header = parseHeaderSnapshot(raw);
     requestRender?.();
-    publishPromptStatus();
-    publishRuntimeFooter();
   });
 
   const markObservedActivity = () => {
     lastObservedActivityAt = Date.now();
-    lastActivityAgeSignature = '';
+    startActivityTicker();
     requestRender?.();
-    publishRuntimeFooter();
   };
 
   const clearObservedActivity = () => {
     lastObservedActivityAt = null;
-    lastActivityAgeSignature = '';
+    stopActivityTicker();
   };
 
   const refreshActivityAge = () => {
     if (currentActivityAge() === null) return;
-    if (deckMode) requestRender?.();
-    else publishRuntimeFooter();
+    requestRender?.();
   };
 
   pi.on('before_agent_start', (_event, ctx) => {
     if (ctx.mode !== 'tui') return;
     agentBusy = true;
     markObservedActivity();
-    publishPromptStatus();
   });
 
   pi.on('turn_start', markObservedActivity);
@@ -480,11 +353,7 @@ export default function galacticaContextHeader(
         gitStatus = gitAvailable
           ? parseGitStatus(String(statusResult?.stdout ?? ''))
           : { ...EMPTY_GIT };
-        if (deckMode) requestRender?.();
-        else {
-          publishPromptStatus();
-          publishFooter();
-        }
+        requestRender?.();
       } while (gitRefreshQueued && activeCwd);
     } finally {
       gitRefreshInFlight = false;
@@ -495,9 +364,8 @@ export default function galacticaContextHeader(
     clearWidget?.();
     clearFooter?.();
     clearFooter = undefined;
-    if (activityAgeTimer) clearInterval(activityAgeTimer);
+    stopActivityTicker();
     if (resourceTimer) clearInterval(resourceTimer);
-    activityAgeTimer = undefined;
     resourceTimer = undefined;
     ++sessionGeneration;
     activeCtx = ctx;
@@ -519,33 +387,23 @@ export default function galacticaContextHeader(
     cpuSmoothing = undefined;
     latestResourceTelemetry = undefined;
     lastResourceSignature = '';
-    lastCapabilitySignature = '';
     clearObservedActivity();
-    publishFooter();
-    publishPromptStatus();
-    publishRuntimeFooter();
-    publishCapabilityFooter();
     publishCapabilityHealth();
-    if (ctx.mode === 'tui') {
-      activityAgeTimer = setInterval(refreshActivityAge, 50);
-    }
     if (!ctx.hasUI) return;
-    if (deckMode) {
-      clearFooter = installEmptyDeckFooter(
-        ctx,
-        (statuses) => {
-          pi.events.emit(PI_NATIVE_STATUS_CHANNEL, {
-            protocol: 1,
-            type: 'snapshot',
-            statuses,
-          });
-        },
-        (available) => {
-          nativeStatusBridgeAvailable = available;
-          publishCapabilityHealth();
-        },
-      );
-    }
+    clearFooter = installEmptyDeckFooter(
+      ctx,
+      (statuses) => {
+        pi.events.emit(PI_NATIVE_STATUS_CHANNEL, {
+          protocol: 1,
+          type: 'snapshot',
+          statuses,
+        });
+      },
+      (available) => {
+        nativeStatusBridgeAvailable = available;
+        publishCapabilityHealth();
+      },
+    );
     void refreshResources();
     resourceTimer = setInterval(() => void refreshResources(), RESOURCE_REFRESH_MS);
     activeCwd = ctx.cwd;
@@ -609,16 +467,7 @@ export default function galacticaContextHeader(
         requestRender = () => tui.requestRender();
         return {
           render(width: number): string[] {
-            if (deckMode) return renderDeck(width, theme);
-            const { work, idle } = runtimeHeaderWork(currentHeader()?.work, agentBusy);
-            const layout = layoutLifecycleTitle(work, width, agentBusy);
-            const line = renderLifecycleTitleSections(
-              layout,
-              work.lifecycle,
-              idle,
-              theme,
-            );
-            return [truncateToWidth(line, width, '…')];
+            return renderDeck(width, theme);
           },
           invalidate() {},
         };
@@ -633,21 +482,17 @@ export default function galacticaContextHeader(
   });
 
   pi.on('model_select', () => {
-    publishFooter();
     requestRender?.();
   });
 
   pi.on('thinking_level_select', () => {
-    if (deckMode) requestRender?.();
-    else publishFooter();
+    requestRender?.();
   });
   pi.on('message_end', (event) => {
     if (event.message.role === 'assistant') markObservedActivity();
-    publishFooter();
   });
   pi.on('session_compact', () => {
-    if (deckMode) requestRender?.();
-    else publishFooter();
+    requestRender?.();
   });
 
   pi.on('tool_execution_end', (event) => {
@@ -661,9 +506,6 @@ export default function galacticaContextHeader(
     agentBusy = false;
     clearObservedActivity();
     requestRender?.();
-    publishPromptStatus();
-    publishFooter();
-    publishRuntimeFooter();
     void refreshGit();
   });
 
@@ -674,9 +516,7 @@ export default function galacticaContextHeader(
     gitAvailable = false;
     agentBusy = false;
     clearObservedActivity();
-    if (activityAgeTimer) clearInterval(activityAgeTimer);
     if (resourceTimer) clearInterval(resourceTimer);
-    activityAgeTimer = undefined;
     resourceTimer = undefined;
     resourceRefreshInFlight = false;
     previousResourceSample = undefined;
@@ -688,9 +528,7 @@ export default function galacticaContextHeader(
     clearWidget = undefined;
     clearFooter?.();
     clearFooter = undefined;
-    removeFooterWidgets();
     stopHeader();
-    stopReady();
     stopLspStatus();
     stopMcpStatus();
     stopPiStatus();

@@ -191,40 +191,6 @@ export const HEADER_PRESENTATION = {
   locationColor: 'success',
 } as const;
 
-export const IDLE_HEADER_WORK: HeaderWork = {
-  lifecycle: 'listening',
-  titles: ['no focused task'],
-  color: 'accent',
-};
-
-export function displayedHeaderWork(work: HeaderWork | null | undefined): {
-  work: HeaderWork;
-  idle: boolean;
-} {
-  return work ? { work, idle: false } : { work: IDLE_HEADER_WORK, idle: true };
-}
-
-export function runtimeHeaderWork(
-  work: HeaderWork | null | undefined,
-  agentBusy: boolean,
-): { work: HeaderWork; idle: boolean } {
-  const displayed = displayedHeaderWork(work);
-  if (!agentBusy || !displayed.idle) return displayed;
-  return {
-    work: {
-      lifecycle: 'understanding',
-      titles: ['no focus'],
-      color: 'accent',
-      activity: { kind: 'understanding' },
-    },
-    idle: false,
-  };
-}
-
-export function lifecycleStatusLabel(work: HeaderWork | null | undefined): string {
-  return work ? `⟩ ${work.lifecycle}` : '⟩';
-}
-
 export type ContextGauge = {
   percent: number;
   percentText: string;

@@ -9,13 +9,10 @@ const {
   contextFooterColor,
   countCompactions,
   contextGaugeColor,
-  displayedHeaderWork,
   formatFooterBranch,
   formatFooterPath,
-  lifecycleStatusLabel,
   normalizeContextPercent,
   reasoningFooterColor,
-  runtimeHeaderWork,
 } = gaugeModule;
 
 test('uses the requested context label and header colors', () => {
@@ -36,51 +33,6 @@ test('uses the requested context label and header colors', () => {
     contextColor: 'success',
     locationColor: 'success',
   });
-  assert.deepEqual(displayedHeaderWork(null), {
-    work: {
-      lifecycle: 'listening',
-      titles: ['no focused task'],
-      color: 'accent',
-    },
-    idle: true,
-  });
-  assert.equal(
-    displayedHeaderWork({ lifecycle: 'active', titles: ['Refine'], color: 'accent' })
-      .idle,
-    false,
-  );
-  assert.equal(lifecycleStatusLabel(displayedHeaderWork(null).work), '⟩ listening');
-  assert.deepEqual(runtimeHeaderWork(null, true), {
-    work: {
-      lifecycle: 'understanding',
-      titles: ['no focus'],
-      color: 'accent',
-      activity: { kind: 'understanding' },
-    },
-    idle: false,
-  });
-  assert.deepEqual(
-    runtimeHeaderWork(
-      { lifecycle: 'waiting', titles: ['Refine'], color: 'accent' },
-      true,
-    ),
-    {
-      work: { lifecycle: 'waiting', titles: ['Refine'], color: 'accent' },
-      idle: false,
-    },
-  );
-  assert.equal(
-    lifecycleStatusLabel(runtimeHeaderWork(null, true).work),
-    '⟩ understanding',
-  );
-  assert.equal(
-    lifecycleStatusLabel({
-      lifecycle: 'waiting',
-      titles: ['Refine'],
-      color: 'accent',
-    }),
-    '⟩ waiting',
-  );
 });
 
 test('colors context pressure semantically at stable boundaries', () => {
@@ -357,10 +309,12 @@ test('leaves Pi working row as-is and wires foreground activity-age lifecycle', 
     assert.match(extensionSource, new RegExp(`pi\\.on\\('${event}'`, 'u'));
   }
   assert.match(extensionSource, /markObservedActivity/u);
+  // The chronometer ticker is duty-cycled: it starts when an activity is
+  // observed and stops when it clears — idle sessions cost zero wakeups.
   assert.match(extensionSource, /setInterval\(refreshActivityAge, 50\)/u);
-  assert.match(extensionSource, /clearInterval\(activityAgeTimer\)/u);
-  assert.match(extensionSource, /buildRuntimeFooterWidgets\(status, active\)/u);
-  assert.match(extensionSource, /activityAge !== null/u);
+  assert.match(extensionSource, /startActivityTicker/u);
+  assert.match(extensionSource, /stopActivityTicker/u);
+  assert.doesNotMatch(extensionSource, /activityAge !== null/u);
   assert.doesNotMatch(extensionSource, /ageLayout|rightAlignActivityAge/u);
   assert.doesNotMatch(extensionSource, /assistantMessageEvent|text_delta/u);
 });
@@ -735,7 +689,7 @@ test('keeps the full home-relative path and puts the Devbox marker before the PW
 
   const extensionSource = readFileSync(new URL('../index.ts', import.meta.url), 'utf8');
   assert.match(extensionSource, /cwd: formatFooterPath\(/u);
-  assert.match(extensionSource, /branch: formatFooterBranch\(branch\)/u);
+  assert.match(extensionSource, /branch: formatFooterBranch\(branch/u);
 });
 
 test('normalizes and compacts a Git branch for display after PWD', () => {

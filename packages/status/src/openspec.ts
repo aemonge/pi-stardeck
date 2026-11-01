@@ -417,10 +417,7 @@ export async function collectOpenSpec(options: {
   const completedTasks =
     tasks.length > 0
       ? tasks.filter((task) => task.done).length
-      : Math.max(
-          0,
-          Math.trunc(instructionProgress?.complete ?? change.completedTasks),
-        );
+      : Math.max(0, Math.trunc(instructionProgress?.complete ?? change.completedTasks));
   const totalTasks =
     tasks.length > 0
       ? tasks.length

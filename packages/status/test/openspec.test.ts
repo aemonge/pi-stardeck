@@ -340,9 +340,7 @@ test('ticked execution artifacts count even when CLI progress says zero', async 
       stdout: JSON.stringify({
         progress: { total: 9, complete: 0 },
         contextFiles: { tasks: [executePath] },
-        tasks: [
-          { id: '1', description: '1 extend the focus type', done: false },
-        ],
+        tasks: [{ id: '1', description: '1 extend the focus type', done: false }],
       }),
       stderr: '',
     };

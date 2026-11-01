@@ -409,7 +409,10 @@ test('keeps activity and focus distinct on the title row', () => {
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
   // Pure band: the legacy activity projection no longer narrates line 3 —
   // the row retires and the title row stays the only narrative surface.
-  assert.equal(lines.some((line) => plain(line).includes('verify')), false);
+  assert.equal(
+    lines.some((line) => plain(line).includes('verify')),
+    false,
+  );
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith('Plan title › Current task'));
   assert.equal(titleRow.includes("000:07'00"), false);
@@ -568,8 +571,14 @@ test('renders every observed activity class on line 3 without narration', () => 
       },
     });
     const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-    assert.ok(lines.some((line) => line.includes(expected)), expected);
-    assert.equal(lines.some((line) => line.includes('working')), false);
+    assert.ok(
+      lines.some((line) => line.includes(expected)),
+      expected,
+    );
+    assert.equal(
+      lines.some((line) => line.includes('working')),
+      false,
+    );
   }
 
   // The legacy work-activity projection never narrates: a kind word is
@@ -582,8 +591,14 @@ test('renders every observed activity class on line 3 without narration', () => 
     activity: { kind: 'recovery' },
   };
   const idle = renderHeaderDeck(legacy, 160, plainTheme as never).map(plain);
-  assert.equal(idle.some((line) => line.includes('recovering')), false);
-  assert.equal(idle.some((line) => line.includes('awaiting Human')), false);
+  assert.equal(
+    idle.some((line) => line.includes('recovering')),
+    false,
+  );
+  assert.equal(
+    idle.some((line) => line.includes('awaiting Human')),
+    false,
+  );
 });
 
 test('reports the observed activity on line 3 while active without a cue', () => {
@@ -1222,7 +1237,10 @@ test('retires the band between tools; no phase words, never awaiting Human', () 
     turn: { tokens: 0, elapsedMs: 0 },
   };
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.some((line) => line.includes('interpreting')), false);
+  assert.equal(
+    lines.some((line) => line.includes('interpreting')),
+    false,
+  );
   assert.equal(
     lines.some((line) => line.includes('awaiting Human')),
     false,
@@ -1384,7 +1402,10 @@ test('keeps the line-3 slot silent for pre-title publishers', () => {
     activity: { kind: 'verification' },
   };
   const lines = renderHeaderDeck(active, 100, plainTheme as never).map(plain);
-  assert.equal(lines.some((line) => line.includes('checking')), false);
+  assert.equal(
+    lines.some((line) => line.includes('checking')),
+    false,
+  );
 });
 
 test('colors the activity and turn meter by liveness', () => {

@@ -20,25 +20,25 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 
 ## Slice 3 — C: pure activity band
 
-- [ ] `deck.ts` phase words, legacy labels, and `awaiting Human` deleted; five observed classes speak
-- [ ] band lifecycle = live observed activity only; turn cluster rides; seam rule follows
-- [ ] deck tests rewritten for the pure contract
-- [ ] Commit — feat(pi-stardeck): pure observed-activity band
-      hash:
+- [x] `deck.ts` phase words, legacy labels, and `awaiting Human` deleted; five observed classes speak
+- [x] band lifecycle = live observed activity only; turn cluster rides; seam rule follows
+- [x] deck tests rewritten for the pure contract
+- [x] Commit — feat(pi-stardeck): pure observed-activity band
+      hash: 33e8733
 
 ## Slice 4 — D: task counts from the execution artifact
 
-- [ ] counts derive from parsed artifact tasks; CLI fallbacks preserve zero-guard
-- [ ] fixture tests: ticked artifact counts `d/N`; hierarchy + blocked-apply unchanged
-- [ ] Commit — fix(status): count openspec tasks from the execution artifact
-      hash:
+- [x] counts derive from parsed artifact tasks; CLI fallbacks preserve zero-guard
+- [x] fixture tests: ticked artifact counts `d/N`; hierarchy + blocked-apply unchanged
+- [x] Commit — fix(status): count openspec tasks from the execution artifact
+      hash: e4b5fa9
 
 ## Slice 5 — strict refactor pass
 
-- [ ] legacy widget branch retired; surface narrows to `'deck' | 'editor-deck'`
-- [ ] 50 ms activity timer duty-cycled (ticks only while busy)
-- [ ] dead `deckMode` guards folded with proofs; embedder path intact
-- [ ] audit ledger recorded below; full suite green
+- [x] legacy widget branch retired; surface narrows to `'deck' | 'editor-deck'`
+- [x] 50 ms activity timer duty-cycled (ticks only while busy)
+- [x] dead `deckMode` guards folded with proofs; embedder path intact
+- [x] audit ledger recorded below; full suite green
 - [ ] Commit — refactor(pi-stardeck): retire dead surfaces and duty-cycle the activity timer
       hash:
 
@@ -50,10 +50,18 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 
 ## Audit ledger (inspected-but-kept)
 
-- `packages/pi-stardeck/src/title-state.ts` — deliberate protocol-boundary copy of the status parser (no cross-package npm dependency; event channel only). KEPT.
-- `spanTreeRows` stage words (`working`) — span-row contract, not the banned band narration. KEPT.
-- `titleBandLines` legacy selection branch — defensive render for pre-title publisher events. KEPT.
-- footer/vim packages — outside this change's confirmed scope; noted as debt candidates.
+Retired with proofs (zero production callers, zero test callers unless noted):
+- `runtimeHeaderWork`, `lifecycleStatusLabel`, `displayedHeaderWork`, `IDLE_HEADER_WORK` (gauge.ts) — legacy-title-only helpers; their gauge.test assertions removed with them.
+- The six non-deck publishers (`publishFooter`, `publishPromptStatus`, `publishRuntimeFooter`, `publishLatestResourceFooter`, `publishCapabilityFooter`, `removeFooterWidgets`) + `FANCY_FOOTER_READY_CHANNEL` listener + `deckMode`/`lastCapabilitySignature`/`lastActivityAgeSignature` state — every declared surface is a deck surface; the guards were always-true.
+- The legacy widget render branch and `'legacy'` surface value — `ContextHeaderOptions.surface` is now `'deck' | 'editor-deck'`.
+- `truncateToWidth` import (legacy render only).
+
+Kept, with reasons:
+- `packages/pi-stardeck/src/title.ts` layout functions — still exported and covered by `title.test.ts`; candidate for a separate retirement brief.
+- Footer widget builders (`buildAgentFooterWidgets`, `buildRuntimeFooterWidgets`, `buildResourceFooterWidgets`, `buildCapabilityFooterWidget`) — exported protocol builders, unit-tested; production emit paths are gone, so they are the next debt candidate once the footer package's consumption is decided.
+- `packages/pi-stardeck/src/title-state.ts` duplicate parser — deliberate protocol boundary (no cross-package npm dependency; event channel only).
+- `spanTreeRows` stage words and the `titleBandLines` legacy selection branch — span-row contract and defensive render for pre-title publishers.
+- eslint/biome via npm scripts — offline cache lacks typescript-eslint (pre-existing debt from 2026-10-30); biome check on `pi-vim-top-border` ran clean directly.
 
   gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:23:40Z
 
@@ -114,3 +122,71 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:35:42Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:35:55Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:39:22Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:39:39Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:40:58Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:41:27Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:41:47Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:42:19Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:42:47Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:42:47Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:43:04Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/index.ts · at 2026-11-01T10:43:22Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/gauge.ts · at 2026-11-01T10:43:22Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/gauge.test.ts · at 2026-11-01T10:43:44Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/gauge.ts · at 2026-11-01T10:44:11Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:44:11Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:44:24Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:44:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:44:41Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/gauge.test.ts · at 2026-11-01T10:45:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:45:45Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:45:52Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:46:06Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:46:13Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:46:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:46:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:46:39Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:46:46Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:47:08Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:47:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:47:40Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:48:17Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:48:33Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:48:33Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:48:48Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:49:28Z
