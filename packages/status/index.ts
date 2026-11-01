@@ -1205,9 +1205,15 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     // polish (every agent skipped the first-turn rule; verified
     // systematically in simplify-session-focus-surface). Human- or
     // agent-set titles and restored sessions are never overridden.
-    if (event.messageType !== 'user' || typeof event.prompt !== 'string') return;
+    // The event fields are narrowed structurally: the registry-pinned
+    // @earendil-works/pi-coding-agent types predate messageType/prompt,
+    // while the runtime event carries both (extensions.md, before_agent_start).
+    const promptRun = event as { messageType?: unknown; prompt?: unknown };
+    if (promptRun.messageType !== 'user' || typeof promptRun.prompt !== 'string') {
+      return;
+    }
     if ((runtime?.currentSubject() ?? NO_SESSION_SUBJECT).state !== 'clear') return;
-    const next = titleFromPrompt(event.prompt);
+    const next = titleFromPrompt(promptRun.prompt);
     if (next && next.state === 'set') persistAndApplySubject(next);
   });
 
