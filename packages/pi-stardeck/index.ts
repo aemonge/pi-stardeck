@@ -527,7 +527,6 @@ export default function galacticaContextHeader(
     publishCapabilityFooter();
     publishCapabilityHealth();
     if (ctx.mode === 'tui') {
-      ctx.ui.setWorkingVisible(false);
       activityAgeTimer = setInterval(refreshActivityAge, 50);
     }
     if (!ctx.hasUI) return;

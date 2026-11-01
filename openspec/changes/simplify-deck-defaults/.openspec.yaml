@@ -1,0 +1,22 @@
+schema: spec
+created: 2026-11-01
+goal: Restore Pi's default working indicator, auto-set the session title, make
+  line 3 a pure observed-activity band, and count OpenSpec tasks from the
+  execution artifact — plus a strict smell/perf pass over the touched deck
+affected_areas:
+  - packages/pi-stardeck
+  - packages/status
+x-status: proposed
+x-created-by: assistant
+
+status: approved
+created_by: assistant
+
+granted: brainstorm,investigate,plan
+granted_brainstorm: 2026-11-01T10:15:06Z
+
+approved_at: 2026-11-01T10:15:14Z
+
+granted_investigate: 2026-11-01T10:21:19Z
+
+granted_plan: 2026-11-01T10:22:55Z

@@ -60,10 +60,10 @@ Runtime anchor and lifecycle are bold blue `#076678`; activity ancestry and its 
 optional focus hierarchy is regular success green. Dim is reserved for the two empty
 focus fallbacks; muted, text, cyan, yellow, and gray are never used in the title.
 
-The extension hides Pi's separate built-in `Working...` loader row with
-`ctx.ui.setWorkingVisible(false)`, including its vertical space. The header therefore
-uses its complete width for lifecycle, bounded activity, and focus. Runtime age is
-published for the bottom prompt rail as an eight-cell chronometer measuring time since
+Pi's own built-in `Working...` loader row remains visible exactly as the core renders it —
+the deck does not suppress native indicators; it renders above the editor and leaves
+liveness narration to Pi while only observed activity speaks in its own band. Runtime
+age is published for the bottom prompt rail as an eight-cell chronometer measuring time since
 the most recent observed foreground provider, assistant, or tool event. It stays
 fixed-width as it advances: `00:00'00`, `00:00'45`, `00:12'30`, or `12:34'56`; hour/day
 fallbacks also remain eight cells. Active timing uses the high-contrast deep-cyan
