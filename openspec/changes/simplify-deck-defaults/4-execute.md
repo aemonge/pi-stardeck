@@ -12,11 +12,11 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 
 ## Slice 2 — B: auto-set the session title from the first user prompt
 
-- [ ] `titleFromPrompt` helper + `before_agent_start` wiring (clear-only, slash-skip)
-- [ ] `title` tool description simplified; first-turn nag dropped
-- [ ] tests: auto-set, no-override, slash-skip, 120 bound, restore precedence
-- [ ] Commit — feat(status): auto-set session title from the first user prompt
-      hash:
+- [x] `titleFromPrompt` helper + `before_agent_start` wiring (clear-only, slash-skip)
+- [x] `title` tool description simplified; first-turn nag dropped
+- [x] tests: auto-set, no-override, slash-skip, 120 bound, restore precedence
+- [x] Commit — feat(status): auto-set session title from the first user prompt
+      hash: e2136ff
 
 ## Slice 3 — C: pure activity band
 
@@ -106,3 +106,11 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:34:27Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:34:37Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/openspec.ts · at 2026-11-01T10:35:04Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/openspec.test.ts · at 2026-11-01T10:35:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:35:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:35:55Z

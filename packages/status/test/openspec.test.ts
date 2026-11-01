@@ -302,6 +302,67 @@ test('malformed task file preserves the instruction fallback', async () => {
   }
 });
 
+test('ticked execution artifacts count even when CLI progress says zero', async () => {
+  // The 0/N repro (simplify-deck-defaults): the CLI's done-counting does
+  // not track custom-schema execution artifacts — the file the Human
+  // ticks is the truth, and its done flags must win.
+  const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  const executePath = join(root, '4-execute.md');
+  await writeFile(
+    executePath,
+    `# Execute\n\n## Slice 1 — first\n\n- [x] extend the focus type\n- [x] parse round-trip\n- [x] validate action\n- [ ] runtime projection\n\n## Slice 2 — second\n\n- [ ] description simplified\n`,
+    'utf8',
+  );
+  const runner: CommandRunner = async (_command, args) => {
+    if (args[0] === 'list') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          changes: [
+            {
+              name: 'demo',
+              completedTasks: 0,
+              totalTasks: 9,
+              lastModified: '2026-01-01T00:00:00Z',
+              status: 'in-progress',
+            },
+          ],
+          root: { path: root },
+        }),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'show') {
+      return { code: 0, stdout: JSON.stringify({ title: 'Demo' }), stderr: '' };
+    }
+    return {
+      code: 0,
+      stdout: JSON.stringify({
+        progress: { total: 9, complete: 0 },
+        contextFiles: { tasks: [executePath] },
+        tasks: [
+          { id: '1', description: '1 extend the focus type', done: false },
+        ],
+      }),
+      stderr: '',
+    };
+  };
+
+  try {
+    const state = await collectOpenSpec({
+      cwd: root,
+      runner,
+      now: 100,
+      configuredChange: 'demo',
+    });
+    assert.equal(state?.completedTasks, 3);
+    assert.equal(state?.totalTasks, 5);
+    assert.equal(state?.progressPercent, 60);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('blocked apply progress never shadows honest list counts', async () => {
   const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
   const runner: CommandRunner = async (_command, args) => {

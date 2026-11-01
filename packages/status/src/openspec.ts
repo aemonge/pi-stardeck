@@ -408,14 +408,23 @@ export async function collectOpenSpec(options: {
     // Progress from `list` remains valid even if apply instructions are unavailable.
   }
 
-  const completedTasks = Math.max(
-    0,
-    Math.trunc(instructionProgress?.complete ?? change.completedTasks),
-  );
-  const totalTasks = Math.max(
-    0,
-    Math.trunc(instructionProgress?.total ?? change.totalTasks),
-  );
+  // File truth first: when the artifact (or apply) task list parsed, its
+  // done flags are what the Human actually ticks — the CLI's done-counting
+  // does not track custom-schema execution artifacts and pinned the Work
+  // tile at 0/N (simplify-deck-defaults). CLI progress and list counts
+  // remain fallbacks; the blocked-apply zero-guard stays for the
+  // no-tasks case.
+  const completedTasks =
+    tasks.length > 0
+      ? tasks.filter((task) => task.done).length
+      : Math.max(
+          0,
+          Math.trunc(instructionProgress?.complete ?? change.completedTasks),
+        );
+  const totalTasks =
+    tasks.length > 0
+      ? tasks.length
+      : Math.max(0, Math.trunc(instructionProgress?.total ?? change.totalTasks));
   const complete =
     change.status === 'complete' || (totalTasks > 0 && completedTasks >= totalTasks);
 
