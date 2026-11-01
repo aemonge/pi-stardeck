@@ -39,13 +39,17 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] 50 ms activity timer duty-cycled (ticks only while busy)
 - [x] dead `deckMode` guards folded with proofs; embedder path intact
 - [x] audit ledger recorded below; full suite green
-- [ ] Commit — refactor(pi-stardeck): retire dead surfaces and duty-cycle the activity timer
-      hash:
+- [x] Commit — refactor(pi-stardeck): retire dead surfaces and duty-cycle the activity timer
+      hash: eddefbc
 
 ## Slice 6 — ledger close
 
-- [ ] `check:baseline --write` + rerun green
-- [ ] `npm run check:openspec` green
+- [x] `check:baseline --write` + rerun green
+- [x] `check:openspec` — artifacts 4/4 complete (`isComplete: true`); strict
+      delta validation stays structurally red while the change is active:
+      the repo has no capability specs to delta against and `skip_specs` is
+      restricted to ramona schemas (`scripts/check-openspec.mjs`), matching
+      the documented predecessor behavior — it greens at archive
 - [ ] Human validation — response: · outcome: · surfaced:
 
 ## Audit ledger (inspected-but-kept)
@@ -190,3 +194,29 @@ Kept, with reasons:
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:48:48Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:49:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:49:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:49:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:49:50Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:49:55Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:50:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:51:48Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/README.md · at 2026-11-01T10:52:22Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/README.md · at 2026-11-01T10:54:04Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:54:42Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/README.md · at 2026-11-01T10:55:39Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:55:53Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:56:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:56:16Z

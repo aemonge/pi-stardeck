@@ -4,73 +4,40 @@ A dependency-free Pi extension that coordinates the prompt information architect
 through Pi's supported widget and event APIs.
 
 ```text
-─ 󰠭 › ─────────────────────────────────────────────────────────────────────
-( 3 ›  2 · 00:05'12) working ⟩ checking Stabilize runtime and focus · step 3/5     task 1/2 ›  stps 3/5
-󰓾 Stabilize runtime and focus in the cockpit
-┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-[󰆧]  ~/projects/example                                     main ⟩  clean
-┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-󰚩 Opus › high ⟩ 󰾆 42% › 󰎞 2         10% › 󰜦 $0.10 ⟩  12% ›  375M ›  3/3
-─ 󰏫 ─────────────────────────────────────────────────────────────── ‹ 󰠭 ─
+─ 󰠭 › ────────────────────────────────────────────────────────────────────
+󰠭 [󰆧]  ~/projects/example › main › +0 ~1 1        󰚩 Opus › high › 󰃰 42%
+──────────────────────────────────────────────────────────────────────
+Stabilize runtime and focus in the cockpit              planning 6/7 › 󰄱 9/19
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+editing deck.ts                                            00:38'00 · 4.2k
+└ (00'12) scout working
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+󰃰 5h 52% › 󰆧 3% › 󰉡 48% › 󰞏 2 › 󰂻 268M › 󰄠 38% › 󰈛 $5.16          󰠭 abcd1234
 ```
 
-The preferred editor-deck surface keeps two stable semantic rows. The first is a
-left-packed operational strip: runtime capsule, lifecycle, activity, controlled next
-action, and Task/Step progress. The second is a full-width explicit selection canvas
-that wraps to at most two lines. Every slot remains present; zero, idle, unavailable,
-and unselected states are dim instead of appearing or disappearing. Long content may
-wrap responsively, but runtime state never changes the deck topology. Decorative rails
-remain slim and contain no telemetry.
+The deck renders four stable rows above the editor:
 
-The editor deck uses blue for the active runtime capsule, the bold lifecycle anchor,
-and regular-weight explicit selection. Ordinary active activity remains neutral, except
-that `recovering` and its ordinary suggestion are blue together while only the lifecycle
-is bold. Other ordinary suggestions remain green. Incomplete Task/Step progress is
-neutral until each counter completes and stays right-aligned without a major boundary.
-The lifecycle/activity boundary and rails remain purple; minor separators are dim.
-Human-input and validation cues stay yellow, blockers stay red, and every inactive value
-stays dim.
+1. **Where and what** — identity and companion chips lead, then the project path
+   and Git segment; the right corner carries the engine group (model › thinking ›
+   quota) and any alert.
+2. **Focus** — the session subject (auto-titled from the first real prompt,
+   settable through the `title` tool) with the OpenSpec work tile on the right.
+3. **Pure activity band (optional)** — exists only while an observed activity is
+   live — `editing`, `reading`, `grepping`, `bash`, or `subagent` — with the turn
+   chronometer and token count riding on the right; subagent and bash child runs
+   keep their `└` span rows directly beneath. Between tools and at rest the band
+   retires entirely: Pi's own `Working…` indicator stays visible exactly as the
+   core renders it, and no phase words or `awaiting Human` filler are ever
+   generated.
+4. **Machine and status** — quota, CPU/RAM, context, compactions, and session
+   cost yield right-to-left into the width the status end leaves: notices when
+   present, otherwise the dim ladybug sentinel wearing the short session id.
 
-The legacy above-editor widget owns only current work identity and preserves the
-` ready ⟩ no focused task` idle row when no work is selected. The leading icon is
-runtime-authoritative: `` while Pi is busy in an active lifecycle and `` while
-settled, waiting, blocked, listening, or aborted. Internal lifecycle states render as
-short readable verbs. The Ramona loop remains exact: `understand`, `work`, `assure`,
-`learn`, and `answer`. Runtime boundaries are `wait`, `blocked`, `ready`, or `stopped`.
-The title has four styled groups: lifecycle, a structured active ancestry, focus, and
-optional focus detail. Each activity-path segment receives the blue minor `›`; the
-violet-pink major `⟩` divides runtime ancestry from the green narrative focus. Human
-prompt text is never converted into focus automatically. OpenSpec may add its exact Task
-after another green `›`. Focus selection prefers an exact OpenSpec Task, then
-Session Work. Active turns without a selection use the explicit `OpenSpec › no focus`,
-`no OpenSpec`, or `no focus` state supplied by the status producer; `Direct response` is
-never presented as a focus. Empty states are dim while real focus remains bold semantic
-green.
-
-Wide rows render lifecycle → active ancestry → optional focus → optional focus detail,
-for example `assure › checking quality › assuring tests ⟩ Implement global flow`. The
-renderer generates every separator. Empty or rejected paths leave no separator or
-placeholder whitespace. As width falls it tries full labels, compact labels, a collapsed
-`… › deepest` ancestry, and finally compact lifecycle plus the deepest active segment.
-Narrative focus disappears before meaningful active ancestry. Terminal display-cell
-measurement and final truncation remain Unicode- and Nerd-Font-aware.
-
-Runtime anchor and lifecycle are bold blue `#076678`; activity ancestry and its minor
-`›` are regular blue; the major `⟩` is purple; focus is bold semantic success green; and
-optional focus hierarchy is regular success green. Dim is reserved for the two empty
-focus fallbacks; muted, text, cyan, yellow, and gray are never used in the title.
-
-Pi's own built-in `Working...` loader row remains visible exactly as the core renders it —
-the deck does not suppress native indicators; it renders above the editor and leaves
-liveness narration to Pi while only observed activity speaks in its own band. Runtime
-age is published for the bottom prompt rail as an eight-cell chronometer measuring time since
-the most recent observed foreground provider, assistant, or tool event. It stays
-fixed-width as it advances: `00:00'00`, `00:00'45`, `00:12'30`, or `12:34'56`; hour/day
-fallbacks also remain eight cells. Active timing uses the high-contrast deep-cyan
-`accent` color; settled states display dim `00:00'00` rather than repeating the header's
-`wait`, `ready`, or other lifecycle word. A session-scoped ticker publishes only when
-the formatted chronometer changes and is cleared on shutdown. No message content,
-thinking, reasoning, prompts, tool arguments, or child-agent output enters the widget.
+Rows appear only when they speak — a silent band and spanless state collapse
+their seam. Every slot is bounded, sanitized display vocabulary; no message
+content, thinking, reasoning, prompts, tool arguments, or child-agent output
+enters the widget. Terminal display-cell measurement and final truncation remain
+Unicode- and Nerd-Font-aware.
 
 The additive header protocol projects selection independently from live work:
 
