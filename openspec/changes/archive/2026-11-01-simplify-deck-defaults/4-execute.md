@@ -50,7 +50,10 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
       the repo has no capability specs to delta against and `skip_specs` is
       restricted to ramona schemas (`scripts/check-openspec.mjs`), matching
       the documented predecessor behavior — it greens at archive
-- [ ] Human validation — response: · outcome: · surfaced:
+- [x] Human validation — response: "VALID" · outcome: change accepted; push,
+      npm login, and `just publish 0.11.0` owned by the Human · surfaced:
+      eslint/typescript-eslint offline debt stands; footer widget builders are
+      the next retirement candidate; `check:openspec` greens at archive
 
 ## Audit ledger (inspected-but-kept)
 
@@ -220,3 +223,7 @@ Kept, with reasons:
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:56:05Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:56:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T16:39:53Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T16:40:17Z
