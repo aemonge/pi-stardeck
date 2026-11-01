@@ -111,6 +111,18 @@ export function parseSessionSubject(value: unknown): SessionSubject | undefined 
   return sessionSubject(value.state, value.title);
 }
 
+/** Derive a session title from a raw user prompt — the extension-side
+ * fallback that makes the agent's first-turn `title` call optional
+ * polish instead of a load-bearing bet (every agent skipped it). The
+ * same sanitizer bounds it; slash commands are commands, not subjects:
+ * they never title. */
+export function titleFromPrompt(prompt: unknown): SessionSubject | undefined {
+  if (typeof prompt !== 'string') return undefined;
+  const normalized = normalizeTitlePart(prompt);
+  if (!normalized || normalized.startsWith('/')) return undefined;
+  return sessionSubject('set', normalized);
+}
+
 export function restoreOpenSpecFocus(entries: readonly unknown[]): OpenSpecFocus {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry = entries[index];

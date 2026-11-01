@@ -60,3 +60,17 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
   gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/README.md · at 2026-11-01T10:23:40Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T10:23:47Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/active-work.ts · at 2026-11-01T10:26:18Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/index.ts · at 2026-11-01T10:26:29Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-11-01T10:26:48Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-11-01T10:27:01Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/active-work.test.ts · at 2026-11-01T10:27:09Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:27:09Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-01T10:27:19Z

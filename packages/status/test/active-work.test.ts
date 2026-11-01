@@ -20,6 +20,7 @@ import {
   sessionSubject,
   sessionWorkFocus,
   taskflowRunFocus,
+  titleFromPrompt,
 } from '../src/active-work.ts';
 import { collectOpenSpec } from '../src/openspec.ts';
 import type { CommandRunner } from '../src/types.ts';
@@ -821,7 +822,7 @@ test('session_info_changed immediately propagates an unfocused session rename', 
   }
 });
 
-test('title exposes one provider-safe string action enum and carries the first-turn rule in its description', () => {
+test('title exposes one provider-safe string action enum and carries the deliberate-set rule in its description', () => {
   const harness = new RuntimeHarness();
   const tool = harness.tools.get('title');
   assert.ok(tool, 'title should be registered');
@@ -836,12 +837,15 @@ test('title exposes one provider-safe string action enum and carries the first-t
   assert.deepEqual(new Set(action.enum), new Set(['status', 'set']));
   assert.equal('anyOf' in action, false);
 
-  // The systematic-bug tombstone: the first-turn behavioral rule must live in
-  // the description (per-request salience), never only in promptGuidelines.
+  // The tombstone evolves: the first-turn rule lost to task attention
+  // (every agent skipped it — verified systematically), so the extension
+  // auto-titles from the first prompt; the description carries the
+  // deliberate-set rule instead.
   const description = tool.description ?? '';
-  assert.match(description, /first conversational turn/iu);
+  assert.match(description, /titles itself from the first/iu);
   assert.match(description, /120/u);
-  assert.match(description, /never raw prompt text/u);
+  assert.match(description, /never raw prompt text/iu);
+  assert.doesNotMatch(description, /first conversational turn/iu);
 });
 
 test('openspec_focus carries the explicit-direction rule in its description', () => {
@@ -1506,6 +1510,94 @@ test('session subject normalization rejects empty titles and bounds hostile meta
   assert.equal(Array.from(subject.title).length, 120);
   assert.ok(subject.title.endsWith('…'));
   assert.doesNotMatch(subject.title, /FORBIDDEN-SUFFIX/u);
+});
+
+test('titleFromPrompt derives a bounded title from the first real prompt', () => {
+  assert.deepEqual(titleFromPrompt('  Fix the   deck band  '), {
+    state: 'set',
+    title: 'Fix the deck band',
+  });
+  const long = titleFromPrompt('x'.repeat(500));
+  assert.equal(long?.state, 'set');
+  if (long?.state !== 'set') assert.fail('expected set subject');
+  assert.equal(Array.from(long.title).length, 120);
+  assert.ok(long.title.endsWith('…'));
+});
+
+test('titleFromPrompt skips slash commands and non-strings', () => {
+  assert.equal(titleFromPrompt('/council convene the advisors'), undefined);
+  assert.equal(titleFromPrompt('   '), undefined);
+  assert.equal(titleFromPrompt(42), undefined);
+  assert.equal(titleFromPrompt(undefined), undefined);
+});
+
+test('before_agent_start auto-titles from the first user prompt only', async () => {
+  const harness = new RuntimeHarness();
+  await harness.emit('session_start', { mode: 'tui' });
+  await harness.emit('before_agent_start', {
+    messageType: 'user',
+    prompt: 'Fix the deck band',
+  });
+  const subject = restoreSessionSubject(harness.entries);
+  assert.deepEqual(subject, { state: 'set', title: 'Fix the deck band' });
+
+  // A later prompt never overrides an existing title.
+  await harness.emit('before_agent_start', {
+    messageType: 'user',
+    prompt: 'A completely different topic',
+  });
+  assert.deepEqual(restoreSessionSubject(harness.entries), {
+    state: 'set',
+    title: 'Fix the deck band',
+  });
+  await harness.stop();
+});
+
+test('before_agent_start skips slash prompts and custom-message runs', async () => {
+  const harness = new RuntimeHarness();
+  await harness.emit('session_start', { mode: 'tui' });
+  await harness.emit('before_agent_start', {
+    messageType: 'user',
+    prompt: '/council convene',
+  });
+  await harness.emit('before_agent_start', {
+    messageType: 'custom',
+    prompt: undefined,
+  });
+  assert.deepEqual(restoreSessionSubject(harness.entries), NO_SESSION_SUBJECT);
+
+  // The first real prompt after the skips still titles.
+  await harness.emit('before_agent_start', {
+    messageType: 'user',
+    prompt: 'Real work begins',
+  });
+  assert.deepEqual(restoreSessionSubject(harness.entries), {
+    state: 'set',
+    title: 'Real work begins',
+  });
+  await harness.stop();
+});
+
+test('before_agent_start never overrides a restored or agent-set title', async () => {
+  const harness = new RuntimeHarness({
+    entries: [
+      {
+        type: 'custom',
+        customType: 'galactica-status.session-subject.v1',
+        data: { state: 'set', title: 'Restored title' },
+      },
+    ],
+  });
+  await harness.emit('session_start', { mode: 'tui' });
+  await harness.emit('before_agent_start', {
+    messageType: 'user',
+    prompt: 'A new conversation',
+  });
+  assert.deepEqual(restoreSessionSubject(harness.entries), {
+    state: 'set',
+    title: 'Restored title',
+  });
+  await harness.stop();
 });
 
 test('restoreSessionSubject prefers the latest valid subject entry', () => {

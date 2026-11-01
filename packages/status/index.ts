@@ -28,6 +28,7 @@ import {
   sessionSubject,
   taskflowRunFocus,
   taskFocus,
+  titleFromPrompt,
 } from './src/active-work.ts';
 import { collectDiagnostics } from './src/diagnostics.ts';
 import { loadConfig } from './src/config.ts';
@@ -1197,8 +1198,17 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     runtime?.settle();
   });
 
-  pi.on('before_agent_start', () => {
+  pi.on('before_agent_start', (event) => {
     runtime?.beginTurn();
+    // Auto-title: the first real user prompt names the session while the
+    // subject is still clear — the agent's `title` call stays optional
+    // polish (every agent skipped the first-turn rule; verified
+    // systematically in simplify-session-focus-surface). Human- or
+    // agent-set titles and restored sessions are never overridden.
+    if (event.messageType !== 'user' || typeof event.prompt !== 'string') return;
+    if ((runtime?.currentSubject() ?? NO_SESSION_SUBJECT).state !== 'clear') return;
+    const next = titleFromPrompt(event.prompt);
+    if (next && next.state === 'set') persistAndApplySubject(next);
   });
 
   pi.on('tool_execution_start', (event) => {
@@ -1302,7 +1312,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     name: 'title',
     label: 'Session Title',
     description:
-      'Show or set the sanitized session title that keeps the focus row populated beneath OpenSpec and Session Work. Call this at the first conversational turn with a short sanitized title (at most 120 characters, never raw prompt text) and revise it only when the topic clearly shifts; never require Human action for it',
+      'Show or set the sanitized session title that keeps the focus row populated beneath OpenSpec and Session Work. The session titles itself from the first real prompt; call this only to name or rename deliberately (at most 120 characters, never raw prompt text), revising when the topic clearly shifts; never require Human action for it',
     promptSnippet: 'Manage the automatic session title',
     parameters: Type.Object({
       action: StringEnum(['status', 'set'] as const),
