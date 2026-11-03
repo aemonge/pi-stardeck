@@ -30,6 +30,6 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] `packages/status/test/active-work.test.ts`: typed `BeforeAgentStartEvent` fixtures (drift fails tsc), malformed raw emit fail-soft, custom-message fixture corrected
 - [x] verify: `npm run typecheck` · `npm run format:check` · `npm run lint` · `npm run test:status` · `npm run test:stardeck` — typecheck root+workspaces green · lint clean · status 177 pass · stardeck 154 pass
 - [x] baseline: `node scripts/check-baseline.mjs --write` → `npm run check:baseline` green (stale v0.11.0 manifest folds in; pre-existing)
-- [ ] Commit — fix(status): fire auto-title on the real before_agent_start shape
-      hash:
+- [x] Commit — fix(status): fire auto-title on the real before_agent_start shape
+      hash: 8bf1610
 - [ ] Human validation — response: · outcome: · surfaced:
