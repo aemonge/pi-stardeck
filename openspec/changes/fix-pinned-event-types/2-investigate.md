@@ -15,3 +15,27 @@
 - **Structural cast + value narrowing** — three lines, type-generation-proof, matches the repo's defensive-boundary doctrine.
 - **Module augmentation** (`declare module` extending `BeforeAgentStartEvent`) — claims fields for every handler repo-wide, but codifies a guess about a vendor type and breaks loudly if the pinned package later declares a conflicting shape.
 - **Drop `messageType` and rely on `typeof prompt === 'string'`** — slimmer, but custom-message runs (`pi.sendMessage`) could carry a prompt-shaped field in future types and mis-title; the messageType guard is load-bearing semantics, not ceremony.
+
+## Correction — 2026-11-03 (live falsification)
+
+Slice 1's pending live validation ran today and **failed**: the focus row
+rendered `— no subject`; the live session carried zero
+`galactica-status.session-subject.v1` entries. Three findings above were wrong:
+
+1. **"0.84.4 declares neither `messageType` nor `prompt`"** — half wrong. The
+   pinned `dist/core/extensions/types.d.ts:539` declares `prompt: string`;
+   only `messageType` is phantom. No runtime changelog ever mentions it.
+2. **"the Pi extension docs specify `messageType: "user"` (extensions.md
+   L216)"** — the current docs (`/usr/lib/pi/docs/extensions.md`, the
+   declared API authority) never mention the field; L103's "both" means
+   `prompt` + `systemPromptOptions`. The comment misread the doc.
+3. **"the auto-title tests pass"** — the harness fed synthetic events shaped
+   with `messageType: 'user'`, mirroring the invention. Green against an
+   event no runtime emits proves nothing.
+
+Runtime truth (`dist/core`, read 2026-11-03): `pi.on('before_agent_start')`
+is fully typed (`ExtensionHandler<BeforeAgentStartEvent, …>`); the single
+emission site is `agent-session.js` → `emitBeforeAgentStart(expandedText, …)`
+— the human-prompt path. `sendCustomMessage` never emits it: custom messages
+steer, follow up, or queue into an existing turn. The "load-bearing"
+run-kind guard protects against a run that cannot occur.

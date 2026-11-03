@@ -10,6 +10,9 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
 - [x] Commit — fix(status): narrow before_agent_start event access for pinned types
       hash:
 - [ ] Human validation — response: · outcome: · surfaced:
+- live validation attempted 2026-11-03 · failed: focus row rendered
+  `— no subject`; live session carried zero
+  `galactica-status.session-subject.v1` entries — routed to Slice 2
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T17:31:15Z
 
@@ -20,3 +23,13 @@ A Slice = one conventional commit + one post-commit Human validation. Tasks are 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T17:33:43Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-01T17:33:50Z
+
+## Slice 2 — fire the auto-title on the real runtime shape
+
+- [x] `packages/status/index.ts`: drop the phantom `messageType` cast/guard; read `event.prompt` via the pinned `BeforeAgentStartEvent` (typed handler, zero casts); comment records the emission truth
+- [x] `packages/status/test/active-work.test.ts`: typed `BeforeAgentStartEvent` fixtures (drift fails tsc), malformed raw emit fail-soft, custom-message fixture corrected
+- [x] verify: `npm run typecheck` · `npm run format:check` · `npm run lint` · `npm run test:status` · `npm run test:stardeck` — typecheck root+workspaces green · lint clean · status 177 pass · stardeck 154 pass
+- [x] baseline: `node scripts/check-baseline.mjs --write` → `npm run check:baseline` green (stale v0.11.0 manifest folds in; pre-existing)
+- [ ] Commit — fix(status): fire auto-title on the real before_agent_start shape
+      hash:
+- [ ] Human validation — response: · outcome: · surfaced:

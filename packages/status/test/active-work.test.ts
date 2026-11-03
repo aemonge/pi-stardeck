@@ -3,7 +3,11 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, before } from 'node:test';
-import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type {
+  BeforeAgentStartEvent,
+  ExtensionAPI,
+  ExtensionContext,
+} from '@earendil-works/pi-coding-agent';
 import galacticaStatus from '../index.ts';
 import {
   formatActiveWorkTitle,
@@ -1529,21 +1533,34 @@ test('titleFromPrompt skips slash commands and non-strings', () => {
   assert.equal(titleFromPrompt(undefined), undefined);
 });
 
-test('before_agent_start auto-titles from the first user prompt only', async () => {
+/**
+ * Auto-title fixtures are typed against the pinned runtime event so a
+ * runtime shape change fails `tsc` here instead of dying silently at
+ * runtime (Slice 1 shipped a guard against a `messageType` field no
+ * runtime BeforeAgentStartEvent ever carried — tests passed, feature
+ * never fired).
+ */
+function agentStartEvent(prompt: string): BeforeAgentStartEvent {
+  return {
+    type: 'before_agent_start',
+    prompt,
+    systemPrompt: '',
+    systemPromptOptions: { cwd: process.cwd() },
+  };
+}
+
+test('before_agent_start auto-titles from the first human prompt only', async () => {
   const harness = new RuntimeHarness();
   await harness.emit('session_start', { mode: 'tui' });
-  await harness.emit('before_agent_start', {
-    messageType: 'user',
-    prompt: 'Fix the deck band',
-  });
+  await harness.emit('before_agent_start', agentStartEvent('Fix the deck band'));
   const subject = restoreSessionSubject(harness.entries);
   assert.deepEqual(subject, { state: 'set', title: 'Fix the deck band' });
 
   // A later prompt never overrides an existing title.
-  await harness.emit('before_agent_start', {
-    messageType: 'user',
-    prompt: 'A completely different topic',
-  });
+  await harness.emit(
+    'before_agent_start',
+    agentStartEvent('A completely different topic'),
+  );
   assert.deepEqual(restoreSessionSubject(harness.entries), {
     state: 'set',
     title: 'Fix the deck band',
@@ -1551,24 +1568,20 @@ test('before_agent_start auto-titles from the first user prompt only', async () 
   await harness.stop();
 });
 
-test('before_agent_start skips slash prompts and custom-message runs', async () => {
+test('before_agent_start skips slash prompts and prompt-less events', async () => {
   const harness = new RuntimeHarness();
   await harness.emit('session_start', { mode: 'tui' });
-  await harness.emit('before_agent_start', {
-    messageType: 'user',
-    prompt: '/council convene',
-  });
-  await harness.emit('before_agent_start', {
-    messageType: 'custom',
-    prompt: undefined,
-  });
+  // Slash prompts never title (titleFromPrompt boundary skip).
+  await harness.emit('before_agent_start', agentStartEvent('/council convene'));
+  // Custom-message runs never reach this event: sendCustomMessage steers,
+  // follows up, or queues into an existing turn — the single emission site
+  // (agent-session emitBeforeAgentStart) is the human-prompt path. A raw
+  // prompt-less emit stands in for host drift and malformed input.
+  await harness.emit('before_agent_start', { type: 'before_agent_start' });
   assert.deepEqual(restoreSessionSubject(harness.entries), NO_SESSION_SUBJECT);
 
   // The first real prompt after the skips still titles.
-  await harness.emit('before_agent_start', {
-    messageType: 'user',
-    prompt: 'Real work begins',
-  });
+  await harness.emit('before_agent_start', agentStartEvent('Real work begins'));
   assert.deepEqual(restoreSessionSubject(harness.entries), {
     state: 'set',
     title: 'Real work begins',
@@ -1587,10 +1600,7 @@ test('before_agent_start never overrides a restored or agent-set title', async (
     ],
   });
   await harness.emit('session_start', { mode: 'tui' });
-  await harness.emit('before_agent_start', {
-    messageType: 'user',
-    prompt: 'A new conversation',
-  });
+  await harness.emit('before_agent_start', agentStartEvent('A new conversation'));
   assert.deepEqual(restoreSessionSubject(harness.entries), {
     state: 'set',
     title: 'Restored title',

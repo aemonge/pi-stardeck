@@ -1205,15 +1205,15 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     // polish (every agent skipped the first-turn rule; verified
     // systematically in simplify-session-focus-surface). Human- or
     // agent-set titles and restored sessions are never overridden.
-    // The event fields are narrowed structurally: the registry-pinned
-    // @earendil-works/pi-coding-agent types predate messageType/prompt,
-    // while the runtime event carries both (extensions.md, before_agent_start).
-    const promptRun = event as { messageType?: unknown; prompt?: unknown };
-    if (promptRun.messageType !== 'user' || typeof promptRun.prompt !== 'string') {
-      return;
-    }
+    // No run-kind guard exists: before_agent_start fires only on the
+    // human-prompt path (agent-session emitBeforeAgentStart — custom
+    // messages steer, follow up, or queue, never start a run), and
+    // titleFromPrompt re-validates the prompt and skips `/` prompts.
+    // fix-pinned-event-types Slice 2: the prior guard read a messageType
+    // field no runtime BeforeAgentStartEvent ever carried, returning on
+    // every turn — the auto-title never fired (verified live 2026-11-03).
     if ((runtime?.currentSubject() ?? NO_SESSION_SUBJECT).state !== 'clear') return;
-    const next = titleFromPrompt(promptRun.prompt);
+    const next = titleFromPrompt(event.prompt);
     if (next && next.state === 'set') persistAndApplySubject(next);
   });
 
