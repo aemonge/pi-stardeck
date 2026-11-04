@@ -81,8 +81,8 @@ write path is append + local cache update + `focus-changed` emit — no session-
       package:load PASS
 - [x] baseline: `check-baseline.mjs --write` → `check:baseline` green
       check: current 104 files PASS · imported record 87 files PASS
-- [ ] commit `refactor(status): shrink to pure renderer; retire session-work`
-      hash:
+- [x] commit `refactor(status): shrink to pure renderer; retire session-work`
+      hash: 323e434 (amended to include the slice's 17 source/test/doc files; pushed)
 - [ ] Human validation — response: · outcome: · surfaced:
 
   gate-attributed · tool: write · paths: /home/aemonge/projects/pi-stardeck/packages/work-state/package.json · at 2026-11-04T15:48:06Z
