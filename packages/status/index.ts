@@ -1345,47 +1345,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     },
   });
 
-  pi.registerTool({
-    name: 'openspec_focus',
-    label: 'OpenSpec Focus',
-    description:
-      'Show, safely set, deliberately replace, validate, or clear branch-local OpenSpec Task focus. Use only for explicit Human direction or an exact declared OpenSpec Task handoff; never infer material Plan selection or Human validation',
-    promptSnippet:
-      'Manage exact branch-local OpenSpec Task focus with replacement safeguards',
-    parameters: Type.Object({
-      action: StringEnum(['status', 'set', 'replace', 'validate', 'clear'] as const),
-      change: Type.Optional(
-        Type.String({
-          description: 'Required for set and replace: the exact OpenSpec change ID',
-        }),
-      ),
-      task: Type.Optional(
-        Type.String({
-          description: 'Required for set and replace: the exact OpenSpec Task ID',
-        }),
-      ),
-    }),
-    async execute(_toolCallId, params) {
-      const result = applyOpenSpecFocusAction(
-        params.action,
-        params.change,
-        params.task,
-      );
-      return {
-        content: [
-          {
-            type: 'text',
-            text: result.ok ? result.message : `Error: ${result.message}`,
-          },
-        ],
-        details: {
-          ok: result.ok,
-          focus: result.focus,
-        },
-      };
-    },
-  });
-
   pi.registerCommand('openspec-focus', {
     description: "Show, clear, or explicitly set this session's OpenSpec task focus",
     handler: async (args, ctx) => {

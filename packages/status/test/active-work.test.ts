@@ -850,40 +850,17 @@ test('title exposes one provider-safe string action enum and carries the deliber
   assert.doesNotMatch(description, /first conversational turn/iu);
 });
 
-test('openspec_focus carries the explicit-direction rule in its description', () => {
-  const harness = new RuntimeHarness();
-  const tool = harness.tools.get('openspec_focus');
-  assert.ok(tool, 'openspec_focus should be registered');
-  const description = tool.description ?? '';
-  assert.match(description, /explicit Human direction/u);
-  assert.match(description, /never infer/u);
-});
-
 test('retired instruments stay retired: work_focus and stage are gone', () => {
   const harness = new RuntimeHarness();
   assert.equal(harness.tools.has('work_focus'), false, 'work_focus is retired');
   assert.equal(harness.tools.has('stage'), false, 'stage is retired');
   assert.equal(harness.commands.has('work'), false, '/work is retired');
-  assert.ok(harness.tools.has('openspec_focus'), 'openspec_focus remains');
-  assert.ok(harness.tools.has('title'), 'title remains');
-});
-
-test('openspec_focus exposes one provider-safe string action enum', () => {
-  const harness = new RuntimeHarness();
-  const tool = harness.tools.get('openspec_focus');
-  assert.ok(tool, 'openspec_focus should be registered');
-
-  const action = tool.parameters.properties.action as {
-    type?: string;
-    enum?: unknown[];
-    anyOf?: unknown;
-  };
-  assert.equal(action.type, 'string');
-  assert.deepEqual(
-    new Set(action.enum),
-    new Set(['status', 'set', 'replace', 'validate', 'clear']),
+  assert.equal(
+    harness.tools.has('openspec_focus'),
+    false,
+    'openspec_focus moved to work-state',
   );
-  assert.equal('anyOf' in action, false);
+  assert.ok(harness.tools.has('title'), 'title remains');
 });
 
 test('conversation-driven Taskflow calls publish and clear controlled live activity', async () => {
@@ -1708,49 +1685,18 @@ test('subject titles fill the fallback before session name and yield to work', (
   );
 });
 
-test('openspec_focus shares safeguarded branch transitions with the slash command', async () => {
+test('/openspec-focus shares safeguarded branch transitions', async () => {
   const intent = 'Clear this work when OpenSpec focus is acquired';
-  const toolHarness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
-  const commandHarness = new RuntimeHarness({
-    entries: [seededWorkEntry(intent)],
-  });
-  const branchState = (harness: RuntimeHarness) =>
+  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
+  const branchState = () =>
     harness.entries.map(({ customType, data }) => ({ customType, data }));
 
   try {
-    await toolHarness.emit('session_start', { reason: 'startup' });
+    await harness.emit('session_start', { reason: 'startup' });
+    assert.equal(harness.entries.length, 1, 'only the seeded legacy work entry');
 
-    const initialStatus = await toolHarness.tool('openspec_focus', {
-      action: 'status',
-    });
-    assert.equal(initialStatus.details.ok, true);
-    assert.deepEqual(initialStatus.details.focus, { mode: 'none' });
-    assert.equal(toolHarness.entries.length, 1, 'only the seeded legacy work entry');
-
-    for (const params of [
-      { action: 'set', change },
-      { action: 'set', change, task: '   ' },
-      { action: 'replace', task: replacementTaskId },
-    ]) {
-      const invalid = await toolHarness.tool('openspec_focus', params);
-      assert.equal(invalid.details.ok, false);
-      assert.match(invalid.content[0].text, /Error:.*change and task/iu);
-      assert.equal(toolHarness.entries.length, 1);
-    }
-
-    const acquired = await toolHarness.tool('openspec_focus', {
-      action: 'set',
-      change,
-      task: taskId,
-    });
-    assert.equal(acquired.details.ok, true);
-    assert.deepEqual(acquired.details.focus, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-    assert.deepEqual(branchState(toolHarness).slice(-2), [
+    await harness.command('openspec-focus', `set ${change} ${taskId}`);
+    assert.deepEqual(branchState().slice(-2), [
       {
         customType: 'galactica-status.session-work.v1',
         data: { state: 'clear' },
@@ -1761,57 +1707,40 @@ test('openspec_focus shares safeguarded branch transitions with the slash comman
       },
     ]);
 
-    const entriesBeforeConflict = toolHarness.entries.length;
-    const conflict = await toolHarness.tool('openspec_focus', {
-      action: 'set',
-      change: replacementChange,
-      task: replacementTaskId,
-    });
-    assert.equal(conflict.details.ok, false);
-    assert.match(conflict.content[0].text, /Error:.*use replace/iu);
-    assert.equal(toolHarness.entries.length, entriesBeforeConflict);
+    const entriesBeforeConflict = harness.entries.length;
+    await harness.command(
+      'openspec-focus',
+      `set ${replacementChange} ${replacementTaskId}`,
+    );
+    assert.equal(
+      harness.entries.length,
+      entriesBeforeConflict,
+      'conflicting set must not write',
+    );
 
-    const replaced = await toolHarness.tool('openspec_focus', {
-      action: 'replace',
-      change: replacementChange,
-      task: replacementTaskId,
-    });
-    assert.equal(replaced.details.ok, true);
-    assert.deepEqual(replaced.details.focus, {
+    await harness.command(
+      'openspec-focus',
+      `replace ${replacementChange} ${replacementTaskId}`,
+    );
+    assert.deepEqual(harness.entries.at(-1)?.data, {
       mode: 'task',
       change: replacementChange,
       taskId: replacementTaskId,
       awaitingValidation: false,
     });
 
-    const cleared = await toolHarness.tool('openspec_focus', { action: 'clear' });
-    assert.equal(cleared.details.ok, true);
-    assert.deepEqual(cleared.details.focus, { mode: 'none' });
-    assert.deepEqual(toolHarness.entries.at(-1)?.data, { mode: 'none' });
+    await harness.command('openspec-focus', 'clear');
+    assert.deepEqual(harness.entries.at(-1)?.data, { mode: 'none' });
 
-    const entriesAfterClear = toolHarness.entries.length;
-    const clearedStatus = await toolHarness.tool('openspec_focus', {
-      action: 'status',
-    });
-    assert.deepEqual(clearedStatus.details.focus, { mode: 'none' });
-    assert.equal(toolHarness.entries.length, entriesAfterClear);
-
-    await commandHarness.emit('session_start', { reason: 'startup' });
-    await commandHarness.command('openspec-focus', `set ${change} ${taskId}`);
-    await commandHarness.command(
-      'openspec-focus',
-      `replace ${replacementChange} ${replacementTaskId}`,
-    );
-    await commandHarness.command('openspec-focus', 'clear');
-
-    assert.deepEqual(
-      branchState(toolHarness),
-      branchState(commandHarness),
-      'tool and slash command must append equivalent branch-local state',
+    const entriesAfterClear = harness.entries.length;
+    await harness.command('openspec-focus', '');
+    assert.equal(
+      harness.entries.length,
+      entriesAfterClear,
+      'bare status writes nothing',
     );
   } finally {
-    await toolHarness.stop();
-    await commandHarness.stop();
+    await harness.stop();
   }
 });
 
@@ -1847,43 +1776,15 @@ test('openspec focus validation flag round-trips and degrades for legacy entries
   });
 });
 
-test('openspec_focus validate marks awaiting Human validation and auto-clears', async () => {
+test('/openspec-focus validate marks awaiting Human validation', async () => {
   const harness = new RuntimeHarness();
-  const commandHarness = new RuntimeHarness();
   try {
     await harness.emit('session_start', { reason: 'startup' });
 
-    const bare = await harness.tool('openspec_focus', { action: 'validate' });
-    assert.equal(bare.details.ok, false);
-    assert.match(bare.content[0].text, /Error:.*no task to validate/iu);
+    await harness.command('openspec-focus', 'validate');
+    assert.equal(harness.entries.length, 0, 'bare validate has no task to validate');
 
-    const focused = await harness.tool('openspec_focus', {
-      action: 'set',
-      change,
-      task: taskId,
-    });
-    assert.equal(focused.details.ok, true);
-    assert.equal(focused.details.focus.awaitingValidation, false);
-
-    const validated = await harness.tool('openspec_focus', { action: 'validate' });
-    assert.equal(validated.details.ok, true);
-    assert.match(validated.content[0].text, /awaiting Human validation/u);
-    assert.equal(validated.details.focus.awaitingValidation, true);
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: true,
-    });
-    assert.equal(latestHeaderWork(harness)?.lifecycle, 'waiting');
-
-    const resecured = await harness.tool('openspec_focus', {
-      action: 'set',
-      change,
-      task: taskId,
-    });
-    assert.equal(resecured.details.ok, true);
-    assert.equal(resecured.details.focus.awaitingValidation, false);
+    await harness.command('openspec-focus', `set ${change} ${taskId}`);
     assert.deepEqual(harness.entries.at(-1)?.data, {
       mode: 'task',
       change,
@@ -1891,34 +1792,34 @@ test('openspec_focus validate marks awaiting Human validation and auto-clears', 
       awaitingValidation: false,
     });
 
-    const conflict = await harness.tool('openspec_focus', {
-      action: 'set',
-      change: replacementChange,
-      task: replacementTaskId,
-    });
-    assert.equal(conflict.details.ok, false);
-    assert.match(conflict.content[0].text, /use replace/iu);
-
-    const replaced = await harness.tool('openspec_focus', {
-      action: 'replace',
-      change: replacementChange,
-      task: replacementTaskId,
-    });
-    assert.equal(replaced.details.ok, true);
-    assert.equal(replaced.details.focus.awaitingValidation, false);
-
-    await commandHarness.emit('session_start', { reason: 'startup' });
-    await commandHarness.command('openspec-focus', `set ${change} ${taskId}`);
-    await commandHarness.command('openspec-focus', 'validate');
-    assert.deepEqual(commandHarness.entries.at(-1)?.data, {
+    await harness.command('openspec-focus', 'validate');
+    assert.deepEqual(harness.entries.at(-1)?.data, {
       mode: 'task',
       change,
       taskId,
       awaitingValidation: true,
     });
+
+    await harness.command('openspec-focus', `set ${change} ${taskId}`);
+    assert.deepEqual(harness.entries.at(-1)?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
+
+    await harness.command(
+      'openspec-focus',
+      `replace ${replacementChange} ${replacementTaskId}`,
+    );
+    assert.deepEqual(harness.entries.at(-1)?.data, {
+      mode: 'task',
+      change: replacementChange,
+      taskId: replacementTaskId,
+      awaitingValidation: false,
+    });
   } finally {
     await harness.stop();
-    await commandHarness.stop();
   }
 });
 

@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 import galacticaContextHeader from '../packages/pi-stardeck/index.js';
+import workState from '../packages/work-state/index.js';
 import galacticaStatus from '../packages/status/index.js';
 import footerTelemetry from '../packages/footer/index.js';
 import { registerStardeckHealth } from './health.js';
@@ -19,6 +20,7 @@ export const COCKPIT_COMPOSITION = [
 export default function piStardeck(pi: ExtensionAPI): void {
   registerPiStatus(pi);
   footerTelemetry(pi);
+  workState(pi);
   galacticaStatus(pi);
   galacticaContextHeader(pi, {
     surface: COCKPIT_SURFACES.contextHeader,
