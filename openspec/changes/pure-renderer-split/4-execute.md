@@ -286,3 +286,11 @@ write path is append + local cache update + `focus-changed` emit — no session-
   gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/test/local-load-probe.test.ts · at 2026-11-04T17:03:46Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-04T17:03:54Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-04T17:23:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-04T17:23:09Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-04T17:23:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-04T17:24:29Z

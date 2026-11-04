@@ -3,11 +3,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, before } from 'node:test';
-import type {
-  BeforeAgentStartEvent,
-  ExtensionAPI,
-  ExtensionContext,
-} from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import galacticaStatus from '../index.ts';
 import {
   formatActiveWorkTitle,
@@ -47,7 +43,6 @@ const activeTitle = `π  ${change} › ${taskId} ${taskTitle}`;
 const replacementChange = 'replace-active-openspec-title';
 const replacementTaskId = '2.4';
 const replacementTaskTitle = 'Replace active title focus';
-const replacementActiveTitle = `π  ${replacementChange} › ${replacementTaskId} ${replacementTaskTitle}`;
 
 const originalEnvironment = {
   codingAgentDir: process.env.PI_CODING_AGENT_DIR,
@@ -74,14 +69,6 @@ after(() => {
     process.env.PI_OPENSPEC_CHANGE = originalEnvironment.openspecChange;
   }
 });
-
-function deferred(): { promise: Promise<void>; resolve: () => void } {
-  let resolve!: () => void;
-  const promise = new Promise<void>((settle) => {
-    resolve = settle;
-  });
-  return { promise, resolve };
-}
 
 function openSpecResult(
   args: string[],
@@ -326,32 +313,6 @@ async function waitFor(
   }
 }
 
-async function waitForSignal(
-  signal: Promise<void>,
-  diagnostics: () => string,
-  timeoutMs = 500,
-): Promise<void> {
-  let timeout: NodeJS.Timeout | undefined;
-  try {
-    await Promise.race([
-      signal,
-      new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(
-          () =>
-            reject(
-              new Error(
-                `waitForSignal timed out after ${timeoutMs}ms: ${diagnostics()}`,
-              ),
-            ),
-          timeoutMs,
-        );
-      }),
-    ]);
-  } finally {
-    if (timeout) clearTimeout(timeout);
-  }
-}
-
 function titleDiagnostics(harness: RuntimeHarness): string {
   return `observed titles: ${JSON.stringify(harness.titles)}`;
 }
@@ -380,24 +341,6 @@ function latestOpenSpecFooterMessage(harness: RuntimeHarness): unknown {
 
 function latestOpenSpecProgressMessage(harness: RuntimeHarness): unknown {
   return latestWidgetMessage(harness, 'galactica.openspec-progress');
-}
-
-function latestWorkFooterMessage(harness: RuntimeHarness): unknown {
-  for (let index = harness.sharedEvents.length - 1; index >= 0; index -= 1) {
-    const message = harness.sharedEvents[index]?.message;
-    if (typeof message !== 'object' || message === null) continue;
-    if ('id' in message && message.id === 'galactica.work') return message;
-    if (
-      'widget' in message &&
-      typeof message.widget === 'object' &&
-      message.widget !== null &&
-      'id' in message.widget &&
-      message.widget.id === 'galactica.work'
-    ) {
-      return message;
-    }
-  }
-  return undefined;
 }
 
 function latestHeader(harness: RuntimeHarness): Record<string, unknown> | undefined {
