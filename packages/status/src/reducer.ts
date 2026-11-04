@@ -1,5 +1,5 @@
 import type { LedgerEvent } from './ledger.ts';
-import type { OpenSpecFocus, SessionSubject, SessionWorkFocus } from './active-work.ts';
+import type { OpenSpecFocus, SessionSubject } from './active-work.ts';
 import type {
   CockpitSnapshot,
   ProgressFact,
@@ -19,7 +19,6 @@ import type {
 
 export type ReducerFacts = {
   openSpec: OpenSpecFocus;
-  work: SessionWorkFocus;
   subject: SessionSubject;
   runs: ReadonlyMap<string, RunSpan>;
   progress: ProgressFact | null;
@@ -30,7 +29,6 @@ export const NO_SELECTION: SelectionState = { kind: 'none' };
 export function emptyFacts(): ReducerFacts {
   return {
     openSpec: { mode: 'none' },
-    work: { state: 'clear' },
     subject: { state: 'clear' },
     runs: new Map(),
     progress: null,
@@ -40,7 +38,6 @@ export function emptyFacts(): ReducerFacts {
 /** The single selection resolver. Priority order is contract-frozen. */
 export function resolveSelection(facts: {
   openSpec: OpenSpecFocus;
-  work: SessionWorkFocus;
   subject: SessionSubject;
 }): SelectionState {
   if (facts.openSpec.mode === 'task') {
@@ -48,13 +45,6 @@ export function resolveSelection(facts: {
       kind: 'openspec-task',
       change: facts.openSpec.change,
       task: facts.openSpec.taskId,
-    };
-  }
-  if (facts.work.state !== 'clear') {
-    return {
-      kind: 'session-work',
-      intent: facts.work.intent,
-      phase: facts.work.state === 'validation' ? 'validation' : 'active',
     };
   }
   if (facts.subject.state === 'set') {
@@ -73,8 +63,6 @@ export function applyEvent(facts: ReducerFacts, event: LedgerEvent): ReducerFact
   switch (event.type) {
     case 'focus/openspec':
       return { ...facts, openSpec: event.focus };
-    case 'focus/work':
-      return { ...facts, work: event.work };
     case 'focus/subject':
       return { ...facts, subject: event.subject };
     case 'run/start': {
@@ -152,12 +140,6 @@ export function deriveTitle(snapshot: CockpitSnapshot): string {
   switch (selection.kind) {
     case 'openspec-task':
       detail = `${selection.change} › ${selection.task}`;
-      break;
-    case 'session-work':
-      detail =
-        selection.phase === 'validation'
-          ? `Validate › ${selection.intent}`
-          : selection.intent;
       break;
     case 'subject':
       detail = selection.title;

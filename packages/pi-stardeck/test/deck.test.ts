@@ -460,7 +460,7 @@ test('keeps a single selected title on the focus row only', () => {
   const state = fixture();
   state.header!.work!.titles = ['One focused work title'];
   state.header!.selection = {
-    source: 'session-work',
+    source: 'subject',
     titles: ['One focused work title'],
     color: 'accent',
   };
@@ -631,7 +631,7 @@ test('renders the selected work title exactly once across the deck', () => {
     activity: { kind: 'implementation' },
   };
   state.header!.selection = {
-    source: 'session-work',
+    source: 'subject',
     titles: [echoTitle],
     color: 'accent',
   };

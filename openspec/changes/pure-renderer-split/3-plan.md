@@ -121,3 +121,8 @@ commands present.
 - 2026-11-04 — Slice 1: the named duplicate-tool risk fired (load probe rejects a second
   `openspec_focus` registration); the pre-agreed fallback executed — status's tool block deleted
   in Slice 1, its five tool-path tests moved out, Slice 2 scope shrinks accordingly.
+- 2026-11-04 — Slice 2: the band chip renders the `formatActiveWorkTitle` chain through the
+  title-state `subject` slot (`SUBJECT_MAX` 180 = the chain's bound — the designed seam);
+  `ctx.ui.setTitle` deleted, so the terminal titlebar is pi-title's alone. The ledger lost the
+  `focus/work` event and the reducer lost the `work` fact; write-path tests moved to work-state
+  or retired; rendering tests seed branch entries instead of driving deleted write paths.

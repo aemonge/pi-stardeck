@@ -1,7 +1,6 @@
 import { basename } from 'node:path';
 
 export const OPEN_SPEC_FOCUS_ENTRY_TYPE = 'galactica-status.openspec-focus.v1';
-export const SESSION_WORK_FOCUS_ENTRY_TYPE = 'galactica-status.session-work.v1';
 export const SESSION_SUBJECT_ENTRY_TYPE = 'galactica-status.session-subject.v1';
 
 export type TaskOpenSpecFocus = {
@@ -15,11 +14,6 @@ export type OpenSpecFocus = { mode: 'none' } | TaskOpenSpecFocus;
 
 export const NO_OPEN_SPEC_FOCUS: OpenSpecFocus = { mode: 'none' };
 
-export type SessionWorkFocus =
-  { state: 'clear' } | { state: 'active' | 'validation'; intent: string };
-
-export const NO_SESSION_WORK_FOCUS: SessionWorkFocus = { state: 'clear' };
-
 export type SessionSubject = { state: 'clear' } | { state: 'set'; title: string };
 
 export const NO_SESSION_SUBJECT: SessionSubject = { state: 'clear' };
@@ -27,7 +21,6 @@ export const NO_SESSION_SUBJECT: SessionSubject = { state: 'clear' };
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/gu;
 const MAX_TITLE_POINTS = 180;
 const MAX_TASK_TITLE_POINTS = 72;
-const MAX_WORK_INTENT_POINTS = 160;
 const MAX_SUBJECT_POINTS = 120;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -73,25 +66,6 @@ export function parseOpenSpecFocus(value: unknown): OpenSpecFocus | undefined {
   return taskFocus(value.change, value.taskId, value.awaitingValidation);
 }
 
-export function sessionWorkFocus(
-  state: unknown,
-  intent?: unknown,
-): SessionWorkFocus | undefined {
-  if (state === 'clear') return NO_SESSION_WORK_FOCUS;
-  if (state !== 'active' && state !== 'validation') return undefined;
-  const normalizedIntent = explicitId(intent);
-  if (!normalizedIntent) return undefined;
-  return {
-    state,
-    intent: shorten(normalizedIntent, MAX_WORK_INTENT_POINTS),
-  };
-}
-
-export function parseSessionWorkFocus(value: unknown): SessionWorkFocus | undefined {
-  if (!isRecord(value)) return undefined;
-  return sessionWorkFocus(value.state, value.intent);
-}
-
 export function sessionSubject(
   state: unknown,
   title?: unknown,
@@ -111,18 +85,6 @@ export function parseSessionSubject(value: unknown): SessionSubject | undefined 
   return sessionSubject(value.state, value.title);
 }
 
-/** Derive a session title from a raw user prompt — the extension-side
- * fallback that makes the agent's first-turn `title` call optional
- * polish instead of a load-bearing bet (every agent skipped it). The
- * same sanitizer bounds it; slash commands are commands, not subjects:
- * they never title. */
-export function titleFromPrompt(prompt: unknown): SessionSubject | undefined {
-  if (typeof prompt !== 'string') return undefined;
-  const normalized = normalizeTitlePart(prompt);
-  if (!normalized || normalized.startsWith('/')) return undefined;
-  return sessionSubject('set', normalized);
-}
-
 export function restoreOpenSpecFocus(entries: readonly unknown[]): OpenSpecFocus {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry = entries[index];
@@ -137,22 +99,6 @@ export function restoreOpenSpecFocus(entries: readonly unknown[]): OpenSpecFocus
     if (focus) return focus;
   }
   return NO_OPEN_SPEC_FOCUS;
-}
-
-export function restoreSessionWorkFocus(entries: readonly unknown[]): SessionWorkFocus {
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const entry = entries[index];
-    if (
-      !isRecord(entry) ||
-      entry.type !== 'custom' ||
-      entry.customType !== SESSION_WORK_FOCUS_ENTRY_TYPE
-    ) {
-      continue;
-    }
-    const focus = parseSessionWorkFocus(entry.data);
-    if (focus) return focus;
-  }
-  return NO_SESSION_WORK_FOCUS;
 }
 
 export function restoreSessionSubject(entries: readonly unknown[]): SessionSubject {
@@ -204,16 +150,6 @@ export function sameOpenSpecFocus(left: OpenSpecFocus, right: OpenSpecFocus): bo
   );
 }
 
-export function sameSessionWorkFocus(
-  left: SessionWorkFocus,
-  right: SessionWorkFocus,
-): boolean {
-  if (left.state !== right.state) return false;
-  return (
-    left.state === 'clear' || (right.state !== 'clear' && left.intent === right.intent)
-  );
-}
-
 export function sameSessionSubject(
   left: SessionSubject,
   right: SessionSubject,
@@ -226,7 +162,6 @@ export function sameSessionSubject(
 
 export function formatActiveWorkTitle(options: {
   focus: OpenSpecFocus;
-  workFocus?: SessionWorkFocus;
   subject?: SessionSubject;
   taskTitle?: string;
   sessionName?: string;
@@ -239,11 +174,8 @@ export function formatActiveWorkTitle(options: {
       ? shorten(normalizeTitlePart(options.taskTitle), MAX_TASK_TITLE_POINTS)
       : '';
     detail = `${options.focus.change} › ${options.focus.taskId}${taskTitle ? ` ${taskTitle}` : ''}`;
-  } else if (options.workFocus && options.workFocus.state !== 'clear') {
-    detail =
-      options.workFocus.state === 'validation'
-        ? `Validate › ${options.workFocus.intent}`
-        : options.workFocus.intent;
+  } else if (normalizeTitlePart(options.sessionName ?? '')) {
+    detail = normalizeTitlePart(options.sessionName ?? '');
   } else if (options.subject && options.subject.state === 'set') {
     detail = options.subject.title;
   } else {

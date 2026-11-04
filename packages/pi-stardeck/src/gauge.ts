@@ -96,12 +96,7 @@ export type HeaderWork = {
   activityPath?: HeaderActivitySegment[];
 };
 
-export const HEADER_SELECTION_SOURCES = [
-  'openspec',
-  'session-work',
-  'subject',
-  'legacy',
-] as const;
+export const HEADER_SELECTION_SOURCES = ['openspec', 'subject', 'legacy'] as const;
 
 export type HeaderSelection = {
   source: (typeof HEADER_SELECTION_SOURCES)[number];

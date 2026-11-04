@@ -36,9 +36,8 @@ Selection is the single answer to "what is this session about". It is one slot:
 
 ```text
 selection =
-  | { kind: 'openspec-task', change, task, awaitingValidation }  ← openspec_focus tool
-  | { kind: 'session-work', intent, phase }  ← legacy entries only (writers retired)
-  | { kind: 'title', title }                ← title tool; passive fallback, never overrides
+  | { kind: 'openspec-task', change, task, awaitingValidation }  ← OpenSpec focus (work-state)
+  | { kind: 'subject', title }              ← legacy subject entries; passive fallback, never overrides
   | { kind: 'none' }
 ```
 

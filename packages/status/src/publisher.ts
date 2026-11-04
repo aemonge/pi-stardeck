@@ -1,4 +1,4 @@
-import type { SessionSubject, SessionWorkFocus } from './active-work.ts';
+import type { SessionSubject } from './active-work.ts';
 import type { ActiveRunSpanView, ActiveRuntimeRuns } from './runtime-runs.ts';
 import type { TitleState } from './title-state.ts';
 import type { TurnCostSnapshot } from './turn-cost.ts';
@@ -24,7 +24,6 @@ export const GALACTICA_HEADER_CHANNEL = 'galactica-status:header';
 const OPEN_SPEC_WIDGET_ID = 'galactica.openspec';
 const OPEN_SPEC_SCOPE_SEPARATOR_WIDGET_ID = 'galactica.openspec-scope-separator';
 const OPEN_SPEC_PROGRESS_WIDGET_ID = 'galactica.openspec-progress';
-const SESSION_WORK_WIDGET_ID = 'galactica.work';
 const DIAGNOSTICS_WIDGET_ID = 'galactica.diagnostics';
 const ORCHESTRATION_WIDGET_ID = 'galactica.orchestration';
 
@@ -86,13 +85,6 @@ function openSpecColor(state: OpenSpecState): WidgetColor {
   if (['blocked', 'error', 'failed'].includes(state.phase)) return 'error';
   if (state.phase === 'complete') return 'success';
   return 'accent';
-}
-
-export function formatSessionWork(focus: SessionWorkFocus): string {
-  if (focus.state === 'clear') return 'Work · clear';
-  return focus.state === 'validation'
-    ? `Validate · ${focus.intent}`
-    : `Work · ${focus.intent}`;
 }
 
 export function formatOpenSpecOverview(overview: OpenSpecOverview): string {
@@ -209,21 +201,13 @@ export function buildWidgetSnapshots(
     openSpecFeedback?: OpenSpecFeedback;
     openSpecOverview?: OpenSpecOverview;
     openSpecProjectDetected?: boolean;
-    workFocus?: SessionWorkFocus;
   } = {},
 ): FancyFooterWidget[] {
   const compact = options.compact ?? false;
   const now = options.now ?? Date.now();
   const widgets: FancyFooterWidget[] = [];
 
-  const hasActiveFallback =
-    !options.openSpecOverview &&
-    Boolean(options.workFocus && options.workFocus.state !== 'clear');
-
-  if (
-    options.openSpecOverview ||
-    (options.openSpecProjectDetected === false && !hasActiveFallback)
-  ) {
+  if (options.openSpecOverview || options.openSpecProjectDetected === false) {
     widgets.push({
       id: OPEN_SPEC_SCOPE_SEPARATOR_WIDGET_ID,
       label: 'OpenSpec scope separator',
@@ -265,41 +249,7 @@ export function buildWidgetSnapshots(
   // Frozen contract: without an OpenSpec focus there is no progress surface —
   // no aggregate overview, no 'no OpenSpec' narration.
 
-  if (
-    !snapshot.openspec &&
-    !options.openSpecOverview &&
-    options.workFocus &&
-    options.workFocus.state !== 'clear'
-  ) {
-    const color: WidgetColor =
-      options.workFocus.state === 'validation' ? 'warning' : 'accent';
-    const glyph =
-      options.workFocus.state === 'validation'
-        ? { nerd: '◇⠀', emoji: '◇⠀', unicode: '◇⠀', ascii: '? ' }
-        : { nerd: '▶⠀', emoji: '▶⠀', unicode: '▶⠀', ascii: '> ' };
-    widgets.push({
-      id: SESSION_WORK_WIDGET_ID,
-      label: options.workFocus.state === 'validation' ? 'Validate' : 'Focus',
-      description:
-        options.workFocus.state === 'validation'
-          ? 'Session focus awaiting Human validation; its title remains in the header'
-          : 'Active Session Work focus; its title remains in the header',
-      content: {
-        type: 'text',
-        text: options.workFocus.state === 'validation' ? 'Validate' : 'Focus',
-      },
-      icon: { glyphs: glyph, color },
-      style: { textColor: color },
-      layout: {
-        row: 0,
-        position: 0,
-        align: 'right',
-        fill: 'none',
-      },
-    });
-  }
-
-  if (!snapshot.openspec && !options.workFocus && options.openSpecFeedback) {
+  if (!snapshot.openspec && options.openSpecFeedback) {
     const unavailable = options.openSpecFeedback === 'unavailable';
     const color: WidgetColor = unavailable ? 'warning' : 'dim';
     const stateText =
@@ -466,11 +416,7 @@ export const HEADER_LIFECYCLES = [
 
 export type HeaderLifecycle = (typeof HEADER_LIFECYCLES)[number];
 
-export const HEADER_SELECTION_SOURCES = [
-  'openspec',
-  'session-work',
-  'subject',
-] as const;
+export const HEADER_SELECTION_SOURCES = ['openspec', 'subject'] as const;
 
 export type HeaderSelection = {
   source: (typeof HEADER_SELECTION_SOURCES)[number];
@@ -547,7 +493,6 @@ function selectedOpenSpecTitles(
 export function headerSelection(options: {
   openSpec?: OpenSpecState | null;
   focusedTaskId?: string;
-  workFocus?: SessionWorkFocus;
   subject?: SessionSubject;
 }): HeaderSelection | null {
   if (options.openSpec) {
@@ -555,13 +500,6 @@ export function headerSelection(options: {
       source: 'openspec',
       titles: selectedOpenSpecTitles(options.openSpec, options.focusedTaskId),
       color: openSpecColor(options.openSpec),
-    };
-  }
-  if (options.workFocus && options.workFocus.state !== 'clear') {
-    return {
-      source: 'session-work',
-      titles: [normalizeInline(options.workFocus.intent)],
-      color: options.workFocus.state === 'validation' ? 'warning' : 'accent',
     };
   }
   if (options.subject && options.subject.state === 'set') {
@@ -884,7 +822,6 @@ export function buildHeaderStatusEvent(
   options: {
     openSpec?: OpenSpecState | null;
     focusedTaskId?: string;
-    workFocus?: SessionWorkFocus;
     subject?: SessionSubject;
     orchestration?: OrchestrationState | null;
     lifecycle?: HeaderLifecycle;
@@ -932,7 +869,7 @@ export function buildHeaderStatusEvent(
     orchestrationLifecycle ??
     options.lifecycle ??
     headerLifecycleForActivity(activity) ??
-    (options.workFocus?.state === 'validation' ? 'waiting' : 'listening');
+    'listening';
   const lifecycle: HeaderLifecycle = blocked
     ? 'blocked'
     : options.lifecycle === 'aborted'
@@ -942,7 +879,7 @@ export function buildHeaderStatusEvent(
   const projectedActivity =
     activityPath !== undefined ? { activityPath } : activity ? { activity } : {};
   const selection = headerSelection(options);
-  const approvalRequired = options.workFocus?.state === 'validation';
+  const approvalRequired = false;
   const suggestion = headerSuggestion({
     lifecycle,
     activity,
@@ -958,13 +895,6 @@ export function buildHeaderStatusEvent(
       lifecycle,
       titles: selectedOpenSpecTitles(state, options.focusedTaskId),
       color: openSpecColor(state),
-      ...projectedActivity,
-    };
-  } else if (options.workFocus && options.workFocus.state !== 'clear') {
-    work = {
-      lifecycle,
-      titles: [normalizeInline(options.workFocus.intent)],
-      color: options.workFocus.state === 'validation' ? 'warning' : 'accent',
       ...projectedActivity,
     };
   } else if (options.orchestration) {

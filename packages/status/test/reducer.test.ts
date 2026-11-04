@@ -40,7 +40,6 @@ test('applyEvent is pure: input facts are never mutated', () => {
 test('resolver priority: openspec-task beats all others', () => {
   const snapshot = reduceLedger([
     { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
-    { type: 'focus/work', at: 2, work: { state: 'active', intent: 'work' } },
     {
       type: 'focus/openspec',
       at: 4,
@@ -60,24 +59,10 @@ test('resolver priority: openspec-task beats all others', () => {
 });
 
 test('resolver priority: subject is the passive fallback, never overriding', () => {
-  const withWork = reduceLedger([
-    { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
-    { type: 'focus/work', at: 2, work: { state: 'active', intent: 'work' } },
-  ]);
-  assert.equal(withWork.selection.kind, 'session-work');
   const alone = reduceLedger([
     { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
   ]);
   assert.deepEqual(alone.selection, { kind: 'subject', title: 'subject' });
-});
-
-test('clearing higher focus falls back to subject without narration', () => {
-  const snapshot = reduceLedger([
-    { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
-    { type: 'focus/work', at: 2, work: { state: 'active', intent: 'work' } },
-    { type: 'focus/work', at: 3, work: { state: 'clear' } },
-  ]);
-  assert.deepEqual(snapshot.selection, { kind: 'subject', title: 'subject' });
 });
 
 test('derived title never renders placeholder narration (exhibits 2, 3, 5)', () => {
@@ -125,18 +110,6 @@ test('derived title projects each selection kind (derived-only rule)', () => {
       ]),
     ),
     'π S',
-  );
-  assert.equal(
-    deriveTitle(
-      reduceLedger([
-        {
-          type: 'focus/work',
-          at: 1,
-          work: { state: 'validation', intent: 'freeze it' },
-        },
-      ]),
-    ),
-    'π Validate › freeze it',
   );
 });
 

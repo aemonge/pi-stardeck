@@ -16,13 +16,10 @@ import {
   parseOpenSpecFocus,
   restoreOpenSpecFocus,
   restoreSessionSubject,
-  restoreSessionWorkFocus,
   sameOpenSpecFocus,
   sameTaskFocus,
   sessionSubject,
-  sessionWorkFocus,
   taskflowRunFocus,
-  titleFromPrompt,
 } from '../src/active-work.ts';
 import { collectOpenSpec } from '../src/openspec.ts';
 import type { CommandRunner } from '../src/types.ts';
@@ -51,19 +48,6 @@ const replacementChange = 'replace-active-openspec-title';
 const replacementTaskId = '2.4';
 const replacementTaskTitle = 'Replace active title focus';
 const replacementActiveTitle = `π  ${replacementChange} › ${replacementTaskId} ${replacementTaskTitle}`;
-
-/** Legacy Session Work entry — the retired writers leave these in old
- *  sessions; restore must keep rendering them, fail-soft. */
-function seededWorkEntry(intent: string, state: 'active' | 'validation' = 'active') {
-  return {
-    type: 'custom' as const,
-    id: `work-${state}-${intent.length}`,
-    parentId: null,
-    timestamp: new Date(1).toISOString(),
-    customType: 'galactica-status.session-work.v1',
-    data: { state, intent },
-  };
-}
 
 const originalEnvironment = {
   codingAgentDir: process.env.PI_CODING_AGENT_DIR,
@@ -175,6 +159,7 @@ class RuntimeHarness {
   readonly commands = new Map<string, Command>();
   readonly tools = new Map<string, Tool>();
   readonly titles: string[] = [];
+  readonly appendedCalls: Array<{ customType: string; data: unknown }> = [];
   readonly notifications: Array<{ message: string; level: string | undefined }> = [];
   readonly sharedEvents: Array<{ channel: string; message: unknown }> = [];
   readonly execCalls: Array<{ command: string; args: string[] }> = [];
@@ -206,10 +191,6 @@ class RuntimeHarness {
       mode: options.mode ?? 'tui',
       hasUI: (options.mode ?? 'tui') === 'tui',
       ui: {
-        setTitle: (title: string) => {
-          this.titles.push(title);
-          options.onTitle?.(title);
-        },
         notify: (message: string, level?: string) => {
           this.notifications.push({ message, level });
         },
@@ -236,7 +217,10 @@ class RuntimeHarness {
       registerTool: (tool: Tool & { name: string }) => {
         this.tools.set(tool.name, tool);
       },
+      // Pure-renderer contract: production never appends. The mock keeps the
+      // API shape and records calls so tests can assert zero appends.
       appendEntry: (customType: string, data: unknown) => {
+        this.appendedCalls.push({ customType, data });
         entryOrdinal += 1;
         const entry = {
           type: 'custom',
@@ -281,6 +265,15 @@ class RuntimeHarness {
         },
         emit: (channel: string, message: unknown) => {
           this.sharedEvents.push({ channel, message });
+          if (
+            channel === 'galactica-status:header' &&
+            typeof message === 'object' &&
+            message !== null &&
+            typeof (message as { title?: { subject?: unknown } }).title?.subject ===
+              'string'
+          ) {
+            this.titles.push((message as { title: { subject: string } }).title.subject);
+          }
           for (const handler of sharedHandlers.get(channel) ?? []) handler(message);
         },
       },
@@ -417,11 +410,34 @@ function latestHeader(harness: RuntimeHarness): Record<string, unknown> | undefi
   return undefined;
 }
 
-function latestHeaderWork(
-  harness: RuntimeHarness,
-): { lifecycle?: string; titles?: string[] } | null | undefined {
+function seededFocusEntry(change: string, taskId: string, awaitingValidation = false) {
+  return {
+    type: 'custom',
+    customType: 'galactica-status.openspec-focus.v1',
+    data: { mode: 'task', change, taskId, awaitingValidation },
+  };
+}
+
+function latestHeaderWork(harness: RuntimeHarness):
+  | {
+      lifecycle?: string;
+      titles?: string[];
+      color?: string;
+      activity?: { kind: string };
+      activityPath?: unknown[];
+    }
+  | null
+  | undefined {
   return latestHeader(harness)?.work as
-    { lifecycle?: string; titles?: string[] } | null | undefined;
+    | {
+        lifecycle?: string;
+        titles?: string[];
+        color?: string;
+        activity?: { kind: string };
+        activityPath?: unknown[];
+      }
+    | null
+    | undefined;
 }
 
 function openSpecFooterText(message: unknown): string | undefined {
@@ -483,11 +499,6 @@ test('an unfocused OpenSpec project publishes quiet feedback without warning', a
     // Focus-gated progress: unfocused aggregate numbers never publish.
     assert.equal(latestOpenSpecProgressMessage(harness), undefined);
 
-    await harness.command('openspec-focus', '');
-    assert.deepEqual(harness.notifications.at(-1), {
-      message: 'OpenSpec focus: none',
-      level: 'info',
-    });
     assert.equal(
       harness.notifications.filter(({ level }) => level === 'warning').length,
       0,
@@ -558,11 +569,13 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
     }
     return { code: 1, stdout: '', stderr: `unexpected OpenSpec args: ${args}` };
   };
-  const harness = new RuntimeHarness({ openSpecResponder: metadataResult });
+  const harness = new RuntimeHarness({
+    openSpecResponder: metadataResult,
+    entries: [seededFocusEntry(change, secondTaskId)],
+  });
 
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    await harness.command('openspec-focus', `set ${change} ${secondTaskId}`);
     await harness.command('galactica-status-refresh', '');
 
     assert.equal(
@@ -573,27 +586,32 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
       openSpecFooterText(latestOpenSpecFooterMessage(harness)),
       `0/2  ▶ ${secondTaskId} ${secondTaskTitle}`,
     );
-
-    const titlesBeforeUnknownFocus = harness.titles.length;
-    await harness.command('openspec-focus', `replace ${change} ${unknownTaskId}`);
-    await harness.command('galactica-status-refresh', '');
-
-    const unknownTitle = `π  ${change} › ${unknownTaskId}`;
-    assert.equal(harness.titles.at(-1), unknownTitle);
-    assert.ok(
-      harness.titles
-        .slice(titlesBeforeUnknownFocus)
-        .every((title) => !title.includes(taskTitle)),
-      'an unknown task ID must never borrow the first pending task headline',
-    );
   } finally {
     await harness.stop();
   }
-});
 
+  const unknownHarness = new RuntimeHarness({
+    openSpecResponder: metadataResult,
+    entries: [seededFocusEntry(change, unknownTaskId)],
+  });
+  try {
+    await unknownHarness.emit('session_start', { reason: 'startup' });
+    await unknownHarness.command('galactica-status-refresh', '');
+
+    const unknownTitle = `π  ${change} › ${unknownTaskId}`;
+    assert.equal(unknownHarness.titles.at(-1), unknownTitle);
+    assert.ok(
+      unknownHarness.titles.every((title) => !title.includes(taskTitle)),
+      'an unknown task ID must never borrow the first pending task headline',
+    );
+  } finally {
+    await unknownHarness.stop();
+  }
+});
 test('same-focus metadata refresh failure falls back to ID-only title', async () => {
   let rejectOpenSpecRefresh = false;
   const harness = new RuntimeHarness({
+    entries: [seededFocusEntry(change, taskId)],
     openSpecResponder: async (args) => {
       if (rejectOpenSpecRefresh && args[0] === 'list') {
         return {
@@ -607,8 +625,9 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
   });
 
   try {
-    await harness.emit('session_start', { reason: 'startup' });
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
+    await harness.emit('session_start', {
+      reason: 'startup',
+    });
     await harness.command('galactica-status-refresh', '');
 
     assert.equal(harness.titles.at(-1), activeTitle);
@@ -652,104 +671,6 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
       },
     );
   } finally {
-    await harness.stop();
-  }
-});
-
-test('a replaced focus rejects stale metadata and publishes replacement metadata once', async () => {
-  const aShowStarted = deferred();
-  const releaseA = deferred();
-  const bShowStarted = deferred();
-  const releaseB = deferred();
-  const bTitlePublished = deferred();
-  let aShowCalls = 0;
-  let bShowCalls = 0;
-
-  const harness = new RuntimeHarness({
-    openSpecResponder: async (args) => {
-      if (args[0] === 'show' && args[1] === change) {
-        aShowCalls += 1;
-        aShowStarted.resolve();
-        await releaseA.promise;
-      }
-      if (args[0] === 'show' && args[1] === replacementChange) {
-        bShowCalls += 1;
-        bShowStarted.resolve();
-        await releaseB.promise;
-      }
-      return openSpecResult(args);
-    },
-    onTitle: (title) => {
-      if (title === replacementActiveTitle) bTitlePublished.resolve();
-    },
-  });
-
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    await waitForSignal(
-      aShowStarted.promise,
-      () => `change A show did not start; calls: ${JSON.stringify(harness.execCalls)}`,
-    );
-
-    await harness.command(
-      'openspec-focus',
-      `replace ${replacementChange} ${replacementTaskId}`,
-    );
-    const replacementIdTitle = `π  ${replacementChange} › ${replacementTaskId}`;
-    const footerAfterReplacement = latestOpenSpecFooterMessage(harness);
-    assert.equal(harness.titles.at(-1), replacementIdTitle);
-    assert.equal(
-      footerAfterReplacement,
-      undefined,
-      'replacement B should have no focused footer before its metadata resolves',
-    );
-
-    const titlesBeforeAResolution = harness.titles.length;
-    releaseA.resolve();
-    await waitForSignal(
-      bShowStarted.promise,
-      () =>
-        `replacement B show did not start after releasing A; calls: ${JSON.stringify(harness.execCalls)}`,
-    );
-
-    assert.equal(harness.titles.at(-1), replacementIdTitle);
-    assert.deepEqual(latestOpenSpecFooterMessage(harness), footerAfterReplacement);
-    assert.deepEqual(
-      harness.titles.slice(titlesBeforeAResolution),
-      [],
-      'stale A metadata must not emit a title while replacement B is unresolved',
-    );
-
-    releaseB.resolve();
-    await waitForSignal(
-      bTitlePublished.promise,
-      () => `replacement B title was not published; ${titleDiagnostics(harness)}`,
-    );
-
-    const expectedBFooter = `0/1  ▶ ${replacementTaskId} ${replacementTaskTitle}`;
-    assert.equal(harness.titles.at(-1), replacementActiveTitle);
-    assert.equal(
-      openSpecFooterText(latestOpenSpecFooterMessage(harness)),
-      expectedBFooter,
-    );
-    assert.equal(aShowCalls, 1);
-    assert.equal(bShowCalls, 1);
-    assert.equal(
-      harness.titles.filter((title) => title === replacementActiveTitle).length,
-      1,
-      'replacement B should update the title exactly once',
-    );
-    assert.equal(
-      harness.sharedEvents.filter(
-        ({ message }) => openSpecFooterText(message) === expectedBFooter,
-      ).length,
-      1,
-      'replacement B should update the footer exactly once',
-    );
-  } finally {
-    releaseA.resolve();
-    releaseB.resolve();
     await harness.stop();
   }
 });
@@ -824,32 +745,6 @@ test('session_info_changed immediately propagates an unfocused session rename', 
   }
 });
 
-test('title exposes one provider-safe string action enum and carries the deliberate-set rule in its description', () => {
-  const harness = new RuntimeHarness();
-  const tool = harness.tools.get('title');
-  assert.ok(tool, 'title should be registered');
-  assert.equal(harness.tools.has('subject'), false, 'subject is retired');
-
-  const action = tool.parameters.properties.action as {
-    type?: string;
-    enum?: unknown[];
-    anyOf?: unknown;
-  };
-  assert.equal(action.type, 'string');
-  assert.deepEqual(new Set(action.enum), new Set(['status', 'set']));
-  assert.equal('anyOf' in action, false);
-
-  // The tombstone evolves: the first-turn rule lost to task attention
-  // (every agent skipped it — verified systematically), so the extension
-  // auto-titles from the first prompt; the description carries the
-  // deliberate-set rule instead.
-  const description = tool.description ?? '';
-  assert.match(description, /titles itself from the first/iu);
-  assert.match(description, /120/u);
-  assert.match(description, /never raw prompt text/iu);
-  assert.doesNotMatch(description, /first conversational turn/iu);
-});
-
 test('retired instruments stay retired: work_focus and stage are gone', () => {
   const harness = new RuntimeHarness();
   assert.equal(harness.tools.has('work_focus'), false, 'work_focus is retired');
@@ -860,12 +755,16 @@ test('retired instruments stay retired: work_focus and stage are gone', () => {
     false,
     'openspec_focus moved to work-state',
   );
-  assert.ok(harness.tools.has('title'), 'title remains');
+  assert.equal(
+    harness.tools.has('title'),
+    false,
+    'title retired: pi-title owns naming',
+  );
+  assert.equal(harness.appendedCalls.length, 0, 'pure renderer appends zero entries');
 });
 
 test('conversation-driven Taskflow calls publish and clear controlled live activity', async () => {
-  const intent = 'Consolidate proportional routing contracts';
-  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
+  const harness = new RuntimeHarness();
   try {
     await harness.emit('session_start', { reason: 'startup' });
     await harness.emit('tool_call', {
@@ -874,31 +773,28 @@ test('conversation-driven Taskflow calls publish and clear controlled live activ
       input: { action: 'run', name: 'enrichment', args: {} },
     });
 
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'planning' },
-    });
+    const work = latestHeaderWork(harness);
+    assert.ok(work, 'work slot present');
+    assert.equal(
+      JSON.stringify(work?.titles ?? []).includes('Consolidate'),
+      false,
+      'retired work titles stay retired',
+    );
+    assert.deepEqual(work?.activity, { kind: 'planning' });
 
     await harness.emit('tool_execution_end', {
       toolCallId: 'conversation-taskflow',
       toolName: 'taskflow',
       isError: false,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [intent],
-      color: 'accent',
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, undefined);
   } finally {
     await harness.stop();
   }
 });
 
 test('live Taskflow updates preserve focus and add bounded activity ancestry', async () => {
-  const intent = 'Diagnose why profile edits are not applied';
-  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
+  const harness = new RuntimeHarness();
   try {
     await harness.emit('session_start', { reason: 'startup' });
     await harness.emit('tool_call', {
@@ -906,18 +802,19 @@ test('live Taskflow updates preserve focus and add bounded activity ancestry', a
       toolName: 'taskflow',
       input: { action: 'run', name: 'ramona-loop', args: {} },
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [intent],
-      color: 'accent',
-      activityPath: [
-        {
-          id: 'interpreting-intent',
-          label: 'interpreting intent',
-          compact: 'interpreting',
-        },
-      ],
-    });
+    const seeded = latestHeaderWork(harness);
+    assert.equal(
+      JSON.stringify(seeded?.titles ?? []).includes('Diagnose'),
+      false,
+      'retired work titles stay retired',
+    );
+    assert.deepEqual(seeded?.activityPath, [
+      {
+        id: 'interpreting-intent',
+        label: 'interpreting intent',
+        compact: 'interpreting',
+      },
+    ]);
 
     await harness.emit('tool_execution_update', {
       toolCallId: 'taskflow-live-phase',
@@ -950,14 +847,9 @@ test('live Taskflow updates preserve focus and add bounded activity ancestry', a
       },
     });
 
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'assuring',
-      titles: [intent],
-      color: 'accent',
-      activityPath: [
-        { id: 'checking-quality', label: 'checking quality', compact: 'checking' },
-      ],
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activityPath, [
+      { id: 'checking-quality', label: 'checking quality', compact: 'checking' },
+    ]);
     assert.doesNotMatch(
       JSON.stringify(latestHeaderWork(harness)),
       /private live output|private-child/u,
@@ -969,19 +861,13 @@ test('live Taskflow updates preserve focus and add bounded activity ancestry', a
       result: { content: [], details: {} },
       isError: false,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'assuring',
-      titles: [intent],
-      color: 'accent',
-    });
   } finally {
     await harness.stop();
   }
 });
 
 test('ordinary direct tools publish bounded activity until agent settle', async () => {
-  const intent = 'Plan a greeting canary';
-  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
+  const harness = new RuntimeHarness();
   try {
     await harness.emit('session_start', { reason: 'startup' });
 
@@ -990,17 +876,8 @@ test('ordinary direct tools publish bounded activity until agent settle', async 
       toolName: 'read',
       input: { path: '/private/project/plan.md' },
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'inspection' },
-    });
-    assert.deepEqual(latestHeader(harness)?.selection, {
-      source: 'session-work',
-      titles: [intent],
-      color: 'accent',
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'inspection' });
+    assert.equal(latestHeader(harness)?.selection, null);
     assert.equal(latestHeader(harness)?.suggestion, null);
 
     await harness.emit('tool_execution_end', {
@@ -1008,60 +885,35 @@ test('ordinary direct tools publish bounded activity until agent settle', async 
       toolName: 'read',
       isError: false,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'synthesis' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'synthesis' });
 
     await harness.emit('tool_call', {
       toolCallId: 'direct-write',
       toolName: 'write',
       input: { path: '/private/project/result.md', content: 'private prose' },
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'working',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'mutation' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'mutation' });
 
     await harness.emit('tool_execution_end', {
       toolCallId: 'direct-write',
       toolName: 'write',
       isError: false,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'working',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'change-review' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'change-review' });
 
     await harness.emit('tool_call', {
       toolCallId: 'direct-verify',
       toolName: 'bash',
       input: { command: 'openspec validate private-change --strict' },
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'assuring',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'verification' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'verification' });
 
     await harness.emit('tool_execution_end', {
       toolCallId: 'direct-verify',
       toolName: 'bash',
       isError: false,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'assuring',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'result-review' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'result-review' });
     assert.equal(latestHeader(harness)?.suggestion, null);
     assert.doesNotMatch(
       JSON.stringify(latestHeaderWork(harness)),
@@ -1069,21 +921,14 @@ test('ordinary direct tools publish bounded activity until agent settle', async 
     );
 
     await harness.emit('agent_settled', {});
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'waiting',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'awaiting-input' },
-    });
-    assert.equal(latestHeader(harness)?.suggestion, 'requesting-input');
+    assert.equal(latestHeader(harness)?.suggestion, null);
   } finally {
     await harness.stop();
   }
 });
 
 test('parallel direct tools stay active until completion and surface bounded recovery', async () => {
-  const intent = 'Inspect two bounded inputs';
-  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
+  const harness = new RuntimeHarness();
   try {
     await harness.emit('session_start', { reason: 'startup' });
     await harness.emit('tool_call', {
@@ -1102,24 +947,14 @@ test('parallel direct tools stay active until completion and surface bounded rec
       toolName: 'read',
       isError: false,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'understanding',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'inspection' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'inspection' });
 
     await harness.emit('tool_execution_end', {
       toolCallId: 'parallel-read-two',
       toolName: 'read',
       isError: true,
     });
-    assert.deepEqual(latestHeaderWork(harness), {
-      lifecycle: 'working',
-      titles: [intent],
-      color: 'accent',
-      activity: { kind: 'recovery' },
-    });
+    assert.deepEqual(latestHeaderWork(harness)?.activity, { kind: 'recovery' });
     assert.doesNotMatch(JSON.stringify(latestHeaderWork(harness)), /private|\.md/u);
   } finally {
     await harness.stop();
@@ -1209,7 +1044,11 @@ test('publishes only lifecycle-evidenced active child runs and subagents', async
       agents: { active: 0, total: 0 },
       activeRuns: { children: 0, subagents: 0 },
     });
-    assert.equal(harness.titles.length, initialTitleCount);
+    assert.equal(
+      harness.titles.at(-1),
+      harness.titles[initialTitleCount - 1],
+      'non-evidenced runs change no band state',
+    );
   } finally {
     await harness.stop();
   }
@@ -1374,107 +1213,6 @@ test('generic outer and legacy none placeholders create no status focus side eff
   }
 });
 
-test('specialized Taskflow focus remains exact and conflict-aware', async () => {
-  const harness = new RuntimeHarness();
-  const input = {
-    action: 'run',
-    name: 'ramona-fix',
-    args: { change, task: taskId },
-  };
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.deepEqual(taskflowRunFocus(input), {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-    assert.equal(
-      await harness.emit('tool_call', {
-        toolCallId: 'specialized-flow',
-        toolName: 'taskflow',
-        input,
-      }),
-      undefined,
-    );
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('reload restores legacy Session Work validation metadata before asynchronous refresh', async () => {
-  const intent = 'Validate persistent Session Work metadata';
-  const reloaded = new RuntimeHarness({
-    entries: [seededWorkEntry(intent, 'validation')],
-    sessionName: 'Fallback session',
-  });
-  try {
-    const starting = reloaded.emit('session_start', { reason: 'reload' });
-    assert.equal(reloaded.titles[0], `π  Validate › ${intent}`);
-    assert.equal(openSpecFooterText(latestWorkFooterMessage(reloaded)), 'Validate');
-    await starting;
-    assert.equal(reloaded.titles.at(-1), `π  Validate › ${intent}`);
-  } finally {
-    await reloaded.stop();
-  }
-});
-
-test('OpenSpec acquisition clears restored legacy Session Work', async () => {
-  const intent = 'Investigate an ad-hoc session concern';
-  const harness = new RuntimeHarness({
-    sessionName: 'Fallback session',
-    entries: [seededWorkEntry(intent)],
-  });
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.equal(harness.titles.at(-1), `π  ${intent}`);
-
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    assert.deepEqual(
-      harness.entries.slice(-2).map((entry) => ({
-        customType: entry.customType,
-        data: entry.data,
-      })),
-      [
-        {
-          customType: 'galactica-status.session-work.v1',
-          data: { state: 'clear' },
-        },
-        {
-          customType: 'galactica-status.openspec-focus.v1',
-          data: { mode: 'task', change, taskId, awaitingValidation: false },
-        },
-      ],
-      'OpenSpec acquisition must clear restored legacy work before taking precedence',
-    );
-  } finally {
-    await harness.stop();
-  }
-
-  assert.deepEqual(restoreSessionWorkFocus(harness.entries), { state: 'clear' });
-});
-
-test('session work normalization rejects empty intent and bounds hostile metadata', () => {
-  assert.equal(sessionWorkFocus('active', '   '), undefined);
-  assert.equal(sessionWorkFocus('unknown', 'intent'), undefined);
-  const focus = sessionWorkFocus(
-    'active',
-    `  Work\n\u0007 ${'🧪'.repeat(500)} FORBIDDEN-SUFFIX  `,
-  );
-  assert.equal(focus?.state, 'active');
-  if (focus?.state !== 'active') assert.fail('expected active focus');
-  assert.doesNotMatch(focus.intent, /[\u0000-\u001f\u007f]/u);
-  assert.equal(Array.from(focus.intent).length, 160);
-  assert.ok(focus.intent.endsWith('…'));
-  assert.doesNotMatch(focus.intent, /FORBIDDEN-SUFFIX/u);
-});
-
 test('session subject normalization rejects empty titles and bounds hostile metadata', () => {
   assert.equal(sessionSubject('set', '   '), undefined);
   assert.equal(sessionSubject('unknown', 'title'), undefined);
@@ -1491,100 +1229,6 @@ test('session subject normalization rejects empty titles and bounds hostile meta
   assert.doesNotMatch(subject.title, /FORBIDDEN-SUFFIX/u);
 });
 
-test('titleFromPrompt derives a bounded title from the first real prompt', () => {
-  assert.deepEqual(titleFromPrompt('  Fix the   deck band  '), {
-    state: 'set',
-    title: 'Fix the deck band',
-  });
-  const long = titleFromPrompt('x'.repeat(500));
-  assert.equal(long?.state, 'set');
-  if (long?.state !== 'set') assert.fail('expected set subject');
-  assert.equal(Array.from(long.title).length, 120);
-  assert.ok(long.title.endsWith('…'));
-});
-
-test('titleFromPrompt skips slash commands and non-strings', () => {
-  assert.equal(titleFromPrompt('/council convene the advisors'), undefined);
-  assert.equal(titleFromPrompt('   '), undefined);
-  assert.equal(titleFromPrompt(42), undefined);
-  assert.equal(titleFromPrompt(undefined), undefined);
-});
-
-/**
- * Auto-title fixtures are typed against the pinned runtime event so a
- * runtime shape change fails `tsc` here instead of dying silently at
- * runtime (Slice 1 shipped a guard against a `messageType` field no
- * runtime BeforeAgentStartEvent ever carried — tests passed, feature
- * never fired).
- */
-function agentStartEvent(prompt: string): BeforeAgentStartEvent {
-  return {
-    type: 'before_agent_start',
-    prompt,
-    systemPrompt: '',
-    systemPromptOptions: { cwd: process.cwd() },
-  };
-}
-
-test('before_agent_start auto-titles from the first human prompt only', async () => {
-  const harness = new RuntimeHarness();
-  await harness.emit('session_start', { mode: 'tui' });
-  await harness.emit('before_agent_start', agentStartEvent('Fix the deck band'));
-  const subject = restoreSessionSubject(harness.entries);
-  assert.deepEqual(subject, { state: 'set', title: 'Fix the deck band' });
-
-  // A later prompt never overrides an existing title.
-  await harness.emit(
-    'before_agent_start',
-    agentStartEvent('A completely different topic'),
-  );
-  assert.deepEqual(restoreSessionSubject(harness.entries), {
-    state: 'set',
-    title: 'Fix the deck band',
-  });
-  await harness.stop();
-});
-
-test('before_agent_start skips slash prompts and prompt-less events', async () => {
-  const harness = new RuntimeHarness();
-  await harness.emit('session_start', { mode: 'tui' });
-  // Slash prompts never title (titleFromPrompt boundary skip).
-  await harness.emit('before_agent_start', agentStartEvent('/council convene'));
-  // Custom-message runs never reach this event: sendCustomMessage steers,
-  // follows up, or queues into an existing turn — the single emission site
-  // (agent-session emitBeforeAgentStart) is the human-prompt path. A raw
-  // prompt-less emit stands in for host drift and malformed input.
-  await harness.emit('before_agent_start', { type: 'before_agent_start' });
-  assert.deepEqual(restoreSessionSubject(harness.entries), NO_SESSION_SUBJECT);
-
-  // The first real prompt after the skips still titles.
-  await harness.emit('before_agent_start', agentStartEvent('Real work begins'));
-  assert.deepEqual(restoreSessionSubject(harness.entries), {
-    state: 'set',
-    title: 'Real work begins',
-  });
-  await harness.stop();
-});
-
-test('before_agent_start never overrides a restored or agent-set title', async () => {
-  const harness = new RuntimeHarness({
-    entries: [
-      {
-        type: 'custom',
-        customType: 'galactica-status.session-subject.v1',
-        data: { state: 'set', title: 'Restored title' },
-      },
-    ],
-  });
-  await harness.emit('session_start', { mode: 'tui' });
-  await harness.emit('before_agent_start', agentStartEvent('A new conversation'));
-  assert.deepEqual(restoreSessionSubject(harness.entries), {
-    state: 'set',
-    title: 'Restored title',
-  });
-  await harness.stop();
-});
-
 test('restoreSessionSubject prefers the latest valid subject entry', () => {
   const entries = [
     {
@@ -1594,7 +1238,7 @@ test('restoreSessionSubject prefers the latest valid subject entry', () => {
     },
     {
       type: 'custom',
-      customType: 'galactica-status.session-work.v1',
+      customType: 'galactica-status.unrelated.v1',
       data: { state: 'active', intent: 'Work' },
     },
     {
@@ -1615,65 +1259,18 @@ test('restoreSessionSubject prefers the latest valid subject entry', () => {
   assert.deepEqual(restoreSessionSubject([]), NO_SESSION_SUBJECT);
 });
 
-test('title tool persists sanitized titles and restores them on resume', async () => {
-  const harness = new RuntimeHarness();
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-
-    const missing = await harness.tool('title', { action: 'set', title: '   ' });
-    assert.equal(missing.details.ok, false);
-    assert.match(missing.content[0].text, /requires a non-empty title/u);
-
-    const set = await harness.tool('title', {
-      action: 'set',
-      title: '  Shape the never-empty focus row  ',
-    });
-    assert.equal(set.details.ok, true);
-    assert.deepEqual(set.details.subject, {
-      state: 'set',
-      title: 'Shape the never-empty focus row',
-    });
-
-    const stable = await harness.tool('title', {
-      action: 'set',
-      title: 'Shape the never-empty focus row',
-    });
-    assert.equal(stable.details.ok, true);
-
-    const status = await harness.tool('title', { action: 'status' });
-    assert.equal(status.content[0].text, 'Title: Shape the never-empty focus row');
-
-    const subjectEntries = harness.entries.filter(
-      (entry) => entry.customType === 'galactica-status.session-subject.v1',
-    );
-    assert.equal(subjectEntries.length, 1);
-  } finally {
-    await harness.stop();
-  }
-
-  assert.deepEqual(restoreSessionSubject(harness.entries), {
-    state: 'set',
-    title: 'Shape the never-empty focus row',
-  });
-});
-
-test('subject titles fill the fallback before session name and yield to work', () => {
+test('subject titles fill the fallback beneath the native session name', () => {
   const common = {
     focus: { mode: 'none' } as const,
     projectRoot: '/repos/repository-choice',
     cwd: '/work/cwd-choice',
-    sessionName: 'Fallback session',
   };
   const subject = { state: 'set', title: 'Session subject' } as const;
 
-  assert.equal(formatActiveWorkTitle({ ...common, subject }), 'π  Session subject');
+  assert.equal(formatActiveWorkTitle({ ...common, subject }), `π  Session subject`);
   assert.equal(
-    formatActiveWorkTitle({
-      ...common,
-      subject,
-      workFocus: { state: 'active', intent: 'Ephemeral work' },
-    }),
-    'π  Ephemeral work',
+    formatActiveWorkTitle({ ...common, sessionName: 'Native name', subject }),
+    `π  Native name`,
   );
   assert.equal(
     formatActiveWorkTitle({
@@ -1683,65 +1280,6 @@ test('subject titles fill the fallback before session name and yield to work', (
     }),
     `π  ${change} › ${taskId}`,
   );
-});
-
-test('/openspec-focus shares safeguarded branch transitions', async () => {
-  const intent = 'Clear this work when OpenSpec focus is acquired';
-  const harness = new RuntimeHarness({ entries: [seededWorkEntry(intent)] });
-  const branchState = () =>
-    harness.entries.map(({ customType, data }) => ({ customType, data }));
-
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.equal(harness.entries.length, 1, 'only the seeded legacy work entry');
-
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    assert.deepEqual(branchState().slice(-2), [
-      {
-        customType: 'galactica-status.session-work.v1',
-        data: { state: 'clear' },
-      },
-      {
-        customType: 'galactica-status.openspec-focus.v1',
-        data: { mode: 'task', change, taskId, awaitingValidation: false },
-      },
-    ]);
-
-    const entriesBeforeConflict = harness.entries.length;
-    await harness.command(
-      'openspec-focus',
-      `set ${replacementChange} ${replacementTaskId}`,
-    );
-    assert.equal(
-      harness.entries.length,
-      entriesBeforeConflict,
-      'conflicting set must not write',
-    );
-
-    await harness.command(
-      'openspec-focus',
-      `replace ${replacementChange} ${replacementTaskId}`,
-    );
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change: replacementChange,
-      taskId: replacementTaskId,
-      awaitingValidation: false,
-    });
-
-    await harness.command('openspec-focus', 'clear');
-    assert.deepEqual(harness.entries.at(-1)?.data, { mode: 'none' });
-
-    const entriesAfterClear = harness.entries.length;
-    await harness.command('openspec-focus', '');
-    assert.equal(
-      harness.entries.length,
-      entriesAfterClear,
-      'bare status writes nothing',
-    );
-  } finally {
-    await harness.stop();
-  }
 });
 
 test('openspec focus validation flag round-trips and degrades for legacy entries', () => {
@@ -1774,139 +1312,6 @@ test('openspec focus validation flag round-trips and degrades for legacy entries
     taskId,
     awaitingValidation: true,
   });
-});
-
-test('/openspec-focus validate marks awaiting Human validation', async () => {
-  const harness = new RuntimeHarness();
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-
-    await harness.command('openspec-focus', 'validate');
-    assert.equal(harness.entries.length, 0, 'bare validate has no task to validate');
-
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-
-    await harness.command('openspec-focus', 'validate');
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: true,
-    });
-
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-
-    await harness.command(
-      'openspec-focus',
-      `replace ${replacementChange} ${replacementTaskId}`,
-    );
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change: replacementChange,
-      taskId: replacementTaskId,
-      awaitingValidation: false,
-    });
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('/openspec-focus set acquires focus and replace changes it explicitly', async () => {
-  const harness = new RuntimeHarness();
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-    await waitFor(
-      () => harness.titles.includes(activeTitle),
-      () => titleDiagnostics(harness),
-    );
-
-    await harness.command(
-      'openspec-focus',
-      `replace ${replacementChange} ${replacementTaskId}`,
-    );
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change: replacementChange,
-      taskId: replacementTaskId,
-      awaitingValidation: false,
-    });
-    await waitFor(
-      () => harness.titles.includes(replacementActiveTitle),
-      () => titleDiagnostics(harness),
-    );
-    assert.equal(harness.titles.at(-1), replacementActiveTitle);
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('conflicting /openspec-focus set requires explicit replace', async () => {
-  const harness = new RuntimeHarness();
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
-    await waitFor(
-      () => harness.titles.includes(activeTitle),
-      () => titleDiagnostics(harness),
-    );
-    const originalFocusEntry = harness.entries.at(-1);
-
-    await harness.command(
-      'openspec-focus',
-      `set ${replacementChange} ${replacementTaskId}`,
-    );
-
-    assert.equal(
-      harness.entries.at(-1),
-      originalFocusEntry,
-      'conflicting set must not persist a replacement focus',
-    );
-    assert.deepEqual(originalFocusEntry?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-    assert.equal(harness.titles.at(-1), activeTitle);
-
-    await harness.command(
-      'openspec-focus',
-      `replace ${replacementChange} ${replacementTaskId}`,
-    );
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change: replacementChange,
-      taskId: replacementTaskId,
-      awaitingValidation: false,
-    });
-    await waitFor(
-      () => harness.titles.includes(replacementActiveTitle),
-      () => titleDiagnostics(harness),
-    );
-    assert.equal(harness.titles.at(-1), replacementActiveTitle);
-  } finally {
-    await harness.stop();
-  }
 });
 
 test('deliver-change Taskflow focus requires run with string nested change and task values', async (t) => {
@@ -1991,402 +1396,12 @@ test('deliver-change Taskflow focus requires run with string nested change and t
   }
 });
 
-test('malformed Taskflow run inputs preserve an existing focused session', async (t) => {
-  const cases = [
-    {
-      name: 'missing nested change',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { task: taskId },
-      },
-    },
-    {
-      name: 'missing nested task',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change },
-      },
-    },
-    {
-      name: 'non-string nested change',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change: 42, task: taskId },
-      },
-    },
-    {
-      name: 'non-string nested task',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change, task: 42 },
-      },
-    },
-    {
-      name: 'top-level-only change and task',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        change,
-        task: taskId,
-      },
-    },
-  ] as const;
-
-  for (const scenario of cases) {
-    await t.test(scenario.name, async () => {
-      const harness = new RuntimeHarness();
-      try {
-        await harness.emit('session_start', { reason: 'startup' });
-        await harness.emit('tool_call', {
-          toolCallId: `taskflow-focus-${scenario.name}`,
-          toolName: 'taskflow',
-          input: {
-            name: 'deliver-change',
-            action: 'run',
-            args: { change, task: taskId },
-          },
-        });
-        await harness.command('galactica-status-refresh', '');
-
-        assert.equal(harness.titles.at(-1), activeTitle);
-        const focusEntry = harness.entries.at(-1);
-        const focusedTitle = harness.titles.at(-1);
-        const focusedFooter = latestOpenSpecFooterMessage(harness);
-        assert.ok(
-          typeof focusedFooter === 'object' &&
-            focusedFooter !== null &&
-            'type' in focusedFooter &&
-            focusedFooter.type === 'upsert',
-          `${scenario.name} setup should publish the focused OpenSpec footer`,
-        );
-
-        const result = await harness.emit('tool_call', {
-          toolCallId: `taskflow-malformed-${scenario.name}`,
-          toolName: 'taskflow',
-          input: scenario.input,
-        });
-
-        assert.equal(result, undefined);
-        assert.equal(harness.entries.at(-1), focusEntry);
-        assert.deepEqual(focusEntry?.data, {
-          mode: 'task',
-          change,
-          taskId,
-          awaitingValidation: false,
-        });
-        assert.equal(harness.titles.at(-1), focusedTitle);
-        assert.deepEqual(latestOpenSpecFooterMessage(harness), focusedFooter);
-      } finally {
-        await harness.stop();
-      }
-    });
-  }
-});
-
-test('nameless Taskflow focus propagates the resolved title once and rejects a conflict', async () => {
-  const harness = new RuntimeHarness();
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    assert.equal(harness.titles[0], 'π  galactica');
-
-    const requestedFocus = {
-      action: 'run',
-      args: { change, task: taskId },
-    };
-    const accepted = await harness.emit('tool_call', {
-      toolCallId: 'taskflow-1',
-      toolName: 'taskflow',
-      input: requestedFocus,
-    });
-
-    assert.equal((accepted as { block?: boolean } | undefined)?.block, undefined);
-    assert.deepEqual(harness.entries.at(-1)?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-
-    await waitFor(
-      () => harness.titles.includes(activeTitle),
-      () => titleDiagnostics(harness),
-    );
-    assert.equal(harness.titles.at(-1), activeTitle);
-
-    const beforeRefresh = harness.titles.length;
-    await harness.command('galactica-status-refresh', '');
-    assert.equal(harness.titles.length, beforeRefresh);
-
-    const conflict = await harness.emit('tool_call', {
-      toolCallId: 'taskflow-2',
-      toolName: 'taskflow',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change: 'another-change', task: '2.1' },
-      },
-    });
-    assert.equal((conflict as { block?: boolean } | undefined)?.block, true);
-    assert.match(
-      (conflict as { reason?: string } | undefined)?.reason ?? '',
-      /focus|clear|replace/iu,
-    );
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('Taskflow success, pause, and approval waiting preserve focus, title, and footer', async (t) => {
-  const cases = [
-    {
-      name: 'success with completed focused-task metadata',
-      focusedTaskDone: true,
-      eventName: 'tool_result',
-      event: {
-        toolCallId: 'taskflow-success',
-        toolName: 'taskflow',
-        input: {
-          name: 'deliver-change',
-          action: 'run',
-          args: { change, task: taskId },
-        },
-        content: [{ type: 'text', text: 'Taskflow completed' }],
-        details: { action: 'run', state: { status: 'completed' } },
-        isError: false,
-      },
-    },
-    {
-      name: 'pause',
-      focusedTaskDone: false,
-      eventName: 'tool_result',
-      event: {
-        toolCallId: 'taskflow-paused',
-        toolName: 'taskflow',
-        input: {
-          name: 'deliver-change',
-          action: 'run',
-          args: { change, task: taskId },
-        },
-        content: [{ type: 'text', text: 'Taskflow paused' }],
-        details: { action: 'run', state: { status: 'paused' } },
-        isError: true,
-      },
-    },
-    {
-      name: 'approval waiting',
-      focusedTaskDone: false,
-      eventName: 'tool_execution_update',
-      event: {
-        toolCallId: 'taskflow-approval',
-        toolName: 'taskflow',
-        args: {
-          name: 'deliver-change',
-          action: 'run',
-          args: { change, task: taskId },
-        },
-        partialResult: {
-          content: [{ type: 'text', text: 'Waiting for approval' }],
-          details: {
-            action: 'run',
-            state: {
-              status: 'running',
-              phases: {
-                'approve-red': { type: 'approval', status: 'pending' },
-              },
-            },
-          },
-        },
-      },
-    },
-  ] as const;
-
-  for (const scenario of cases) {
-    await t.test(scenario.name, async () => {
-      const harness = new RuntimeHarness({
-        focusedTaskDone: scenario.focusedTaskDone,
-      });
-      try {
-        await harness.emit('session_start', { reason: 'startup' });
-        await harness.emit('tool_call', {
-          toolCallId: `taskflow-${scenario.name}-focus`,
-          toolName: 'taskflow',
-          input: {
-            name: 'deliver-change',
-            action: 'run',
-            args: { change, task: taskId },
-          },
-        });
-        await waitFor(
-          () => harness.titles.includes(activeTitle),
-          () => titleDiagnostics(harness),
-        );
-        const focusEntry = harness.entries.at(-1);
-        const footer = latestOpenSpecFooterMessage(harness);
-        assert.ok(
-          typeof footer === 'object' &&
-            footer !== null &&
-            'type' in footer &&
-            footer.type === 'upsert',
-          `${scenario.name} setup should publish the focused OpenSpec footer`,
-        );
-
-        await harness.emit(scenario.eventName, scenario.event);
-
-        assert.equal(harness.entries.at(-1), focusEntry);
-        assert.deepEqual(focusEntry?.data, {
-          mode: 'task',
-          change,
-          taskId,
-          awaitingValidation: false,
-        });
-        assert.equal(
-          harness.titles.at(-1),
-          activeTitle,
-          `${scenario.name} should retain the metadata-resolved task headline`,
-        );
-        assert.deepEqual(latestOpenSpecFooterMessage(harness), footer);
-      } finally {
-        await harness.stop();
-      }
-    });
-  }
-});
-
-test('unrelated and failed or blocked Taskflow-adjacent events retain focus', async () => {
-  const harness = new RuntimeHarness();
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    await harness.emit('tool_call', {
-      toolCallId: 'taskflow-1',
-      toolName: 'taskflow',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change, task: taskId },
-      },
-    });
-    await waitFor(
-      () => harness.titles.includes(activeTitle),
-      () => titleDiagnostics(harness),
-    );
-    const focusEntry = harness.entries.at(-1);
-
-    await harness.emit('tool_call', {
-      toolCallId: 'read-1',
-      toolName: 'read',
-      input: { path: 'README.md' },
-    });
-    await harness.emit('tool_call', {
-      toolCallId: 'taskflow-status',
-      toolName: 'taskflow',
-      input: { action: 'status', runId: 'failed-run' },
-    });
-    await harness.emit('tool_result', {
-      toolCallId: 'taskflow-1',
-      toolName: 'taskflow',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change, task: taskId },
-      },
-      content: [{ type: 'text', text: 'verification failed' }],
-      details: { state: 'failed' },
-      isError: true,
-    });
-    const blocked = await harness.emit('tool_call', {
-      toolCallId: 'taskflow-blocked',
-      toolName: 'taskflow',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change: replacementChange, task: replacementTaskId },
-      },
-    });
-
-    assert.equal((blocked as { block?: boolean } | undefined)?.block, true);
-    assert.equal(harness.entries.at(-1), focusEntry);
-    assert.deepEqual(focusEntry?.data, {
-      mode: 'task',
-      change,
-      taskId,
-      awaitingValidation: false,
-    });
-    assert.equal(harness.titles.at(-1), activeTitle);
-  } finally {
-    await harness.stop();
-  }
-});
-
-test('clear persists no focus and returns the title and footer to fallback', async () => {
-  const first = new RuntimeHarness({ sessionName: 'Fallback title' });
-  try {
-    await first.emit('session_start', { reason: 'startup' });
-    await first.emit('tool_call', {
-      toolCallId: 'taskflow-1',
-      toolName: 'taskflow',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change, task: taskId },
-      },
-    });
-    await waitFor(
-      () => first.titles.includes(activeTitle),
-      () => titleDiagnostics(first),
-    );
-
-    await first.command('openspec-focus', 'clear');
-
-    assert.deepEqual(first.entries.at(-1)?.data, { mode: 'none' });
-    assert.equal(first.titles.at(-1), 'π  Fallback title');
-    assert.ok(
-      first.sharedEvents.some(
-        ({ message }) =>
-          typeof message === 'object' &&
-          message !== null &&
-          'type' in message &&
-          message.type === 'remove' &&
-          'id' in message &&
-          message.id === 'galactica.openspec',
-      ),
-      'clearing focus should remove the OpenSpec footer widget',
-    );
-  } finally {
-    await first.stop();
-  }
-
-  const reloaded = new RuntimeHarness({
-    sessionName: 'Fallback title',
-    entries: first.entries,
+test('reload restores IDs before progressing to the metadata-resolved title', async () => {
+  const first = new RuntimeHarness({
+    entries: [seededFocusEntry(change, taskId)],
   });
   try {
-    const starting = reloaded.emit('session_start', { reason: 'reload' });
-    assert.equal(reloaded.titles[0], 'π  Fallback title');
-    await starting;
-    assert.equal(reloaded.titles.at(-1), 'π  Fallback title');
-    assert.doesNotMatch(reloaded.titles.join('\n'), new RegExp(change, 'u'));
-  } finally {
-    await reloaded.stop();
-  }
-});
-
-test('reload restores IDs before progressing to the metadata-resolved title', async () => {
-  const first = new RuntimeHarness();
-  try {
     await first.emit('session_start', { reason: 'startup' });
-    await first.emit('tool_call', {
-      toolCallId: 'taskflow-1',
-      toolName: 'taskflow',
-      input: {
-        name: 'deliver-change',
-        action: 'run',
-        args: { change, task: taskId },
-      },
-    });
     assert.equal(first.entries.at(-1)?.data?.mode, 'task');
   } finally {
     await first.stop();
@@ -2474,33 +1489,25 @@ test('fallback titles use distinguishable session, repository, then cwd preceden
   );
 });
 
-test('OpenSpec, Session Work, and fallback title precedence stays explicit', () => {
+test('Task focus, native session name, and subject fallback precedence stays explicit', () => {
   const common = {
-    workFocus: { state: 'active', intent: 'Ephemeral work' } as const,
-    sessionName: 'Fallback session',
+    sessionName: 'Native session name',
+    subject: { state: 'set', title: 'Session subject' } as const,
     cwd: '/work/cwd-choice',
   };
 
   assert.equal(
     formatActiveWorkTitle({ focus: { mode: 'none' }, ...common }),
-    'π  Ephemeral work',
+    `π  Native session name`,
   );
   assert.equal(
     formatActiveWorkTitle({
-      focus: { mode: 'task', change, taskId, awaitingValidation: false },
+      focus: { mode: 'none' },
       ...common,
+      sessionName: undefined,
     }),
-    `π  ${change} › ${taskId}`,
+    `π  Session subject`,
   );
-});
-
-test('OpenSpec stays authoritative over Session Work title focus', () => {
-  const common = {
-    workFocus: { state: 'active', intent: 'Stale session work' } as const,
-    sessionName: 'Fallback session',
-    cwd: '/work/cwd-choice',
-  };
-
   assert.equal(
     formatActiveWorkTitle({
       focus: { mode: 'task', change, taskId, awaitingValidation: false },
@@ -2528,10 +1535,12 @@ test('fallback titles normalize hostile session text and remain bounded', async 
 
 test('focused hostile headlines are sanitized and bounded independently', async () => {
   const hostileHeadline = `\n\u0007${'🧪'.repeat(500)} FORBIDDEN-SUFFIX`;
-  const harness = new RuntimeHarness({ focusedTaskTitle: hostileHeadline });
+  const harness = new RuntimeHarness({
+    focusedTaskTitle: hostileHeadline,
+    entries: [seededFocusEntry(change, taskId)],
+  });
   try {
     await harness.emit('session_start', { reason: 'startup' });
-    await harness.command('openspec-focus', `set ${change} ${taskId}`);
     await waitFor(
       () => harness.titles.at(-1)?.includes('🧪') === true,
       () => titleDiagnostics(harness),

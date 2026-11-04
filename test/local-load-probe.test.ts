@@ -10,11 +10,10 @@ const EXPECTED_COMMANDS = [
   'galactica-status',
   'galactica-status-debug',
   'galactica-status-refresh',
-  'openspec-focus',
   'pi-status',
   'stardeck-health',
 ];
-const EXPECTED_TOOLS = ['openspec_focus', 'title'];
+const EXPECTED_TOOLS = ['openspec_focus'];
 
 test('chrome-only deck composition activates header footer and status', () => {
   assert.equal(COCKPIT_SURFACES.contextHeader, 'deck');

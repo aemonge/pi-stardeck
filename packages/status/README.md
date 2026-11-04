@@ -90,10 +90,10 @@ branch entry. The agent-callable `openspec_focus` tool shares the command's `sta
 safeguarded `set`, deliberate `replace`, validating `validate`, and persistent `clear`
 transitions; the `awaitingValidation` flag marks a focused task as awaiting Human
 validation and auto-clears on the next `set`, `replace`, or `clear`. The
-agent-callable `title` tool sets the sanitized session title shown when no OpenSpec
-focus owns the row. The retired `work_focus` and `stage` instruments are gone: stages
-derive from events and Taskflow phases, and legacy `session-work` entries from old
-sessions still restore and render, fail-soft.
+retired `work_focus`, `stage`, and `title` instruments are gone: stages
+derive from events and Taskflow phases, the focus row falls back to the
+native session name (named by `pi-title`) and then to legacy `session-subject`
+entries from old sessions, read defensively and fail-soft.
 
 Global routing belongs to native Ramona policy rather than this status package. This
 package does not inject parent routing prompts, block parent tools, create Session Work

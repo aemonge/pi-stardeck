@@ -193,7 +193,6 @@ export type StageValue =
 
 export type SelectionState =
   | { kind: 'openspec-task'; change: string; task: string }
-  | { kind: 'session-work'; intent: string; phase: 'active' | 'validation' }
   | { kind: 'subject'; title: string }
   | { kind: 'none' };
 

@@ -31,8 +31,6 @@ const openSpec: OpenSpecState = {
 };
 
 const subject = { state: 'set' as const, title: 'Session subject' };
-const work = { state: 'active' as const, intent: 'Freeze the contract' };
-const workValidation = { state: 'validation' as const, intent: 'Freeze the contract' };
 const taskFocus = {
   mode: 'task' as const,
   change: 'closed-loop',
@@ -63,7 +61,6 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
       name: 'nothing set',
       facts: {
         openSpec: { mode: 'none' },
-        work: { state: 'clear' },
         subject: { state: 'clear' },
       },
       legacy: {},
@@ -73,35 +70,17 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
       name: 'subject alone',
       facts: {
         openSpec: { mode: 'none' },
-        work: { state: 'clear' },
         subject,
       },
       legacy: { subject },
       expected: 'subject',
     },
     {
-      name: 'work beats subject',
-      facts: { openSpec: { mode: 'none' }, work, subject },
-      legacy: { workFocus: work, subject },
-      expected: 'session-work',
-    },
-    {
-      name: 'validation work still session-work',
-      facts: {
-        openSpec: { mode: 'none' },
-        work: workValidation,
-        subject,
-      },
-      legacy: { workFocus: workValidation, subject },
-      expected: 'session-work',
-    },
-    {
       name: 'openspec task beats everything',
-      facts: { openSpec: taskFocus, work, subject },
+      facts: { openSpec: taskFocus, subject },
       legacy: {
         openSpec,
         focusedTaskId: '2',
-        workFocus: work,
         subject,
       },
       expected: 'openspec-task',
@@ -124,7 +103,6 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
 test('incremental recordEvent fold equals a full ledger replay (T2 parity)', () => {
   const events: LedgerEvent[] = [
     { type: 'focus/subject', at: 1, subject },
-    { type: 'focus/work', at: 2, work },
     { type: 'run/start', at: 3, span: span() },
     {
       type: 'run/start',
@@ -142,7 +120,6 @@ test('incremental recordEvent fold equals a full ledger replay (T2 parity)', () 
       },
     },
     { type: 'run/end', at: 7, id: 'sub-1' },
-    { type: 'focus/work', at: 8, work: { state: 'clear' } },
   ];
 
   let incremental = emptyFacts();
@@ -164,7 +141,6 @@ test('exhibit regression: no selection narrates nothing (exhibits 1 and 5)', asy
   for (const fallbackTitles of [undefined, ['no focus'], ['no OpenSpec']]) {
     const event = buildHeaderStatusEvent([], {
       openSpec: null,
-      workFocus: undefined,
       subject: { state: 'clear' },
       orchestration: null,
       lifecycle: 'understanding',

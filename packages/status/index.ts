@@ -1,4 +1,3 @@
-import { StringEnum } from '@earendil-works/pi-ai';
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
@@ -6,29 +5,15 @@ import type {
 } from '@earendil-works/pi-coding-agent';
 import { promises as fs, watch } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { Type } from 'typebox';
 import {
   formatActiveWorkTitle,
-  NO_OPEN_SPEC_FOCUS,
-  NO_SESSION_SUBJECT,
-  NO_SESSION_WORK_FOCUS,
-  OPEN_SPEC_FOCUS_ENTRY_TYPE,
   type OpenSpecFocus,
+  parseOpenSpecFocus,
   restoreOpenSpecFocus,
   restoreSessionSubject,
-  restoreSessionWorkFocus,
   sameOpenSpecFocus,
   sameSessionSubject,
-  sameSessionWorkFocus,
-  sameTaskFocus,
-  SESSION_SUBJECT_ENTRY_TYPE,
-  SESSION_WORK_FOCUS_ENTRY_TYPE,
   type SessionSubject,
-  type SessionWorkFocus,
-  sessionSubject,
-  taskflowRunFocus,
-  taskFocus,
-  titleFromPrompt,
 } from './src/active-work.ts';
 import { collectDiagnostics } from './src/diagnostics.ts';
 import { loadConfig } from './src/config.ts';
@@ -90,7 +75,6 @@ import type {
 
 type SessionContext = ExtensionContext | ExtensionCommandContext;
 type Domain = RuntimeErrorRecord['domain'];
-type OpenSpecFocusAction = 'status' | 'set' | 'replace' | 'validate' | 'clear';
 
 type StatusHealthCondition = {
   id: string;
@@ -187,10 +171,8 @@ class GalacticaStatusRuntime {
   private openSpecOverview: OpenSpecOverview | undefined;
   private openSpecProjectDetected: boolean | undefined;
   private focus: OpenSpecFocus;
-  private workFocus: SessionWorkFocus;
   private subject: SessionSubject;
   private sessionName: string | undefined;
-  private lastTitle: string | undefined;
   private diagnosticsPath: string | undefined;
   private orchestrationPath: string | undefined;
   private liveLifecycle: HeaderLifecycle;
@@ -218,7 +200,6 @@ class GalacticaStatusRuntime {
     ctx: SessionContext,
     publisher: FancyFooterPublisher,
     focus: OpenSpecFocus,
-    workFocus: SessionWorkFocus,
     subject: SessionSubject,
     sessionName: string | undefined,
   ) {
@@ -226,12 +207,10 @@ class GalacticaStatusRuntime {
     this.ctx = ctx;
     this.publisher = publisher;
     this.focus = focus;
-    this.workFocus = workFocus;
     this.subject = subject;
     this.sessionName = sessionName;
     const restoredAwaitingValidation =
-      (focus.mode === 'task' && focus.awaitingValidation) ||
-      workFocus.state === 'validation';
+      focus.mode === 'task' && focus.awaitingValidation;
     this.liveLifecycle = restoredAwaitingValidation ? 'waiting' : 'listening';
     this.liveActivity = restoredAwaitingValidation
       ? { kind: 'awaiting-validation' }
@@ -243,7 +222,6 @@ class GalacticaStatusRuntime {
     });
     const seededAt = Date.now();
     this.recordEvent({ type: 'focus/openspec', at: seededAt, focus });
-    this.recordEvent({ type: 'focus/work', at: seededAt, work: workFocus });
     this.recordEvent({ type: 'focus/subject', at: seededAt, subject });
   }
 
@@ -608,28 +586,19 @@ class GalacticaStatusRuntime {
     // the same object references), so output stays byte-identical while the
     // ledger becomes the feeding seam.
     const focus = this.cockpitFacts.openSpec;
-    const work = this.cockpitFacts.work;
     const subject = this.cockpitFacts.subject;
     const title = this.currentTitleState(snapshot);
     const focusedOpenSpec =
       focus.mode === 'task' && snapshot.openspec?.changeId === focus.change
         ? snapshot.openspec
         : null;
-    const visibleWorkFocus =
-      focus.mode === 'task' || (work.state === 'clear' && this.openSpecFeedback)
-        ? undefined
-        : work;
     const widgets = buildWidgetSnapshots(
       { ...snapshot, openspec: focusedOpenSpec },
       {
         focusedTaskId: focus.mode === 'task' ? focus.taskId : undefined,
-        openSpecFeedback:
-          focus.mode === 'none' && !visibleWorkFocus
-            ? this.openSpecFeedback
-            : undefined,
+        openSpecFeedback: focus.mode === 'none' ? this.openSpecFeedback : undefined,
         openSpecOverview: this.openSpecOverview,
         openSpecProjectDetected: this.openSpecProjectDetected,
-        workFocus: visibleWorkFocus,
       },
     );
     this.publisher.sync(widgets);
@@ -638,7 +607,6 @@ class GalacticaStatusRuntime {
       buildHeaderStatusEvent(widgets, {
         openSpec: focusedOpenSpec,
         focusedTaskId: focus.mode === 'task' ? focus.taskId : undefined,
-        workFocus: visibleWorkFocus,
         subject,
         orchestration: snapshot.orchestration,
         lifecycle: this.liveLifecycle,
@@ -655,20 +623,10 @@ class GalacticaStatusRuntime {
         diagnostics: snapshot.diagnostics,
       }),
     );
-    this.updateTitle(snapshot);
     this.publishStatusHealth();
   }
 
   private currentTitleState(snapshot = this.store.get()): TitleState {
-    return buildTitleState({
-      subject: this.cockpitFacts.subject,
-      focus: this.cockpitFacts.openSpec,
-      openspec: snapshot.openspec,
-      activity: this.titleActivity.current(),
-    });
-  }
-
-  private updateTitle(snapshot = this.store.get()): void {
     const facts = this.cockpitFacts;
     const focusedTaskId =
       facts.openSpec.mode === 'task' ? facts.openSpec.taskId : undefined;
@@ -680,18 +638,23 @@ class GalacticaStatusRuntime {
             (task) => task.id === focusedTaskId,
           )?.title
         : undefined;
-    const title = formatActiveWorkTitle({
+    // The band chip renders the fallback chain — task focus, native session
+    // name, legacy subject, directory. The terminal titlebar is pi-title's
+    // alone; this package never paints it (pure-renderer-split Slice 2).
+    const subjectTitle = formatActiveWorkTitle({
       focus: facts.openSpec,
-      workFocus: facts.work,
       subject: facts.subject,
       ...(taskTitle ? { taskTitle } : {}),
       ...(this.sessionName ? { sessionName: this.sessionName } : {}),
       projectRoot: snapshot.projectRoot,
       cwd: snapshot.cwd,
     });
-    if (title === this.lastTitle) return;
-    this.lastTitle = title;
-    this.ctx.ui.setTitle(title);
+    return buildTitleState({
+      subject: { state: 'set', title: subjectTitle },
+      focus: facts.openSpec,
+      openspec: snapshot.openspec,
+      activity: this.titleActivity.current(),
+    });
   }
 
   private recordEvent(event: LedgerEvent): void {
@@ -706,10 +669,6 @@ class GalacticaStatusRuntime {
 
   currentFocus(): OpenSpecFocus {
     return this.focus;
-  }
-
-  currentWorkFocus(): SessionWorkFocus {
-    return this.workFocus;
   }
 
   currentSubject(): SessionSubject {
@@ -735,25 +694,11 @@ class GalacticaStatusRuntime {
     this.store.clearOpenSpec();
     if (focus.mode === 'task' && focus.awaitingValidation) {
       this.setLiveProjection('waiting', { kind: 'awaiting-validation' });
-    } else if (focus.mode === 'none' && this.workFocus.state === 'clear') {
+    } else if (focus.mode === 'none') {
       this.setLiveProjection('listening');
     }
     this.publish();
     this.launch(this.refresh(false), 'openspec');
-  }
-
-  setWorkFocus(focus: SessionWorkFocus): void {
-    if (sameSessionWorkFocus(this.workFocus, focus)) return;
-    this.workFocus = focus;
-    this.recordEvent({ type: 'focus/work', at: Date.now(), work: focus });
-    if (focus.state === 'validation') {
-      this.liveLifecycle = 'waiting';
-      this.liveActivity = { kind: 'awaiting-validation' };
-    } else if (focus.state === 'clear' && this.focus.mode === 'none') {
-      this.liveLifecycle = 'listening';
-      this.liveActivity = undefined;
-    }
-    this.publish();
   }
 
   setSubject(subject: SessionSubject): void {
@@ -938,12 +883,8 @@ class GalacticaStatusRuntime {
       this.publish();
       return;
     }
-    if (this.focus.mode === 'task' || this.workFocus.state === 'validation') {
+    if (this.focus.mode === 'task') {
       this.setLiveProjection('waiting', { kind: 'awaiting-validation' });
-      return;
-    }
-    if (this.workFocus.state === 'active') {
-      this.setLiveProjection('waiting', { kind: 'awaiting-input' });
       return;
     }
     this.setLiveProjection('listening');
@@ -951,7 +892,7 @@ class GalacticaStatusRuntime {
 
   setSessionName(name: string | undefined): void {
     this.sessionName = name;
-    this.updateTitle();
+    this.publish();
   }
 
   async forceRefresh(): Promise<void> {
@@ -979,11 +920,6 @@ class GalacticaStatusRuntime {
           : 'OpenSpec focus: none',
     );
     lines.push(
-      this.workFocus.state === 'clear'
-        ? 'Work: clear'
-        : `Work: ${this.workFocus.state} · ${this.workFocus.intent}`,
-    );
-    lines.push(
       snapshot.diagnostics
         ? `Diagnostics: ${formatDiagnostics(snapshot.diagnostics)}`
         : 'Diagnostics: hidden (no source)',
@@ -1004,7 +940,6 @@ class GalacticaStatusRuntime {
         configPath: snapshot.configPath,
         configWarnings: snapshot.configWarnings,
         focus: this.focus,
-        workFocus: this.workFocus,
         openSpecFeedback: this.openSpecFeedback ?? null,
         openSpecOverview: this.openSpecOverview ?? null,
         detected: {
@@ -1055,123 +990,20 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     }
   });
 
-  function persistAndApplyWorkFocus(focus: SessionWorkFocus): void {
-    pi.appendEntry(SESSION_WORK_FOCUS_ENTRY_TYPE, focus);
-    runtime?.setWorkFocus(focus);
-  }
-
-  function persistAndApplySubject(subject: SessionSubject): void {
-    pi.appendEntry(SESSION_SUBJECT_ENTRY_TYPE, subject);
-    runtime?.setSubject(subject);
-  }
-
-  function persistAndApplyFocus(focus: OpenSpecFocus): void {
-    if (
-      focus.mode === 'task' &&
-      (runtime?.currentWorkFocus() ?? NO_SESSION_WORK_FOCUS).state !== 'clear'
-    ) {
-      persistAndApplyWorkFocus(NO_SESSION_WORK_FOCUS);
-    }
-    pi.appendEntry(OPEN_SPEC_FOCUS_ENTRY_TYPE, focus);
+  // work-state owns focus writes and emits `focus-changed` after each
+  // successful one (pi.events); the renderer subscribes for immediate
+  // repaint (pure-renderer-split Slice 2).
+  const stopFocusRepaint = pi.events.on('focus-changed', (data: unknown) => {
+    const focus = parseOpenSpecFocus(data);
+    if (!focus) return;
     runtime?.setFocus(focus);
-  }
-
-  function subjectStatus(subject: SessionSubject): string {
-    return subject.state === 'clear' ? 'Title: clear' : `Title: ${subject.title}`;
-  }
-
-  function applyTitleAction(
-    action: 'status' | 'set',
-    title?: string,
-  ): { ok: boolean; message: string; subject: SessionSubject } {
-    const current = runtime?.currentSubject() ?? NO_SESSION_SUBJECT;
-
-    if (action === 'status') {
-      return { ok: true, message: subjectStatus(current), subject: current };
-    }
-
-    const next = sessionSubject('set', title);
-    if (!next || next.state !== 'set') {
-      return {
-        ok: false,
-        message: 'Title requires a non-empty title',
-        subject: current,
-      };
-    }
-    if (!sameSessionSubject(current, next)) persistAndApplySubject(next);
-    return { ok: true, message: subjectStatus(next), subject: next };
-  }
-
-  function applyOpenSpecFocusAction(
-    action: OpenSpecFocusAction,
-    change?: string,
-    taskId?: string,
-  ): { ok: boolean; message: string; focus: OpenSpecFocus } {
-    const current = runtime?.currentFocus() ?? NO_OPEN_SPEC_FOCUS;
-    const statusMessage = (focus: OpenSpecFocus): string =>
-      focus.mode === 'task'
-        ? `OpenSpec focus: ${focus.change} › ${focus.taskId}` +
-          (focus.awaitingValidation ? ' — awaiting Human validation' : '')
-        : 'OpenSpec focus: none';
-
-    if (action === 'status') {
-      return { ok: true, message: statusMessage(current), focus: current };
-    }
-    if (action === 'clear') {
-      persistAndApplyFocus(NO_OPEN_SPEC_FOCUS);
-      return {
-        ok: true,
-        message: 'OpenSpec focus cleared',
-        focus: NO_OPEN_SPEC_FOCUS,
-      };
-    }
-    if (action === 'validate') {
-      if (current.mode !== 'task') {
-        return {
-          ok: false,
-          message: 'OpenSpec focus has no task to validate',
-          focus: current,
-        };
-      }
-      const validated = { ...current, awaitingValidation: true };
-      if (!sameOpenSpecFocus(current, validated)) persistAndApplyFocus(validated);
-      return { ok: true, message: statusMessage(validated), focus: validated };
-    }
-
-    const requested = taskFocus(change, taskId);
-    if (!requested) {
-      return {
-        ok: false,
-        message: 'OpenSpec focus requires non-empty change and task identifiers',
-        focus: current,
-      };
-    }
-    if (
-      action === 'set' &&
-      current.mode === 'task' &&
-      !sameTaskFocus(current, requested)
-    ) {
-      return {
-        ok: false,
-        message:
-          `OpenSpec focus is ${current.change} › ${current.taskId}; ` +
-          'use replace to change it deliberately',
-        focus: current,
-      };
-    }
-    if (!sameOpenSpecFocus(current, requested)) persistAndApplyFocus(requested);
-    return {
-      ok: true,
-      message: statusMessage(requested),
-      focus: requested,
-    };
-  }
+    runtime?.settle();
+  });
 
   pi.on('session_start', (_event, ctx) => {
     runtime?.stop();
     const branch = ctx.sessionManager.getBranch();
     const focus = restoreOpenSpecFocus(branch);
-    const workFocus = restoreSessionWorkFocus(branch);
     const subject = restoreSessionSubject(branch);
     const sessionName = pi.getSessionName() ?? ctx.sessionManager.getSessionName();
     runtime = new GalacticaStatusRuntime(
@@ -1179,7 +1011,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
       ctx,
       publisher,
       focus,
-      workFocus,
       subject,
       sessionName,
     );
@@ -1193,28 +1024,12 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   pi.on('session_tree', (_event, ctx) => {
     const branch = ctx.sessionManager.getBranch();
     runtime?.setFocus(restoreOpenSpecFocus(branch));
-    runtime?.setWorkFocus(restoreSessionWorkFocus(branch));
     runtime?.setSubject(restoreSessionSubject(branch));
     runtime?.settle();
   });
 
-  pi.on('before_agent_start', (event) => {
+  pi.on('before_agent_start', () => {
     runtime?.beginTurn();
-    // Auto-title: the first real user prompt names the session while the
-    // subject is still clear — the agent's `title` call stays optional
-    // polish (every agent skipped the first-turn rule; verified
-    // systematically in simplify-session-focus-surface). Human- or
-    // agent-set titles and restored sessions are never overridden.
-    // No run-kind guard exists: before_agent_start fires only on the
-    // human-prompt path (agent-session emitBeforeAgentStart — custom
-    // messages steer, follow up, or queue, never start a run), and
-    // titleFromPrompt re-validates the prompt and skips `/` prompts.
-    // fix-pinned-event-types Slice 2: the prior guard read a messageType
-    // field no runtime BeforeAgentStartEvent ever carried, returning on
-    // every turn — the auto-title never fired (verified live 2026-11-03).
-    if ((runtime?.currentSubject() ?? NO_SESSION_SUBJECT).state !== 'clear') return;
-    const next = titleFromPrompt(event.prompt);
-    if (next && next.state === 'set') persistAndApplySubject(next);
   });
 
   pi.on('tool_execution_start', (event) => {
@@ -1230,23 +1045,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
       );
       return;
     }
-    const requested = taskflowRunFocus(event.input);
-
-    if (requested) {
-      const current = runtime?.currentFocus() ?? NO_OPEN_SPEC_FOCUS;
-      if (current.mode === 'task' && !sameOpenSpecFocus(current, requested)) {
-        return {
-          block: true,
-          reason:
-            `OpenSpec focus is ${current.change} › ${current.taskId}; ` +
-            'use /openspec-focus clear or /openspec-focus replace <change> <task> before starting a conflicting run',
-        };
-      }
-      if (!sameOpenSpecFocus(current, requested)) {
-        persistAndApplyFocus(requested);
-      }
-    }
-
     const initialPhase = taskflowInitialHeaderPhase(event.input);
     if (initialPhase) {
       runtime?.setTaskflowPhase(initialPhase);
@@ -1312,76 +1110,7 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     runtime = undefined;
     publisher.removeAll();
     stopReady();
-  });
-
-  pi.registerTool({
-    name: 'title',
-    label: 'Session Title',
-    description:
-      'Show or set the sanitized session title that keeps the focus row populated beneath OpenSpec and Session Work. The session titles itself from the first real prompt; call this only to name or rename deliberately (at most 120 characters, never raw prompt text), revising when the topic clearly shifts; never require Human action for it',
-    promptSnippet: 'Manage the automatic session title',
-    parameters: Type.Object({
-      action: StringEnum(['status', 'set'] as const),
-      title: Type.Optional(
-        Type.String({
-          description: 'Required only for set: the short sanitized subject title',
-        }),
-      ),
-    }),
-    async execute(_toolCallId, params) {
-      const result = applyTitleAction(params.action, params.title);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: result.ok ? result.message : `Error: ${result.message}`,
-          },
-        ],
-        details: {
-          ok: result.ok,
-          subject: result.subject,
-        },
-      };
-    },
-  });
-
-  pi.registerCommand('openspec-focus', {
-    description: "Show, clear, or explicitly set this session's OpenSpec task focus",
-    handler: async (args, ctx) => {
-      const parts = args.trim().split(/\s+/u).filter(Boolean);
-      if (parts.length === 0) {
-        ctx.ui.notify(applyOpenSpecFocusAction('status').message, 'info');
-        return;
-      }
-
-      if (parts.length === 1 && parts[0]?.toLowerCase() === 'clear') {
-        const result = applyOpenSpecFocusAction('clear');
-        ctx.ui.notify(result.message, 'info');
-        return;
-      }
-
-      if (parts.length === 1 && parts[0]?.toLowerCase() === 'validate') {
-        const result = applyOpenSpecFocusAction('validate');
-        ctx.ui.notify(result.message, result.ok ? 'info' : 'warning');
-        return;
-      }
-
-      const rawAction = parts[0]?.toLowerCase();
-      const action: 'set' | 'replace' = ['set', 'replace'].includes(rawAction ?? '')
-        ? (rawAction as 'set' | 'replace')
-        : 'set';
-      const identifiers = rawAction === action ? parts.slice(1) : parts;
-      if (identifiers.length !== 2) {
-        ctx.ui.notify(
-          'Usage: /openspec-focus [set|replace] <change> <task> | clear',
-          'warning',
-        );
-        return;
-      }
-
-      const result = applyOpenSpecFocusAction(action, identifiers[0], identifiers[1]);
-      ctx.ui.notify(result.message, result.ok ? 'info' : 'warning');
-    },
+    stopFocusRepaint();
   });
 
   pi.registerCommand('galactica-status', {

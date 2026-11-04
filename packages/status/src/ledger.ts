@@ -5,7 +5,7 @@ import type {
   RunSpan,
   StageValue,
 } from './types.ts';
-import type { OpenSpecFocus, SessionSubject, SessionWorkFocus } from './active-work.ts';
+import type { OpenSpecFocus, SessionSubject } from './active-work.ts';
 
 /**
  * Append-only event ledger for the cockpit status core.
@@ -18,7 +18,6 @@ import type { OpenSpecFocus, SessionSubject, SessionWorkFocus } from './active-w
 
 export const LEDGER_EVENT_TYPES = [
   'focus/openspec',
-  'focus/work',
   'focus/subject',
   'run/start',
   'run/stage',
@@ -37,7 +36,6 @@ export type LedgerEvent =
       at: number;
       focus: OpenSpecFocus;
     }
-  | { type: 'focus/work'; at: number; work: SessionWorkFocus }
   | { type: 'focus/subject'; at: number; subject: SessionSubject }
   | { type: 'run/start'; at: number; span: RunSpan }
   | { type: 'run/stage'; at: number; id: string; stage: StageValue; declared: boolean }

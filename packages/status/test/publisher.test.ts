@@ -7,7 +7,6 @@ import {
   FancyFooterPublisher,
   formatDiagnostics,
   formatOpenSpec,
-  formatSessionWork,
 } from '../src/publisher.ts';
 import { AtomicStatusStore, ResourceBag } from '../src/state.ts';
 import type {
@@ -143,56 +142,8 @@ test('publishes dim OpenSpec feedback without inventing a focus', () => {
   assert.deepEqual(buildWidgetSnapshots(snapshot({ openspec: null })), []);
 });
 
-test('publishes explicit Session Work states without competing with OpenSpec', () => {
-  const active = { state: 'active', intent: 'Implement session metadata' } as const;
-  const validation = {
-    state: 'validation',
-    intent: 'Implement session metadata',
-  } as const;
-  const clear = { state: 'clear' } as const;
-
-  assert.equal(formatSessionWork(active), 'Work · Implement session metadata');
-  assert.equal(formatSessionWork(validation), 'Validate · Implement session metadata');
-  assert.equal(formatSessionWork(clear), 'Work · clear');
-
-  const activeWidget = buildWidgetSnapshots(snapshot({ openspec: null }), {
-    workFocus: active,
-    openSpecFeedback: 'no-focus',
-  })[0];
-  assert.equal(activeWidget?.id, 'galactica.work');
-  assert.equal(activeWidget?.content.text, 'Focus');
-  assert.equal(activeWidget?.layout?.align, 'right');
-  assert.equal(activeWidget?.style?.textColor, 'accent');
-
-  const validationWidget = buildWidgetSnapshots(snapshot({ openspec: null }), {
-    workFocus: validation,
-  })[0];
-  assert.equal(validationWidget?.content.text, 'Validate');
-  assert.equal(validationWidget?.style?.textColor, 'warning');
-
-  const clearWidgets = buildWidgetSnapshots(snapshot({ openspec: null }), {
-    workFocus: clear,
-  });
-  assert.deepEqual(clearWidgets, []);
-
-  const openSpecWins = buildWidgetSnapshots(snapshot(), { workFocus: active });
-  assert.equal(
-    openSpecWins.some((widget) => widget.id === 'galactica.work'),
-    false,
-  );
-  assert.equal(openSpecWins[0]?.id, 'galactica.openspec');
-});
-
 test('uses Focus, then no OpenSpec as row-one fallbacks', () => {
   const noProject = { openSpecProjectDetected: false } as const;
-  const focusWidgets = buildWidgetSnapshots(snapshot({ openspec: null }), {
-    ...noProject,
-    workFocus: { state: 'active', intent: 'Improve prompt layout' },
-  });
-  assert.equal(focusWidgets.length, 1);
-  assert.equal(focusWidgets[0]?.id, 'galactica.work');
-  assert.equal(focusWidgets[0]?.content.text, 'Focus');
-
   const emptyWidgets = buildWidgetSnapshots(snapshot({ openspec: null }), noProject);
   // Frozen contract: no focus means no progress surface — no narration widget.
   assert.equal(
@@ -304,22 +255,7 @@ test('publishes explicit selection and controlled next-action suggestions', () =
   assert.equal(idle.selection, null);
   assert.equal(idle.suggestion, null);
 
-  const restoredWork = publisherModule.buildHeaderStatusEvent([], {
-    workFocus: { state: 'active', intent: 'Continue stable cockpit layout' },
-  });
-  assert.equal(restoredWork.work?.lifecycle, 'listening');
-  assert.equal(restoredWork.suggestion, 'awaiting-continuation');
-
-  const validation = publisherModule.buildHeaderStatusEvent([], {
-    workFocus: { state: 'validation', intent: 'Validate stable cockpit layout' },
-  });
-  assert.deepEqual(validation.selection, {
-    source: 'session-work',
-    titles: ['Validate stable cockpit layout'],
-    color: 'warning',
-  });
-  assert.equal(validation.suggestion, 'requesting-validation');
-  assert.doesNotMatch(JSON.stringify([selected, validation]), /prompt|command|path/u);
+  assert.doesNotMatch(JSON.stringify([selected, idle]), /prompt|command|path/u);
 });
 
 test('subject selection fills the focus row beneath every higher source', () => {
@@ -332,12 +268,6 @@ test('subject selection fills the focus row beneath every higher source', () => 
     color: 'accent',
   });
 
-  const beneathWork = publisherModule.buildHeaderStatusEvent([], {
-    subject,
-    workFocus: { state: 'active', intent: 'Ephemeral work' },
-  });
-  assert.equal(beneathWork.selection?.source, 'session-work');
-
   const beneathOpenSpec = publisherModule.buildHeaderStatusEvent([], {
     subject,
     openSpec,
@@ -345,7 +275,7 @@ test('subject selection fills the focus row beneath every higher source', () => 
   });
   assert.equal(beneathOpenSpec.selection?.source, 'openspec');
 
-  assert.doesNotMatch(JSON.stringify([idle, beneathWork]), /prompt|command/u);
+  assert.doesNotMatch(JSON.stringify([idle, beneathOpenSpec]), /prompt|command/u);
 });
 
 test('publishes bounded active-run counters without runtime identities', () => {

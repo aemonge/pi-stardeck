@@ -43,7 +43,7 @@ The additive header protocol projects selection independently from live work:
 
 ```ts
 selection: {
-  source: 'openspec' | 'session-work';
+  source: 'openspec' | 'subject' | 'legacy';
   titles: string[]; // one or two bounded, normalized titles
   color: HeaderColor;
 } | null;
