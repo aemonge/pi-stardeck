@@ -107,9 +107,12 @@
       complete; invalid scaffolded `skip_specs: true` removed from this
       change's `.openspec.yaml`
       check: known red, not introduced by this change
-- [ ] commit `feat(deck): truthful de-duplicated title band`
-      hash:
-- [ ] Human validation — response: · outcome: · surfaced:
+- [x] commit `feat(deck): truthful de-duplicated title band`
+      hash: b5e15cc
+- [x] Human validation — response: "VALID !" (chat, 2026-11-06) · outcome:
+      pass · surfaced: the live frame test caught the missing item segment
+      (deviation 5, status-JSON shape), fixed and re-verified before the
+      verdict
 
 Deviations recorded:
 1. **`currentArtifact` semantics corrected, not just renamed** (Plan choice
@@ -199,3 +202,5 @@ Deviations recorded:
   gate-attributed · tool: bash · paths: — · at 2026-11-06T11:39:24Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-06T11:53:40Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-06T11:53:52Z
