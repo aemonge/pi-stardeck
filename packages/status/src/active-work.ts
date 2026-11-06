@@ -186,5 +186,8 @@ export function formatActiveWorkTitle(options: {
       'pi';
   }
 
-  return shorten(`π  ${normalizeTitlePart(detail)}`, MAX_TITLE_POINTS);
+  // Bare text — line 2 carries no chrome (frozen amendment): the session
+  // name, change, and task stand naked, and pi-title's naming is quoted,
+  // never re-decorated.
+  return shorten(normalizeTitlePart(detail), MAX_TITLE_POINTS);
 }

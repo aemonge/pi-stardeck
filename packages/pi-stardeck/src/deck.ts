@@ -237,15 +237,18 @@ function alignedSingleRow(left: string, right: string, width: number): string {
   return `${fittedLeft}${' '.repeat(gap)}${right}`;
 }
 
-function workTile(state: HeaderDeckState, theme: Theme): string {
+function workTile(state: HeaderDeckState, theme: Theme, width: number): string {
   // Line 2 right: Work — derived from OpenSpec focus, never authored here.
-  // A fresh session keeps the slot with the accepted dim hint; pre-title
-  // publishers leave it silent (absent facts remove their slots).
+  // Width policy: the full tile from 56; 40–55 the attention/progress side
+  // yields first and the item count survives longest; below 40 the slot
+  // stays empty. A work slot without facts renders nothing — absent facts
+  // remove their slots, never sentinel dashes or narration.
+  if (width < 40) return '';
   const title = state.header?.title ?? null;
   if (!title) return '';
   const work = title.work;
-  if (!work) return color(theme, 'dim', '— no change owns the moment');
-  return deckWorkSegments(work)
+  if (!work) return '';
+  return deckWorkSegments(work, Date.now(), width < 56)
     .map((segment) => color(theme, segment.color, segment.text, segment.bold === true))
     .join('');
 }
@@ -754,7 +757,7 @@ export function renderHeaderDeck(
   // Line 2 (four-line deck): the Subject leads with Work on the right end
   // (Human amendment 2026-10-23 — no clock, no chrome). Narrow frames: the
   // Work slot yields before the Subject does.
-  const titleRight = boundedWidth >= 40 ? workTile(state, theme) : '';
+  const titleRight = workTile(state, theme, boundedWidth);
   const focusLines = titleBandLines(state, boundedWidth, theme);
   const titleRows = [
     alignedSingleRow(focusLines[0] ?? '', titleRight, boundedWidth),

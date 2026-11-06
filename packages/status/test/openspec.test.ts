@@ -1,14 +1,23 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  rm,
+  stat as fsStat,
+  utimes,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
   collectOpenSpec,
   collectOpenSpecOverview,
+  parseCheckboxCounts,
   parseOpenSpecList,
   parseTaskHierarchy,
   parseTaskMarkdown,
+  readArtifactItems,
 } from '../src/openspec.ts';
 import type { CommandRunner } from '../src/types.ts';
 
@@ -413,8 +422,22 @@ test('blocked apply progress never shadows honest list counts', async () => {
   }
 });
 
-test('collects the schema name and artifact ladder from status', async () => {
+test('collects artifacts, currentArtifact, and file-truth item counts', async () => {
   const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  const changeDir = join(root, 'openspec', 'changes', 'demo');
+  await mkdir(changeDir, { recursive: true });
+  // Checkbox files: idea complete, requirements complete, research in
+  // flight with one unchecked item. The CLI cannot count these — the
+  // collector reads the FILES (status JSON carries no item counts).
+  await writeFile(
+    join(changeDir, 'idea.md'),
+    '- [x] seed the idea\n- [x] frame the pain\n',
+  );
+  await writeFile(join(changeDir, 'requirements.md'), '- [x] list requirements\n');
+  await writeFile(
+    join(changeDir, 'research.md'),
+    '# Research\n\n- [x] first finding\n- [ ] open question\n\nNo checkboxes here:\nplain prose line\n',
+  );
   const runner: CommandRunner = async (_command, args) => {
     if (args[0] === 'list') {
       return {
@@ -442,10 +465,11 @@ test('collects the schema name and artifact ladder from status', async () => {
         code: 0,
         stdout: JSON.stringify({
           schemaName: 'spec',
+          changeRoot: changeDir,
           artifacts: [
-            { id: 'idea', status: 'done' },
-            { id: 'requirements', status: 'done' },
-            { id: 'research', status: 'ready' },
+            { id: 'idea', status: 'done', outputPath: 'idea.md' },
+            { id: 'requirements', status: 'done', outputPath: 'requirements.md' },
+            { id: 'research', status: 'ready', outputPath: 'research.md' },
           ],
         }),
         stderr: '',
@@ -470,10 +494,145 @@ test('collects the schema name and artifact ladder from status', async () => {
       configuredChange: 'demo',
     });
     assert.equal(state?.schemaName, 'spec');
-    assert.deepEqual(state?.ladder, { done: 2, total: 3, rung: 'requirements' });
+    // Current artifact = the first not-yet-done (research), not the last
+    // done one — the work is IN research at 2/3.
+    assert.equal(state?.currentArtifact, 'research');
+    assert.deepEqual(state?.artifacts, [
+      { id: 'idea', done: true, items: { done: 2, total: 2 } },
+      { id: 'requirements', done: true, items: { done: 1, total: 1 } },
+      { id: 'research', done: false, items: { done: 1, total: 2 } },
+    ]);
+    // File-truth item counting never touches the CLI's change totals.
     assert.equal(state?.completedTasks, 4);
     assert.equal(state?.totalTasks, 14);
+    // The change directory's newest file mtime feeds attention staleness.
+    const stat = await fsStat(join(changeDir, 'research.md'));
+    assert.equal(state?.changeModifiedAt, stat.mtimeMs);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('unreadable or empty artifact files emit no item counts — never zeros', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  await writeFile(join(root, 'empty.md'), 'plain prose, no checkboxes\n');
+  let allDone = false;
+  const runner: CommandRunner = async (_command, args) => {
+    if (args[0] === 'list') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          changes: [
+            {
+              name: 'demo',
+              completedTasks: 0,
+              totalTasks: 0,
+              lastModified: '2026-01-01T00:00:00Z',
+              status: 'no-tasks',
+            },
+          ],
+          root: { path: root },
+        }),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'show') {
+      return { code: 0, stdout: JSON.stringify({ title: 'Demo' }), stderr: '' };
+    }
+    if (args[0] === 'status') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          schemaName: 'spec',
+          changeRoot: root,
+          artifacts: [
+            { id: 'empty', status: allDone ? 'done' : 'ready', outputPath: 'empty.md' },
+            {
+              id: 'ghost',
+              status: allDone ? 'done' : 'ready',
+              outputPath: 'missing.md',
+            },
+            { id: 'pathless', status: 'done' },
+          ],
+        }),
+        stderr: '',
+      };
+    }
+    return {
+      code: 0,
+      stdout: JSON.stringify({
+        state: 'ready',
+        progress: { total: 0, complete: 0, remaining: 0 },
+        tasks: [],
+      }),
+      stderr: '',
+    };
+  };
+
+  try {
+    const state = await collectOpenSpec({
+      cwd: root,
+      runner,
+      now: 100,
+      configuredChange: 'demo',
+    });
+    // First not-yet-done wins while work remains; nothing invents 0/0.
+    assert.equal(state?.currentArtifact, 'empty');
+    assert.deepEqual(state?.artifacts, [
+      { id: 'empty', done: false },
+      { id: 'ghost', done: false },
+      { id: 'pathless', done: true },
+    ]);
+    // Once everything is done, the fallback names the last done artifact.
+    allDone = true;
+    const finished = await collectOpenSpec({
+      cwd: root,
+      runner,
+      now: 200,
+      configuredChange: 'demo',
+    });
+    assert.equal(finished?.currentArtifact, 'pathless');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('parseCheckboxCounts counts only checkbox items and treats zero as absence', () => {
+  assert.deepEqual(parseCheckboxCounts('- [x] done\n- [ ] open\n- [X] also done\n'), {
+    done: 2,
+    total: 3,
+  });
+  assert.equal(parseCheckboxCounts('no checkboxes at all\njust prose\n'), undefined);
+  assert.equal(parseCheckboxCounts(''), undefined);
+  // Indented and tilde-adjacent forms still count as checkbox items.
+  assert.deepEqual(parseCheckboxCounts('  - [x] nested done\n\t- [ ] nested open'), {
+    done: 1,
+    total: 2,
+  });
+  assert.deepEqual(parseCheckboxCounts('- [x] a\n- [x] b\n- [x] c\n- [x] d'), {
+    done: 4,
+    total: 4,
+  });
+});
+
+test('readArtifactItems caches by mtime and retries unreadable files', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  const file = join(root, 'execute.md');
+  // Exact millisecond timestamps: utimes round-trips whole ms faithfully,
+  // so the cache hit is deterministic.
+  const original = new Date(1_700_000_000_000);
+  await writeFile(file, '- [x] one\n- [ ] two\n');
+  await utimes(file, original, original);
+  assert.deepEqual(await readArtifactItems(file), { done: 1, total: 2 });
+  // Same mtime → cache hit (even if content changed underneath).
+  await writeFile(file, '- [x] one\n- [x] two\n- [x] three\n');
+  await utimes(file, original, original);
+  assert.deepEqual(await readArtifactItems(file), { done: 1, total: 2 });
+  // Moved mtime → honest re-read.
+  const moved = new Date(1_700_000_500_000);
+  await utimes(file, moved, moved);
+  assert.deepEqual(await readArtifactItems(file), { done: 3, total: 3 });
+  // Unreadable paths stay undefined without throwing.
+  assert.equal(await readArtifactItems(join(root, 'missing.md')), undefined);
+  await rm(root, { recursive: true, force: true });
 });

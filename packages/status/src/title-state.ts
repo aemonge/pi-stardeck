@@ -10,7 +10,7 @@ import type { OpenSpecState } from './types.ts';
  * code may never write any slot; it only parses defensively.
  */
 
-export const TITLE_STATE_VERSION = 1 as const;
+export const TITLE_STATE_VERSION = 2 as const;
 
 export const TITLE_ACTIVITY_CLASSES = [
   'editing',
@@ -37,14 +37,25 @@ const TASK_ID_MAX = 32;
 const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
+const ARTIFACTS_MAX = 16;
+
+export type TitleArtifactState = {
+  id: string;
+  done: boolean;
+  items?: { done: number; total: number };
+};
 
 export type TitleWorkState = {
   change: string;
   task?: string;
-  done?: number;
-  total?: number;
   schemaName?: string;
-  ladder?: { done: number; total: number; rung?: string };
+  artifacts?: TitleArtifactState[];
+  /** The artifact the work is in — first not done, else last done. */
+  currentArtifact?: string;
+  /** Attention facts, derived from publisher-owned truth only. */
+  awaitingValidation?: boolean;
+  focusAt?: number;
+  focusStale?: boolean;
 };
 
 export type TitleActivityState = {
@@ -115,46 +126,66 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
   if (!isRecord(value)) return undefined;
   const change = boundedText(value.change, IDENTIFIER_MAX);
   if (!change) return undefined;
-  // Counts are optional as a pair: absent means unknown (never fabricated
-  // zeros); present-but-invalid rejects the object.
-  const hasCounts = 'done' in value && 'total' in value;
-  if ('done' in value !== 'total' in value) return undefined;
-  const boundedDone = hasCounts ? boundedTotal(value.done) : undefined;
-  const boundedTotalValue = hasCounts ? boundedTotal(value.total) : undefined;
-  if (hasCounts && (boundedDone === null || boundedTotalValue === null)) {
-    return undefined;
-  }
   const task = boundedText(value.task, TASK_ID_MAX, { required: false });
   if (task === null) return undefined;
   const schemaName = boundedText(value.schemaName, IDENTIFIER_MAX, {
     required: false,
   });
   if (schemaName === null) return undefined;
-  let ladder: { done: number; total: number; rung?: string } | undefined;
-  if ('ladder' in value) {
-    if (!isRecord(value.ladder)) return undefined;
-    const ladderDone = boundedTotal(value.ladder.done);
-    const ladderTotal = boundedTotal(value.ladder.total);
-    if (ladderDone === null || ladderTotal === null) return undefined;
-    const ladderRung = boundedText(value.ladder.rung, 32, { required: false });
-    if (ladderRung === null) return undefined;
-    ladder = {
-      done: ladderDone,
-      total: ladderTotal,
-      ...(ladderRung ? { rung: ladderRung } : {}),
-    };
+  const currentArtifact = boundedText(value.currentArtifact, TASK_ID_MAX, {
+    required: false,
+  });
+  if (currentArtifact === null) return undefined;
+  let artifacts: TitleArtifactState[] | undefined;
+  if ('artifacts' in value) {
+    if (!Array.isArray(value.artifacts) || value.artifacts.length > ARTIFACTS_MAX) {
+      return undefined;
+    }
+    const parsed: TitleArtifactState[] = [];
+    for (const entry of value.artifacts) {
+      if (!isRecord(entry)) return undefined;
+      const id = boundedText(entry.id, TASK_ID_MAX);
+      if (!id) return undefined;
+      if (typeof entry.done !== 'boolean') return undefined;
+      const artifactDone = entry.done;
+      let items: { done: number; total: number } | undefined;
+      if ('items' in entry) {
+        if (!isRecord(entry.items)) return undefined;
+        const done = boundedTotal(entry.items.done);
+        const total = boundedTotal(entry.items.total);
+        if (done === null || total === null) return undefined;
+        items = { done, total };
+      }
+      parsed.push({ id, done: artifactDone, ...(items ? { items } : {}) });
+    }
+    artifacts = parsed;
   }
-  const counts =
-    typeof boundedDone === 'number' && typeof boundedTotalValue === 'number'
-      ? { done: boundedDone, total: boundedTotalValue }
-      : {};
+  if ('awaitingValidation' in value && typeof value.awaitingValidation !== 'boolean') {
+    return undefined;
+  }
+  let focusAt: number | undefined;
+  if ('focusAt' in value) {
+    if (
+      typeof value.focusAt !== 'number' ||
+      !Number.isSafeInteger(value.focusAt) ||
+      value.focusAt < 0
+    ) {
+      return undefined;
+    }
+    focusAt = value.focusAt;
+  }
+  if ('focusStale' in value && typeof value.focusStale !== 'boolean') {
+    return undefined;
+  }
   const extras = {
     ...(schemaName ? { schemaName } : {}),
-    ...(ladder ? { ladder } : {}),
+    ...(artifacts ? { artifacts } : {}),
+    ...(currentArtifact ? { currentArtifact } : {}),
+    ...(value.awaitingValidation === true ? { awaitingValidation: true } : {}),
+    ...(focusAt !== undefined ? { focusAt } : {}),
+    ...(value.focusStale === true ? { focusStale: true } : {}),
   };
-  return task === undefined
-    ? { change, ...counts, ...extras }
-    : { change, task, ...counts, ...extras };
+  return task === undefined ? { change, ...extras } : { change, task, ...extras };
 }
 
 function parseTitleWaiver(value: unknown): TitleWaiverState | null | undefined {
@@ -202,46 +233,44 @@ export function shortenTitleTarget(value: string): string {
   return `${points.slice(0, Math.max(1, TITLE_TARGET_MAX - 1)).join('')}…`;
 }
 
-function boundedCount(value: number | undefined, fallback = 0): number {
-  const candidate = value === undefined || !Number.isFinite(value) ? fallback : value;
-  return Math.max(0, Math.min(TITLE_TOTAL_MAX, Math.round(candidate)));
-}
-
 /**
  * Derive the `work` slot from the OpenSpec focus and the focused snapshot.
  * A task focus owns its change; without a focus a passively collected change
- * still reports progress, just without a task id.
+ * still reports artifact facts, just without a task id. Counts live only on
+ * artifact `items` — file truth; absent counts are absent, never zeros.
  */
 export function deriveTitleWork(
   focus: OpenSpecFocus,
   openspec: OpenSpecState | null | undefined,
+  options: { focusAt?: number } = {},
 ): TitleWorkState | null {
-  const counts = (state: OpenSpecState): { done: number; total: number } => ({
-    done: boundedCount(state.hierarchy?.tasks?.completed, state.completedTasks),
-    total: boundedCount(state.hierarchy?.tasks?.total, state.totalTasks),
-  });
-  // Human steering 2026-10-23: no invented phase words — the ladder's
-  // rung name comes straight from OpenSpec.
+  // Artifact facts come straight from the collector; nothing is invented
+  // here — absent facts simply drop out of the contract.
   const extras = (state: OpenSpecState | undefined) => {
     if (!state) return {};
     return {
       ...(state.schemaName ? { schemaName: state.schemaName } : {}),
-      ...(state.ladder ? { ladder: state.ladder } : {}),
+      ...(state.artifacts ? { artifacts: state.artifacts } : {}),
+      ...(state.currentArtifact ? { currentArtifact: state.currentArtifact } : {}),
     };
   };
   if (focus.mode === 'task') {
     const state = openspec && openspec.changeId === focus.change ? openspec : undefined;
-    const taskCounts = state ? counts(state) : undefined;
+    const stale =
+      options.focusAt !== undefined &&
+      state?.changeModifiedAt !== undefined &&
+      state.changeModifiedAt > options.focusAt;
     return {
       change: focus.change,
       task: focus.taskId,
-      ...(taskCounts ?? {}),
       ...extras(state),
+      ...(focus.awaitingValidation ? { awaitingValidation: true } : {}),
+      ...(options.focusAt !== undefined ? { focusAt: options.focusAt } : {}),
+      ...(stale ? { focusStale: true } : {}),
     };
   }
   if (!openspec) return null;
-  const taskCounts = counts(openspec);
-  return { change: openspec.changeId, ...taskCounts, ...extras(openspec) };
+  return { change: openspec.changeId, ...extras(openspec) };
 }
 
 /**
@@ -254,11 +283,15 @@ export function buildTitleState(options: {
   focus: OpenSpecFocus;
   openspec?: OpenSpecState | null;
   activity?: TitleActivityState | null;
+  /** Publisher-owned timestamp of the current focus fact. */
+  focusAt?: number;
 }): TitleState {
   return {
     v: TITLE_STATE_VERSION,
     subject: options.subject.state === 'set' ? options.subject.title : null,
-    work: deriveTitleWork(options.focus, options.openspec),
+    work: deriveTitleWork(options.focus, options.openspec, {
+      focusAt: options.focusAt,
+    }),
     activity: options.activity ?? null,
     waiver: null,
   };

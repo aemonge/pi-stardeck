@@ -731,7 +731,7 @@ test('header events carry the title state only when provided', () => {
   });
   const withTitle = publisherModule.buildHeaderStatusEvent([], { title: idle });
   assert.deepEqual(withTitle.title, {
-    v: 1,
+    v: 2,
     subject: 'Pivot cockpit to pure pi-starship-header chrome',
     work: null,
     activity: null,
@@ -754,11 +754,11 @@ test('header events carry the title state only when provided', () => {
     },
   });
   const withWork = publisherModule.buildHeaderStatusEvent([], { title: midWork });
+  // The fixture carries no artifact facts, so the work slot names the
+  // focused change and task alone — counts never clamp in as zeros.
   assert.deepEqual(withWork.title?.work, {
     change: 'closed-loop',
     task: '1.2',
-    done: 2,
-    total: 3,
   });
   assert.deepEqual(withWork.title?.activity, {
     class: 'editing',

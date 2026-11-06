@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import type {
   CommandRunner,
+  OpenSpecArtifact,
   OpenSpecHierarchyProgress,
   OpenSpecOverview,
   OpenSpecState,
@@ -25,6 +26,19 @@ interface ApplyInstructionsResult {
   progress?: { total?: number; complete?: number };
   tasks: OpenSpecTask[];
   tasksPath?: string;
+}
+
+/** Parsed `openspec status` artifacts plus their resolved files. Paths stay
+ *  internal: they feed the file-truth item counter, never the contract. */
+interface ParsedArtifact extends OpenSpecArtifact {
+  resolvedPath?: string;
+}
+
+interface ParsedOpenSpecStatus {
+  schemaName?: string;
+  artifacts?: ParsedArtifact[];
+  currentArtifact?: string;
+  changeRoot?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -115,6 +129,51 @@ export function parseTaskMarkdown(content: string): OpenSpecTask[] {
     );
   }
   return tasks;
+}
+
+/** File-truth checkbox counting: `{ done, total }` over `- [x]` / `- [ ]`
+ *  items. Zero checkboxes is absence, not zero — `undefined` emits only
+ *  when a readable source file actually carries countable items. */
+export function parseCheckboxCounts(
+  content: string,
+): { done: number; total: number } | undefined {
+  const pattern = /^\s*-\s*\[([ xX])\]/gmu;
+  let total = 0;
+  let done = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(content)) !== null) {
+    total += 1;
+    if ((match[1] ?? '').toLowerCase() === 'x') done += 1;
+  }
+  return total > 0 ? { done, total } : undefined;
+}
+
+/** mtime-keyed parse cache: a file is re-read only after its mtime moves.
+ *  Unreadable files stay uncached so the next refresh retries honestly. */
+const artifactItemsCache = new Map<
+  string,
+  { mtimeMs: number; counts: { done: number; total: number } | undefined }
+>();
+
+export async function readArtifactItems(
+  path: string,
+): Promise<{ done: number; total: number } | undefined> {
+  let mtimeMs: number;
+  try {
+    mtimeMs = (await fs.stat(path)).mtimeMs;
+  } catch {
+    return undefined;
+  }
+  const cached = artifactItemsCache.get(path);
+  if (cached && cached.mtimeMs === mtimeMs) return cached.counts;
+  let counts: { done: number; total: number } | undefined;
+  try {
+    counts = parseCheckboxCounts(await fs.readFile(path, 'utf8'));
+  } catch {
+    return undefined;
+  }
+  artifactItemsCache.set(path, { mtimeMs, counts });
+  return counts;
 }
 
 export function parseTaskHierarchy(
@@ -234,31 +293,60 @@ function chooseChange(
   return selected;
 }
 
-function parseOpenSpecStatus(value: unknown): {
-  schemaName?: string;
-  ladder?: { done: number; total: number; rung?: string };
-} {
+function parseOpenSpecStatus(value: unknown): ParsedOpenSpecStatus {
   if (!isRecord(value)) return {};
   const schemaName =
     typeof value.schemaName === 'string' && value.schemaName.trim()
       ? value.schemaName.trim()
       : undefined;
-  let ladder: { done: number; total: number; rung?: string } | undefined;
+  const changeRoot =
+    typeof value.changeRoot === 'string' && value.changeRoot.trim()
+      ? value.changeRoot.trim()
+      : undefined;
+  let artifacts: ParsedArtifact[] | undefined;
+  let currentArtifact: string | undefined;
   if (Array.isArray(value.artifacts) && value.artifacts.length > 0) {
-    let done = 0;
-    let rung: string | undefined;
+    const parsed: ParsedArtifact[] = [];
+    let lastDone: string | undefined;
     for (const artifact of value.artifacts) {
       if (!isRecord(artifact)) continue;
-      const id = typeof artifact.id === 'string' ? artifact.id : undefined;
-      if (rung === undefined && id) rung = id;
-      if (artifact.status === 'done') {
-        done += 1;
-        if (id) rung = id;
+      const id =
+        typeof artifact.id === 'string' && artifact.id.trim()
+          ? artifact.id.trim()
+          : undefined;
+      if (!id) continue;
+      const done = artifact.status === 'done';
+      if (done) lastDone = id;
+      // The artifacts array carries a relative outputPath; the item counter
+      // resolves it against the change root — contained paths only.
+      let resolvedPath: string | undefined;
+      const outputPath =
+        typeof artifact.outputPath === 'string' && artifact.outputPath.trim()
+          ? artifact.outputPath.trim()
+          : undefined;
+      if (changeRoot && outputPath) {
+        const root = resolve(changeRoot);
+        const candidate = resolve(root, outputPath);
+        if (candidate === root || candidate.startsWith(`${root}${sep}`)) {
+          resolvedPath = candidate;
+        }
       }
+      parsed.push({ id, done, ...(resolvedPath ? { resolvedPath } : {}) });
     }
-    ladder = { done, total: value.artifacts.length, ...(rung ? { rung } : {}) };
+    if (parsed.length > 0) {
+      // The current artifact is the one the work is in: the first not yet
+      // done; once everything is complete, the last done artifact.
+      const inProgress = parsed.find((artifact) => !artifact.done);
+      currentArtifact = inProgress ? inProgress.id : lastDone;
+      artifacts = parsed;
+    }
   }
-  return { ...(schemaName ? { schemaName } : {}), ...(ladder ? { ladder } : {}) };
+  return {
+    ...(schemaName ? { schemaName } : {}),
+    ...(artifacts ? { artifacts } : {}),
+    ...(currentArtifact ? { currentArtifact } : {}),
+    ...(changeRoot ? { changeRoot } : {}),
+  };
 }
 
 async function runJson(
@@ -293,6 +381,37 @@ async function isIdeaChange(projectRoot: string, changeName: string): Promise<bo
     // Generic OpenSpec changes have no Ramona Idea marker and count as Plans.
     return false;
   }
+}
+
+/** Newest mtime over the change directory's direct files — the file-truth
+ *  "the change moved on" timestamp attention staleness compares against.
+ *  Change directories are flat; absent or unreadable dirs stay undefined. */
+async function changeDirectoryMtime(
+  projectRoot: string,
+  changeName: string,
+): Promise<number | undefined> {
+  const changesRoot = resolve(projectRoot, 'openspec', 'changes');
+  const changeRoot = resolve(changesRoot, changeName);
+  if (changeRoot !== changesRoot && !changeRoot.startsWith(`${changesRoot}${sep}`)) {
+    return undefined;
+  }
+  let entries;
+  try {
+    entries = await fs.readdir(changeRoot, { withFileTypes: true });
+  } catch {
+    return undefined;
+  }
+  let newest: number | undefined;
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    try {
+      const mtimeMs = (await fs.stat(resolve(changeRoot, entry.name))).mtimeMs;
+      newest = newest === undefined ? mtimeMs : Math.max(newest, mtimeMs);
+    } catch {
+      // A file vanishing between readdir and stat is honest absence.
+    }
+  }
+  return newest;
 }
 
 export async function collectOpenSpecOverview(options: {
@@ -361,7 +480,8 @@ export async function collectOpenSpec(options: {
   }
 
   let schemaName: string | undefined;
-  let ladder: OpenSpecState['ladder'];
+  let artifacts: OpenSpecArtifact[] | undefined;
+  let currentArtifact: string | undefined;
   try {
     const status = parseOpenSpecStatus(
       await runJson(
@@ -372,10 +492,28 @@ export async function collectOpenSpec(options: {
       ),
     );
     schemaName = status.schemaName;
-    ladder = status.ladder;
+    currentArtifact = status.currentArtifact;
+    if (status.artifacts) {
+      // Item counts come from the artifact FILES, not CLI opinion: the CLI
+      // cannot count custom-schema items (taskTrackingConfigured: false),
+      // and only readable files emit counts — absence never becomes zero.
+      artifacts = await Promise.all(
+        status.artifacts.map(async (artifact) => {
+          const items = artifact.resolvedPath
+            ? await readArtifactItems(artifact.resolvedPath)
+            : undefined;
+          return {
+            id: artifact.id,
+            done: artifact.done,
+            ...(items ? { items } : {}),
+          };
+        }),
+      );
+    }
   } catch {
-    // Ladder facts are optional; the list counts remain valid without them.
+    // Artifact facts are optional; the list counts remain valid without them.
   }
+  const changeModifiedAt = await changeDirectoryMtime(projectRoot, change.name);
 
   let tasks: OpenSpecTask[] = [];
   let tasksPath: string | undefined;
@@ -441,7 +579,9 @@ export async function collectOpenSpec(options: {
     ...(tasksPath ? { tasksPath } : {}),
     ...(hierarchy ? { hierarchy } : {}),
     ...(schemaName ? { schemaName } : {}),
-    ...(ladder ? { ladder } : {}),
+    ...(artifacts ? { artifacts } : {}),
+    ...(currentArtifact ? { currentArtifact } : {}),
+    ...(changeModifiedAt !== undefined ? { changeModifiedAt } : {}),
     meta: {
       source: 'openspec-cli',
       refreshedAt: now,

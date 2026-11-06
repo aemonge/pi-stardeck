@@ -60,6 +60,15 @@ export interface OpenSpecTask {
   done: boolean;
 }
 
+/** One OpenSpec artifact: lifecycle from `openspec status`, item counts
+ *  from the artifact's own file. Absent items mean unreadable or empty —
+ *  never zeros. */
+export interface OpenSpecArtifact {
+  id: string;
+  done: boolean;
+  items?: { done: number; total: number };
+}
+
 export interface OpenSpecOverview {
   projectRoot: string;
   actionableChanges: number;
@@ -90,7 +99,12 @@ export interface OpenSpecState {
   tasksPath?: string;
   hierarchy?: OpenSpecHierarchyProgress;
   schemaName?: string;
-  ladder?: { done: number; total: number; rung?: string };
+  artifacts?: OpenSpecArtifact[];
+  /** The artifact the work is currently in: first not yet done, falling
+   *  back to the last done artifact once everything is complete. */
+  currentArtifact?: string;
+  /** Newest file mtime inside the change directory, when statable. */
+  changeModifiedAt?: number;
   meta: SourceMeta;
 }
 

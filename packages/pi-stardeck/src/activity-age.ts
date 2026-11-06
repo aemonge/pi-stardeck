@@ -66,7 +66,7 @@ function standardActivityAge(ageMs: number): string {
   return `${Math.min(99, Math.floor(hours / 24))}d`;
 }
 
-function compactActivityAge(ageMs: number): string {
+export function compactActivityAge(ageMs: number): string {
   const age = boundedAge(ageMs);
   const seconds = Math.floor(age / 1_000);
   if (seconds < 100) return `${seconds}s`;

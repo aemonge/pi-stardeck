@@ -39,7 +39,7 @@ type Tool = {
 const change = 'show-active-openspec-in-pi-title';
 const taskId = '1.1';
 const taskTitle = 'Show active OpenSpec in Pi title';
-const activeTitle = `π  ${change} › ${taskId} ${taskTitle}`;
+const activeTitle = `${change} › ${taskId} ${taskTitle}`;
 const replacementChange = 'replace-active-openspec-title';
 const replacementTaskId = '2.4';
 const replacementTaskTitle = 'Replace active title focus';
@@ -523,7 +523,7 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
 
     assert.equal(
       harness.titles.at(-1),
-      `π  ${change} › ${secondTaskId} ${secondTaskTitle}`,
+      `${change} › ${secondTaskId} ${secondTaskTitle}`,
     );
     assert.equal(
       openSpecFooterText(latestOpenSpecFooterMessage(harness)),
@@ -541,7 +541,7 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
     await unknownHarness.emit('session_start', { reason: 'startup' });
     await unknownHarness.command('galactica-status-refresh', '');
 
-    const unknownTitle = `π  ${change} › ${unknownTaskId}`;
+    const unknownTitle = `${change} › ${unknownTaskId}`;
     assert.equal(unknownHarness.titles.at(-1), unknownTitle);
     assert.ok(
       unknownHarness.titles.every((title) => !title.includes(taskTitle)),
@@ -596,7 +596,7 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
     });
     assert.equal(
       harness.titles.at(-1),
-      `π  ${change} › ${taskId}`,
+      `${change} › ${taskId}`,
       'failed same-focus metadata refresh must discard the stale task headline',
     );
     assert.doesNotMatch(harness.titles.at(-1) ?? '', new RegExp(taskTitle, 'u'));
@@ -622,7 +622,7 @@ test('session start emits the session-name fallback before asynchronous refresh'
   const harness = new RuntimeHarness({ sessionName: 'Review title contract' });
   try {
     const starting = harness.emit('session_start', { reason: 'startup' });
-    assert.deepEqual(harness.titles, ['π  Review title contract']);
+    assert.deepEqual(harness.titles, ['Review title contract']);
     await starting;
   } finally {
     await harness.stop();
@@ -645,7 +645,7 @@ test('PI_OPENSPEC_CHANGE selects collection without establishing session focus',
       ),
       'the environment-selected change should be collected',
     );
-    assert.equal(harness.titles.at(-1), 'π  Environment fallback');
+    assert.equal(harness.titles.at(-1), 'Environment fallback');
     assert.equal(
       harness.sharedEvents.some(({ message }) => {
         if (typeof message !== 'object' || message === null) return false;
@@ -682,7 +682,7 @@ test('session_info_changed immediately propagates an unfocused session rename', 
     await harness.emit('session_start', { reason: 'startup' });
     await harness.emit('session_info_changed', { name: 'Renamed session' });
 
-    assert.equal(harness.titles.at(-1), 'π  Renamed session');
+    assert.equal(harness.titles.at(-1), 'Renamed session');
   } finally {
     await harness.stop();
   }
@@ -1210,10 +1210,10 @@ test('subject titles fill the fallback beneath the native session name', () => {
   };
   const subject = { state: 'set', title: 'Session subject' } as const;
 
-  assert.equal(formatActiveWorkTitle({ ...common, subject }), `π  Session subject`);
+  assert.equal(formatActiveWorkTitle({ ...common, subject }), `Session subject`);
   assert.equal(
     formatActiveWorkTitle({ ...common, sessionName: 'Native name', subject }),
-    `π  Native name`,
+    `Native name`,
   );
   assert.equal(
     formatActiveWorkTitle({
@@ -1221,7 +1221,7 @@ test('subject titles fill the fallback beneath the native session name', () => {
       subject,
       focus: { mode: 'task', change, taskId, awaitingValidation: false },
     }),
-    `π  ${change} › ${taskId}`,
+    `${change} › ${taskId}`,
   );
 });
 
@@ -1331,7 +1331,7 @@ test('deliver-change Taskflow focus requires run with string nested change and t
 
         assert.equal(result, undefined);
         assert.deepEqual(harness.entries, []);
-        assert.equal(harness.titles.at(-1), 'π  No Taskflow focus');
+        assert.equal(harness.titles.at(-1), 'No Taskflow focus');
       } finally {
         await harness.stop();
       }
@@ -1355,7 +1355,7 @@ test('reload restores IDs before progressing to the metadata-resolved title', as
     const starting = reloaded.emit('session_start', { reason: 'reload' });
     assert.equal(
       reloaded.titles[0],
-      `π  ${change} › ${taskId}`,
+      `${change} › ${taskId}`,
       'restored explicit IDs should be visible without waiting for task metadata',
     );
     await starting;
@@ -1400,7 +1400,7 @@ test('tree navigation restores the selected branch focus', async () => {
   try {
     harness.navigateToBranch([root, focused]);
     await harness.emit('session_start', { reason: 'resume' });
-    assert.equal(harness.titles[0], `π  ${change} › ${taskId}`);
+    assert.equal(harness.titles[0], `${change} › ${taskId}`);
 
     harness.navigateToBranch([root, cleared]);
     await harness.emit('session_tree', {
@@ -1408,7 +1408,7 @@ test('tree navigation restores the selected branch focus', async () => {
       newLeafId: cleared.id,
     });
 
-    assert.equal(harness.titles.at(-1), 'π  Branch fallback');
+    assert.equal(harness.titles.at(-1), 'Branch fallback');
   } finally {
     await harness.stop();
   }
@@ -1423,12 +1423,12 @@ test('fallback titles use distinguishable session, repository, then cwd preceden
 
   assert.equal(
     formatActiveWorkTitle({ ...common, sessionName: 'session choice' }),
-    'π  session choice',
+    'session choice',
   );
-  assert.equal(formatActiveWorkTitle(common), 'π  repository-choice');
+  assert.equal(formatActiveWorkTitle(common), 'repository-choice');
   assert.equal(
     formatActiveWorkTitle({ focus: common.focus, cwd: common.cwd }),
-    'π  cwd-choice',
+    'cwd-choice',
   );
 });
 
@@ -1441,7 +1441,7 @@ test('Task focus, native session name, and subject fallback precedence stays exp
 
   assert.equal(
     formatActiveWorkTitle({ focus: { mode: 'none' }, ...common }),
-    `π  Native session name`,
+    `Native session name`,
   );
   assert.equal(
     formatActiveWorkTitle({
@@ -1449,14 +1449,14 @@ test('Task focus, native session name, and subject fallback precedence stays exp
       ...common,
       sessionName: undefined,
     }),
-    `π  Session subject`,
+    `Session subject`,
   );
   assert.equal(
     formatActiveWorkTitle({
       focus: { mode: 'task', change, taskId, awaitingValidation: false },
       ...common,
     }),
-    `π  ${change} › ${taskId}`,
+    `${change} › ${taskId}`,
   );
 });
 
@@ -1467,7 +1467,7 @@ test('fallback titles normalize hostile session text and remain bounded', async 
     await harness.emit('session_start', { reason: 'startup' });
     const title = harness.titles[0] ?? '';
 
-    assert.match(title, /^π  Review title /u);
+    assert.match(title, /^Review title /u);
     assert.doesNotMatch(title, /[\u0000-\u001f\u007f]/u);
     assert.ok(Array.from(title).length <= 180);
     assert.ok(title.length < longName.length);
@@ -1490,7 +1490,7 @@ test('focused hostile headlines are sanitized and bounded independently', async 
     );
 
     const title = harness.titles.at(-1) ?? '';
-    const prefix = `π  ${change} › ${taskId} `;
+    const prefix = `${change} › ${taskId} `;
     const headline = title.slice(prefix.length);
     assert.ok(title.startsWith(prefix));
     assert.doesNotMatch(title, /[\u0000-\u001f\u007f]/u);

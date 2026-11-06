@@ -1015,11 +1015,18 @@ test('span rows collapse when no child runs are live', () => {
 // --- Step 2.1: line 2 on the title-state contract ---------------------------
 
 const IDLE_TITLE = {
-  v: 1 as const,
+  v: 2 as const,
   subject: 'Pivot cockpit to pure pi-starship-header chrome',
   work: null,
   activity: null,
   waiver: null,
+};
+
+/** A truthful focused-work fixture: artifact facts with file-truth items. */
+const WORK_TITLE = {
+  change: 'eight-section-deck',
+  artifacts: [{ id: 'plan', done: false, items: { done: 1, total: 4 } }],
+  currentArtifact: 'plan',
 };
 
 function titleFixture(overrides: {
@@ -1043,29 +1050,31 @@ function titleFixture(overrides: {
 
 test('renders line 2 as Subject with the Work label on the right', () => {
   const state = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      work: { change: 'eight-section-deck', task: '2.1', done: 1, total: 4 },
-    },
+    title: { ...IDLE_TITLE, work: WORK_TITLE },
     elapsedMs: 4_120,
   });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
   assert.ok(titleRow.startsWith('Pivot cockpit to pure pi-starship-header chrome'));
-  assert.ok(titleRow.includes('eight-section-deck › 󰄱 1/4'));
-  // The optional task segment is parsed for the contract but never rendered —
-  // the human-steered format shows `change › 󰄱 done/total`.
-  assert.equal(titleRow.includes('2.1'), false);
+  // The tile de-duplicates: artifact group + items, no change name repeat.
+  assert.ok(titleRow.includes('plan 0/1 › 󰄱 1/4'));
+  assert.equal(titleRow.includes('eight-section-deck'), false);
+  assert.equal(
+    titleRow.includes('eight-section-deck › 󰄱 1/4') ||
+      titleRow.includes('eight-section-deck ⟩'),
+    false,
+  );
 });
 
-test('renders the dim no-work hint when no change owns the moment', () => {
+test('an absent work slot renders an empty tile — no sentinel narration', () => {
   const state = titleFixture({ title: IDLE_TITLE });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow =
-    lines.find((line) => line.includes('— no change owns the moment')) ?? '';
+  const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
+  // The dim hint retired with the truthful band: the subject alone narrates.
   assert.ok(titleRow.includes('Pivot cockpit'));
+  assert.equal(titleRow.includes('no change owns the moment'), false);
   const colors: string[] = [];
   renderHeaderDeck(state, 120, {
     fg: (name: string, text: string) => {
@@ -1074,7 +1083,10 @@ test('renders the dim no-work hint when no change owns the moment', () => {
     },
     bold: (text: string) => text,
   } as never);
-  assert.ok(colors.includes('dim:— no change owns the moment'));
+  assert.equal(
+    colors.some((entry) => entry.includes('no change owns')),
+    false,
+  );
 });
 
 test('renders the dim no-subject placeholder when the subject is null', () => {
@@ -1085,13 +1097,13 @@ test('renders the dim no-subject placeholder when the subject is null', () => {
   assert.ok(titleRow.startsWith('— no subject'));
   assert.doesNotMatch(titleRow, /⟩\s*$/u);
   assert.doesNotMatch(titleRow, /󰠭\s+⟩/u);
-  // The fresh session still owns its right end: the work hint stays.
-  assert.ok(titleRow.includes('— no change owns the moment'));
+  // The work slot stays silent — absent facts remove their slots.
+  assert.equal(titleRow.includes('no change owns the moment'), false);
 });
 
-test('colors the Work label segments and drops it on narrow frames', () => {
+test('colors the Work tile by state and narrows in stages', () => {
   const state = titleFixture({
-    title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 1, total: 4 } },
+    title: { ...IDLE_TITLE, work: WORK_TITLE },
   });
   const colors: string[] = [];
   const theme = {
@@ -1103,20 +1115,34 @@ test('colors the Work label segments and drops it on narrow frames', () => {
   };
 
   renderHeaderDeck(state, 120, theme as never);
-  assert.ok(colors.includes('accent:eight-section-deck'));
+  assert.ok(colors.includes('accent:plan 0/1'));
+  assert.ok(colors.includes('accent: › '));
   assert.ok(colors.includes('accent:󰄱 1/4'));
 
+  // Complete artifacts settle the group; settled items tick bold and green.
   colors.length = 0;
   const done = titleFixture({
-    title: { ...IDLE_TITLE, work: { change: 'eight-section-deck', done: 4, total: 4 } },
+    title: {
+      ...IDLE_TITLE,
+      work: {
+        ...WORK_TITLE,
+        artifacts: [{ id: 'plan', done: true, items: { done: 4, total: 4 } }],
+      },
+    },
   });
   renderHeaderDeck(done, 120, theme as never);
+  assert.ok(colors.includes('success:plan 1/1'));
   assert.ok(colors.includes('success:✔ 4/4'));
 
-  // Narrow frames: the Work slot yields before the clock anchor does.
+  // 39 columns: the whole slot yields.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
   assert.ok((narrow[2] ?? '').includes('Pivot cockpit'));
-  assert.equal((narrow[2] ?? '').includes('eight-section-deck › 󰄱 1/4'), false);
+  assert.equal((narrow[2] ?? '').includes('plan 0/1'), false);
+
+  // 45 columns: attention/progress yield, the item count survives longest.
+  const mid = renderHeaderDeck(state, 45, plainTheme as never).map(plain);
+  assert.ok((mid[2] ?? '').includes('󰄱 1/4'));
+  assert.equal((mid[2] ?? '').includes('plan 0/1'), false);
 });
 
 test('renders the subject green when it mirrors the focused change', () => {
@@ -1124,7 +1150,7 @@ test('renders the subject green when it mirrors the focused change', () => {
     title: {
       ...IDLE_TITLE,
       subject: 'Eight Section Deck',
-      work: { change: 'eight-section-deck', done: 1, total: 4 },
+      work: WORK_TITLE,
     },
   });
   const colors: string[] = [];
@@ -1145,7 +1171,7 @@ test('renders the subject green when it mirrors the focused change', () => {
     title: {
       ...IDLE_TITLE,
       subject: 'Pivot cockpit to pure pi-starship-header chrome',
-      work: { change: 'eight-section-deck', done: 1, total: 4 },
+      work: WORK_TITLE,
     },
   });
   renderHeaderDeck(other, 120, theme as never);
@@ -1738,12 +1764,9 @@ test('renders the accepted idle mockup at wide widths', () => {
   );
   // Second 2.4 amendment: the strong rule returns beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: Subject left (no clock — 2026-10-23 amendment), the dim
-  // no-work hint right.
-  assert.match(
-    lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+\u2014 no change owns the moment$/u,
-  );
+  // Line 2: Subject left (no clock — 2026-10-23 amendment); the work slot
+  // stays silent without facts (truthful band, 2026-11-06).
+  assert.equal(lines[2] ?? '', 'Pivot cockpit to pure pi-starship-header chrome');
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   // quiet-activity-row: the idle band retires — the machine tail anchors
   // the bottom row directly beneath the seam; the sentinel closes it.
@@ -1762,7 +1785,12 @@ test('renders the accepted mid-work mockup at wide widths', () => {
     ...(state.header as NonNullable<typeof state.header>),
     title: parseDeckTitleState({
       ...IDLE_TITLE,
-      work: { change: 'eight-section-deck', task: '2.1', done: 1, total: 4 },
+      work: {
+        change: 'eight-section-deck',
+        task: '2.1',
+        artifacts: [{ id: 'plan', done: false, items: { done: 1, total: 4 } }],
+        currentArtifact: 'plan',
+      },
       activity: {
         class: 'editing',
         target: 'packages/pi-stardeck/src/deck.ts',
@@ -1788,10 +1816,10 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: Work owns the right end with `change › 󰄱 done/total`.
+  // Line 2: Work owns the right end with `artifact 0/1 › 󰄱 done/total`.
   assert.match(
     lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck › 󰄱 1\/4$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+plan 0\/1 › 󰄱 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(

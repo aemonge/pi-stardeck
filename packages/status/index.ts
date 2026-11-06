@@ -171,6 +171,10 @@ class GalacticaStatusRuntime {
   private openSpecOverview: OpenSpecOverview | undefined;
   private openSpecProjectDetected: boolean | undefined;
   private focus: OpenSpecFocus;
+  /** Publisher-owned timestamp of the current focus fact — seeded at
+   *  construction, refreshed on every accepted focus change; staleness
+   *  compares it against the change directory's file truth. */
+  private focusAt: number | undefined;
   private subject: SessionSubject;
   private sessionName: string | undefined;
   private diagnosticsPath: string | undefined;
@@ -209,6 +213,7 @@ class GalacticaStatusRuntime {
     this.focus = focus;
     this.subject = subject;
     this.sessionName = sessionName;
+    this.focusAt = Date.now();
     const restoredAwaitingValidation =
       focus.mode === 'task' && focus.awaitingValidation;
     this.liveLifecycle = restoredAwaitingValidation ? 'waiting' : 'listening';
@@ -654,6 +659,7 @@ class GalacticaStatusRuntime {
       focus: facts.openSpec,
       openspec: snapshot.openspec,
       activity: this.titleActivity.current(),
+      focusAt: this.focusAt,
     });
   }
 
@@ -690,6 +696,7 @@ class GalacticaStatusRuntime {
   setFocus(focus: OpenSpecFocus): void {
     if (sameOpenSpecFocus(this.focus, focus)) return;
     this.focus = focus;
+    this.focusAt = Date.now();
     this.recordEvent({ type: 'focus/openspec', at: Date.now(), focus });
     this.store.clearOpenSpec();
     if (focus.mode === 'task' && focus.awaitingValidation) {
