@@ -1,0 +1,12 @@
+schema: spec
+created: 2026-11-10
+
+status: proposed
+created_by: assistant
+
+granted: brainstorm,investigate,plan
+granted_brainstorm: 2026-11-10T09:01:58Z
+
+granted_investigate: 2026-11-10T09:05:26Z
+
+granted_plan: 2026-11-10T09:10:31Z
