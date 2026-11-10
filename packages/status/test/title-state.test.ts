@@ -589,3 +589,59 @@ test('debug line prints the compact live title-state JSON', () => {
     built,
   );
 });
+
+test('the gate act rides the work contract and never the subject', () => {
+  const focus = {
+    mode: 'task' as const,
+    change: 'eight-section-deck',
+    taskId: '1.2',
+    awaitingValidation: false,
+  };
+  assert.deepEqual(deriveTitleWork(focus, openSpec, { gateAct: 'awaiting grant' }), {
+    change: 'eight-section-deck',
+    task: '1.2',
+    artifacts: openSpec.artifacts,
+    currentArtifact: 'plan',
+    gateAct: 'awaiting grant',
+  });
+  // Passive work carries it too.
+  assert.deepEqual(
+    deriveTitleWork({ mode: 'none' }, openSpec, { gateAct: 'awaiting grant' }),
+    {
+      ...deriveTitleWork({ mode: 'none' }, openSpec),
+      gateAct: 'awaiting grant',
+    },
+  );
+  // Absent gate act stays absent — never an empty string.
+  assert.equal('gateAct' in (deriveTitleWork(focus, openSpec) ?? {}), false);
+  // The builder routes it into the work slot; the subject never sees it.
+  const built = buildTitleState({
+    subject: { state: 'set', title: 'Session subject' },
+    focus,
+    openspec: openSpec,
+    gateAct: 'awaiting grant',
+  });
+  assert.equal(built.subject, 'Session subject');
+  assert.equal(built.work?.gateAct, 'awaiting grant');
+  // Overlong gate text rejects the whole work object on parse.
+  assert.equal(
+    parseTitleState({
+      v: 2,
+      subject: 'Session subject',
+      work: { change: 'eight-section-deck', gateAct: 'x'.repeat(181) },
+      activity: null,
+      waiver: null,
+    }),
+    null,
+  );
+  assert.equal(
+    parseTitleState({
+      v: 2,
+      subject: 'Session subject',
+      work: { change: 'eight-section-deck', gateAct: 'awaiting grant' },
+      activity: null,
+      waiver: null,
+    })?.work?.gateAct,
+    'awaiting grant',
+  );
+});

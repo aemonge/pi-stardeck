@@ -289,12 +289,20 @@ test('focused, working — current artifact, artifact progress, then items', () 
     NOW,
   );
   assert.deepEqual(
-    segments.map((segment) => `${segment.color}:${segment.text}`),
-    ['accent:execute 4/4', 'accent: › ', 'accent:󰄱 12/15'],
+    segments.map(
+      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
+    ),
+    [
+      'success:polish-upload-validations!',
+      'accent: › ',
+      'accent:execute 4/4',
+      'accent: › ',
+      'accent:󰄱 12/15',
+    ],
   );
   assert.equal(
     segments.map((segment) => segment.text).join(''),
-    'execute 4/4 › 󰄱 12/15',
+    'polish-upload-validations › execute 4/4 › 󰄱 12/15',
   );
 });
 
@@ -327,7 +335,11 @@ test('no items — honest absence, no zero', () => {
       },
       NOW,
     ),
-    [{ text: 'execute 4/4', color: 'success' }],
+    [
+      { text: 'polish-upload-validations', color: 'success', bold: true },
+      { text: ' › ', color: 'accent' },
+      { text: 'execute 4/4', color: 'success' },
+    ],
   );
   // Zero checkboxes parse to absence upstream; even a literal 0/0 item pair
   // would never be emitted by the collector — but the renderer still hides
@@ -341,7 +353,11 @@ test('no items — honest absence, no zero', () => {
       },
       NOW,
     ),
-    [{ text: 'a 0/1', color: 'accent' }],
+    [
+      { text: 'deck', color: 'success', bold: true },
+      { text: ' › ', color: 'accent' },
+      { text: 'a 0/1', color: 'accent' },
+    ],
   );
 });
 
@@ -358,13 +374,25 @@ test('stale focus replaces the artifact group; items survive', () => {
     NOW,
   );
   assert.deepEqual(
-    segments.map((segment) => `${segment.color}:${segment.text}`),
-    ['dim:⚠ focus 3h old', 'accent: › ', 'accent:󰄱 12/15'],
+    segments.map(
+      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
+    ),
+    [
+      'success:polish-upload-validations!',
+      'accent: › ',
+      'dim:⚠ focus 3h old',
+      'accent: › ',
+      'accent:󰄱 12/15',
+    ],
   );
-  // Stale with no items keeps the attention segment alone.
+  // Stale with no items keeps the slug and the attention segment.
   assert.deepEqual(
     deckWorkSegments({ change: 'deck', focusAt: NOW - 42_000, focusStale: true }, NOW),
-    [{ text: '⚠ focus 42s old', color: 'dim' }],
+    [
+      { text: 'deck', color: 'success', bold: true },
+      { text: ' › ', color: 'accent' },
+      { text: '⚠ focus 42s old', color: 'dim' },
+    ],
   );
 });
 
@@ -384,7 +412,7 @@ test('artifact progress turns success at completion; items tick bold and green',
     segments.map(
       (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
     ),
-    ['success:plan 2/2', 'accent: › ', 'success:✔ 4/4!'],
+    ['success:deck!', 'accent: › ', 'success:plan 2/2', 'accent: › ', 'success:✔ 4/4!'],
   );
   // Mixed state: artifacts done but items still open — one hue, accent.
   const working = deckWorkSegments(
@@ -399,13 +427,23 @@ test('artifact progress turns success at completion; items tick bold and green',
     NOW,
   );
   assert.deepEqual(
-    working.map((segment) => `${segment.color}:${segment.text}`),
-    ['accent:execute 2/2', 'accent: › ', 'accent:󰄱 12/15'],
+    working.map(
+      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
+    ),
+    [
+      'success:deck!',
+      'accent: › ',
+      'accent:execute 2/2',
+      'accent: › ',
+      'accent:󰄱 12/15',
+    ],
   );
 });
 
-test('no renderable facts render an empty tile — the change name never repeats', () => {
-  assert.deepEqual(deckWorkSegments({ change: 'eight-section-deck' }, NOW), []);
+test('the slug always leads — openspec identity never yields', () => {
+  assert.deepEqual(deckWorkSegments({ change: 'eight-section-deck' }, NOW), [
+    { text: 'eight-section-deck', color: 'success', bold: true },
+  ]);
   // Artifact progress is a real fact — 0/1 artifacts done renders; only
   // absent item counts stay hidden.
   assert.deepEqual(
@@ -413,7 +451,11 @@ test('no renderable facts render an empty tile — the change name never repeats
       { change: 'deck', artifacts: [{ id: 'a', done: false }], currentArtifact: 'a' },
       NOW,
     ),
-    [{ text: 'a 0/1', color: 'accent' }],
+    [
+      { text: 'deck', color: 'success', bold: true },
+      { text: ' › ', color: 'accent' },
+      { text: 'a 0/1', color: 'accent' },
+    ],
   );
 });
 
@@ -428,7 +470,7 @@ test('compact width: attention and progress yield first, items survive longest',
   };
   assert.deepEqual(
     deckWorkSegments(work, NOW, true).map((segment) => segment.text),
-    ['󰄱 12/15'],
+    ['polish-upload-validations', ' › ', '󰄱 12/15'],
   );
   // Awaiting you yields entirely in compact mode.
   assert.deepEqual(
@@ -442,7 +484,7 @@ test('compact width: attention and progress yield first, items survive longest',
       NOW,
       true,
     ).map((segment) => segment.text),
-    ['󰄱 12/15'],
+    ['polish-upload-validations', ' › ', '󰄱 12/15'],
   );
 });
 
@@ -453,6 +495,52 @@ test('the plain-text label joins the segments', () => {
       artifacts: [{ id: 'execute', done: true, items: { done: 12, total: 15 } }],
       currentArtifact: 'execute',
     }),
-    'execute 1/1 › 󰄱 12/15',
+    'polish-upload-validations › execute 1/1 › 󰄱 12/15',
+  );
+});
+
+test('the gate act sits dim in the optional slot; compact yields it first', () => {
+  const work = {
+    change: 'truthful-rendered-state',
+    artifacts: [
+      { id: 'brainstorm', done: true },
+      { id: 'investigate', done: true },
+      { id: 'plan', done: true },
+      { id: 'execute', done: false, items: { done: 2, total: 5 } },
+    ],
+    currentArtifact: 'execute',
+    gateAct: 'awaiting draft of 4-execute.md (artifact execute)',
+  };
+  assert.deepEqual(
+    deckWorkSegments(work, NOW).map(
+      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
+    ),
+    [
+      'success:truthful-rendered-state!',
+      'accent: › ',
+      'accent:execute 3/4',
+      'accent: › ',
+      'dim:gate: awaiting draft of 4-execute.md (artifact execute)',
+      'accent: › ',
+      'accent:󰄱 2/5',
+    ],
+  );
+  // Compact yields the commentary first — identity and truth survive.
+  assert.equal(
+    deckWorkSegments(work, NOW, true)
+      .map((segment) => segment.text)
+      .join(''),
+    'truthful-rendered-state › 󰄱 2/5',
+  );
+  // Overlong gate text rejects the whole work object on parse.
+  assert.equal(
+    parseDeckTitleState({
+      v: 2,
+      subject: null,
+      work: { change: 'deck', gateAct: 'x'.repeat(181) },
+      activity: null,
+      waiver: null,
+    }),
+    null,
   );
 });

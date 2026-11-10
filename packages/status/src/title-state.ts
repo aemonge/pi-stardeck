@@ -38,6 +38,7 @@ const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
 const ARTIFACTS_MAX = 16;
+const GATE_ACT_MAX = 180;
 
 export type TitleArtifactState = {
   id: string;
@@ -56,6 +57,8 @@ export type TitleWorkState = {
   awaitingValidation?: boolean;
   focusAt?: number;
   focusStale?: boolean;
+  /** The gate's relayed act line — dim commentary in the optional slot. */
+  gateAct?: string;
 };
 
 export type TitleActivityState = {
@@ -177,6 +180,8 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
   if ('focusStale' in value && typeof value.focusStale !== 'boolean') {
     return undefined;
   }
+  const gateAct = boundedText(value.gateAct, GATE_ACT_MAX, { required: false });
+  if (gateAct === null) return undefined;
   const extras = {
     ...(schemaName ? { schemaName } : {}),
     ...(artifacts ? { artifacts } : {}),
@@ -184,6 +189,7 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
     ...(value.awaitingValidation === true ? { awaitingValidation: true } : {}),
     ...(focusAt !== undefined ? { focusAt } : {}),
     ...(value.focusStale === true ? { focusStale: true } : {}),
+    ...(gateAct ? { gateAct } : {}),
   };
   return task === undefined ? { change, ...extras } : { change, task, ...extras };
 }
@@ -242,7 +248,7 @@ export function shortenTitleTarget(value: string): string {
 export function deriveTitleWork(
   focus: OpenSpecFocus,
   openspec: OpenSpecState | null | undefined,
-  options: { focusAt?: number } = {},
+  options: { focusAt?: number; gateAct?: string } = {},
 ): TitleWorkState | null {
   // Artifact facts come straight from the collector; nothing is invented
   // here — absent facts simply drop out of the contract.
@@ -267,10 +273,15 @@ export function deriveTitleWork(
       ...(focus.awaitingValidation ? { awaitingValidation: true } : {}),
       ...(options.focusAt !== undefined ? { focusAt: options.focusAt } : {}),
       ...(stale ? { focusStale: true } : {}),
+      ...(options.gateAct ? { gateAct: options.gateAct } : {}),
     };
   }
   if (!openspec) return null;
-  return { change: openspec.changeId, ...extras(openspec) };
+  return {
+    change: openspec.changeId,
+    ...extras(openspec),
+    ...(options.gateAct ? { gateAct: options.gateAct } : {}),
+  };
 }
 
 /**
@@ -285,12 +296,15 @@ export function buildTitleState(options: {
   activity?: TitleActivityState | null;
   /** Publisher-owned timestamp of the current focus fact. */
   focusAt?: number;
+  /** The gate's relayed act line for the focused change, if resolved. */
+  gateAct?: string;
 }): TitleState {
   return {
     v: TITLE_STATE_VERSION,
     subject: options.subject.state === 'set' ? options.subject.title : null,
     work: deriveTitleWork(options.focus, options.openspec, {
       focusAt: options.focusAt,
+      ...(options.gateAct ? { gateAct: options.gateAct } : {}),
     }),
     activity: options.activity ?? null,
     waiver: null,

@@ -26,27 +26,27 @@ render hook is superseded by the dim `{optional}` slot on the right.
 
 ### Slice 1 — the layout law: left Human-owned, right openspec-only
 
-- [ ] `packages/status/src/active-work.ts`: `formatActiveWorkTitle`
+- [x] `packages/status/src/active-work.ts`: `formatActiveWorkTitle`
       drops the task branch, the `focus`/`taskTitle`/`gateAct` options,
       and `MAX_TASK_TITLE_POINTS` — pure session name → subject →
       directory chain, byte-independent of openspec
-- [ ] `packages/status/src/title-state.ts` +
+- [x] `packages/status/src/title-state.ts` +
       `packages/pi-stardeck/src/title-state.ts` (mirrored pair —
       identical edits): the work contract gains optional `gateAct`
       (bounded 180, control-stripped); builders carry it, defensive
       parse accepts it
-- [ ] `packages/status/index.ts`: `currentTitleState` stops computing
+- [x] `packages/status/index.ts`: `currentTitleState` stops computing
       `taskTitle` and feeding focus into the subject; the resolved gate
       act re-routes into `buildTitleState`'s work slot
-- [ ] `packages/pi-stardeck/src/deck.ts`: `deckWorkSegments` leads with
+- [x] `packages/pi-stardeck/src/deck.ts`: `deckWorkSegments` leads with
       the slug segment (`work.change`); `titleBandLines` drops
       `mirrorsFocus`/`mirrorKey` — the left band renders accent
       unconditionally
-- [ ] tests: `active-work.test.ts` (subject chain carries no openspec
+- [x] tests: `active-work.test.ts` (subject chain carries no openspec
       text), title-state tests in both packages (`gateAct` round-trip,
       absence drops), deck tests (right tile leads with the slug; left
       never shows openspec)
-- [ ] verify: prettier · `npm run lint` · `npm run typecheck` ·
+- [x] verify: prettier · `npm run lint` · `npm run typecheck` ·
       `npm run test:status` · `npm run test:stardeck`
 - [ ] commit `fix(deck): openspec renders exclusively on the right work
       tile` (scoped; body records the absorbed relay hook)

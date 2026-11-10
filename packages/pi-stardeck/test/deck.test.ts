@@ -1057,14 +1057,10 @@ test('renders line 2 as Subject with the Work label on the right', () => {
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
   assert.ok(titleRow.startsWith('Pivot cockpit to pure pi-starship-header chrome'));
-  // The tile de-duplicates: artifact group + items, no change name repeat.
-  assert.ok(titleRow.includes('plan 0/1 › 󰄱 1/4'));
-  assert.equal(titleRow.includes('eight-section-deck'), false);
-  assert.equal(
-    titleRow.includes('eight-section-deck › 󰄱 1/4') ||
-      titleRow.includes('eight-section-deck ⟩'),
-    false,
-  );
+  // Layout law 2026-11-10: the slug leads the right tile; the left band
+  // stays the Human-owned subject alone.
+  assert.ok(titleRow.includes('eight-section-deck › plan 0/1 › 󰄱 1/4'));
+  assert.ok(titleRow.indexOf('eight-section-deck') > titleRow.indexOf('Pivot cockpit'));
 });
 
 test('an absent work slot renders an empty tile — no sentinel narration', () => {
@@ -1145,7 +1141,7 @@ test('colors the Work tile by state and narrows in stages', () => {
   assert.equal((mid[2] ?? '').includes('plan 0/1'), false);
 });
 
-test('renders the subject green when it mirrors the focused change', () => {
+test('the left band renders accent unconditionally — it can never mirror openspec', () => {
   const state = titleFixture({
     title: {
       ...IDLE_TITLE,
@@ -1163,9 +1159,11 @@ test('renders the subject green when it mirrors the focused change', () => {
   };
 
   renderHeaderDeck(state, 120, theme as never);
-  assert.ok(colors.includes('success:Eight Section Deck'));
+  // Layout law 2026-11-10: even a subject that echoes the change slug
+  // stays accent — the mirror coloring is gone with the law.
+  assert.ok(colors.includes('accent:Eight Section Deck'));
+  assert.equal(colors.includes('success:Eight Section Deck'), false);
 
-  // A subject that does not mirror the focused change stays accent.
   colors.length = 0;
   const other = titleFixture({
     title: {
@@ -1816,10 +1814,11 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: Work owns the right end with `artifact 0/1 › 󰄱 done/total`.
+  // Line 2: the slug leads the right tile (layout law), then
+  // `artifact 0/1 › 󰄱 done/total`.
   assert.match(
     lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+plan 0\/1 › 󰄱 1\/4$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck › plan 0\/1 › 󰄱 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(

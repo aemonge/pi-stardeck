@@ -163,10 +163,6 @@ function wrapFocus(text: string, width: number, maximumLines: number): string[] 
   return lines.slice(0, maximumLines);
 }
 
-function mirrorKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/gu, '');
-}
-
 function bandWrap(
   content: string,
   width: number,
@@ -191,12 +187,10 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
       // moment` — never an empty band while the session talks.
       return bandWrap('— no subject', width, theme, 'dim');
     }
-    // When the subject mirrors the focused change (the gate law's
-    // "subject mirrors its title"), it renders success-green like the
-    // PWD — the mirror visible at a glance.
-    const work = title.work;
-    const mirrorsFocus = work !== null && mirrorKey(subject) === mirrorKey(work.change);
-    return bandWrap(subject, width, theme, mirrorsFocus ? 'success' : 'accent');
+    // Human layout law 2026-11-10: the left band is Human-owned title —
+    // it can never mirror openspec, so the mirror coloring is gone and
+    // the band renders accent unconditionally.
+    return bandWrap(subject, width, theme, 'accent');
   }
   // Pre-title publishers: the legacy selection keeps the band alive.
   const selection = state.header?.selection;

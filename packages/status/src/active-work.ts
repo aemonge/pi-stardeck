@@ -20,7 +20,6 @@ export const NO_SESSION_SUBJECT: SessionSubject = { state: 'clear' };
 
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/gu;
 const MAX_TITLE_POINTS = 180;
-const MAX_TASK_TITLE_POINTS = 72;
 const MAX_SUBJECT_POINTS = 120;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -160,34 +159,26 @@ export function sameSessionSubject(
   );
 }
 
+/**
+ * The Human-owned left title: session name, subject, then the directory
+ * fallbacks. Layout law 2026-11-10 (truthful-rendered-state): openspec
+ * identity renders exclusively on the right work tile — this chain never
+ * carries change, task, or gate text.
+ */
 export function formatActiveWorkTitle(options: {
-  focus: OpenSpecFocus;
   subject?: SessionSubject;
-  taskTitle?: string;
   sessionName?: string;
   projectRoot?: string;
   cwd: string;
 }): string {
-  let detail: string;
-  if (options.focus.mode === 'task') {
-    const taskTitle = options.taskTitle
-      ? shorten(normalizeTitlePart(options.taskTitle), MAX_TASK_TITLE_POINTS)
-      : '';
-    detail = `${options.focus.change} › ${options.focus.taskId}${taskTitle ? ` ${taskTitle}` : ''}`;
-  } else if (normalizeTitlePart(options.sessionName ?? '')) {
-    detail = normalizeTitlePart(options.sessionName ?? '');
-  } else if (options.subject && options.subject.state === 'set') {
-    detail = options.subject.title;
-  } else {
-    detail =
-      normalizeTitlePart(options.sessionName ?? '') ||
-      normalizeTitlePart(basename(options.projectRoot ?? '')) ||
-      normalizeTitlePart(basename(options.cwd)) ||
-      'pi';
-  }
+  const detail =
+    normalizeTitlePart(options.sessionName ?? '') ||
+    (options.subject && options.subject.state === 'set' ? options.subject.title : '') ||
+    normalizeTitlePart(basename(options.projectRoot ?? '')) ||
+    normalizeTitlePart(basename(options.cwd)) ||
+    'pi';
 
-  // Bare text — line 2 carries no chrome (frozen amendment): the session
-  // name, change, and task stand naked, and pi-title's naming is quoted,
-  // never re-decorated.
-  return shorten(normalizeTitlePart(detail), MAX_TITLE_POINTS);
+  // Bare text — line 2 carries no chrome (frozen amendment): the title
+  // stands naked, and pi-title's naming is quoted, never re-decorated.
+  return shorten(detail, MAX_TITLE_POINTS);
 }

@@ -39,7 +39,6 @@ type Tool = {
 const change = 'show-active-openspec-in-pi-title';
 const taskId = '1.1';
 const taskTitle = 'Show active OpenSpec in Pi title';
-const activeTitle = `${change} › ${taskId} ${taskTitle}`;
 const replacementChange = 'replace-active-openspec-title';
 const replacementTaskId = '2.4';
 const replacementTaskTitle = 'Replace active title focus';
@@ -313,10 +312,6 @@ async function waitFor(
   }
 }
 
-function titleDiagnostics(harness: RuntimeHarness): string {
-  return `observed titles: ${JSON.stringify(harness.titles)}`;
-}
-
 function latestWidgetMessage(harness: RuntimeHarness, id: string): unknown {
   for (let index = harness.sharedEvents.length - 1; index >= 0; index -= 1) {
     const message = harness.sharedEvents[index]?.message;
@@ -521,10 +516,9 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
     await harness.emit('session_start', { reason: 'startup' });
     await harness.command('galactica-status-refresh', '');
 
-    assert.equal(
-      harness.titles.at(-1),
-      `${change} › ${secondTaskId} ${secondTaskTitle}`,
-    );
+    // Layout law: the left title stays Human-owned; the resolved task
+    // headline lives on the footer widget, asserted below.
+    assert.equal(harness.titles.at(-1), 'galactica');
     assert.equal(
       openSpecFooterText(latestOpenSpecFooterMessage(harness)),
       `0/2  ▶ ${secondTaskId} ${secondTaskTitle}`,
@@ -541,8 +535,7 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
     await unknownHarness.emit('session_start', { reason: 'startup' });
     await unknownHarness.command('galactica-status-refresh', '');
 
-    const unknownTitle = `${change} › ${unknownTaskId}`;
-    assert.equal(unknownHarness.titles.at(-1), unknownTitle);
+    assert.equal(unknownHarness.titles.at(-1), 'galactica');
     assert.ok(
       unknownHarness.titles.every((title) => !title.includes(taskTitle)),
       'an unknown task ID must never borrow the first pending task headline',
@@ -551,7 +544,7 @@ test('focused metadata selects the exact task and an unknown ID never borrows an
     await unknownHarness.stop();
   }
 });
-test('same-focus metadata refresh failure falls back to ID-only title', async () => {
+test('same-focus metadata refresh failure keeps the Human-owned title', async () => {
   let rejectOpenSpecRefresh = false;
   const harness = new RuntimeHarness({
     entries: [seededFocusEntry(change, taskId)],
@@ -573,7 +566,7 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
     });
     await harness.command('galactica-status-refresh', '');
 
-    assert.equal(harness.titles.at(-1), activeTitle);
+    assert.equal(harness.titles.at(-1), 'galactica');
     const resolvedFooter = latestOpenSpecFooterMessage(harness);
     assert.ok(
       typeof resolvedFooter === 'object' &&
@@ -596,8 +589,8 @@ test('same-focus metadata refresh failure falls back to ID-only title', async ()
     });
     assert.equal(
       harness.titles.at(-1),
-      `${change} › ${taskId}`,
-      'failed same-focus metadata refresh must discard the stale task headline',
+      'galactica',
+      'failed same-focus metadata refresh keeps the Human-owned title',
     );
     assert.doesNotMatch(harness.titles.at(-1) ?? '', new RegExp(taskTitle, 'u'));
     const health = harness.sharedEvents
@@ -1202,9 +1195,8 @@ test('restoreSessionSubject prefers the latest valid subject entry', () => {
   assert.deepEqual(restoreSessionSubject([]), NO_SESSION_SUBJECT);
 });
 
-test('subject titles fill the fallback beneath the native session name', () => {
+test('the left title is Human-owned — a focused change never touches it', () => {
   const common = {
-    focus: { mode: 'none' } as const,
     projectRoot: '/repos/repository-choice',
     cwd: '/work/cwd-choice',
   };
@@ -1215,14 +1207,8 @@ test('subject titles fill the fallback beneath the native session name', () => {
     formatActiveWorkTitle({ ...common, sessionName: 'Native name', subject }),
     `Native name`,
   );
-  assert.equal(
-    formatActiveWorkTitle({
-      ...common,
-      subject,
-      focus: { mode: 'task', change, taskId, awaitingValidation: false },
-    }),
-    `${change} › ${taskId}`,
-  );
+  // Layout law 2026-11-10: the formatter takes no openspec input at all —
+  // change, task, and gate text render exclusively on the right work tile.
 });
 
 test('openspec focus validation flag round-trips and degrades for legacy entries', () => {
@@ -1339,7 +1325,7 @@ test('deliver-change Taskflow focus requires run with string nested change and t
   }
 });
 
-test('reload restores IDs before progressing to the metadata-resolved title', async () => {
+test('reload restores focus IDs into the contract; the left title stays Human-owned', async () => {
   const first = new RuntimeHarness({
     entries: [seededFocusEntry(change, taskId)],
   });
@@ -1352,18 +1338,17 @@ test('reload restores IDs before progressing to the metadata-resolved title', as
 
   const reloaded = new RuntimeHarness({ entries: first.entries });
   try {
-    const starting = reloaded.emit('session_start', { reason: 'reload' });
-    assert.equal(
-      reloaded.titles[0],
-      `${change} › ${taskId}`,
-      'restored explicit IDs should be visible without waiting for task metadata',
+    await reloaded.emit('session_start', { reason: 'reload' });
+    assert.deepEqual(reloaded.entries.at(-1)?.data, {
+      mode: 'task',
+      change,
+      taskId,
+      awaitingValidation: false,
+    });
+    assert.ok(
+      reloaded.titles.every((title) => !title.includes(change)),
+      'the left title never carries openspec text',
     );
-    await starting;
-    await waitFor(
-      () => reloaded.titles.includes(activeTitle),
-      () => titleDiagnostics(reloaded),
-    );
-    assert.equal(reloaded.titles.at(-1), activeTitle);
   } finally {
     await reloaded.stop();
   }
@@ -1400,7 +1385,8 @@ test('tree navigation restores the selected branch focus', async () => {
   try {
     harness.navigateToBranch([root, focused]);
     await harness.emit('session_start', { reason: 'resume' });
-    assert.equal(harness.titles[0], `${change} › ${taskId}`);
+    // The restored focus lives in the contract; the left stays session-named.
+    assert.equal(harness.titles[0], 'Branch fallback');
 
     harness.navigateToBranch([root, cleared]);
     await harness.emit('session_tree', {
@@ -1416,7 +1402,6 @@ test('tree navigation restores the selected branch focus', async () => {
 
 test('fallback titles use distinguishable session, repository, then cwd precedence', () => {
   const common = {
-    focus: { mode: 'none' } as const,
     projectRoot: '/repos/repository-choice',
     cwd: '/work/cwd-choice',
   };
@@ -1426,37 +1411,28 @@ test('fallback titles use distinguishable session, repository, then cwd preceden
     'session choice',
   );
   assert.equal(formatActiveWorkTitle(common), 'repository-choice');
-  assert.equal(
-    formatActiveWorkTitle({ focus: common.focus, cwd: common.cwd }),
-    'cwd-choice',
-  );
+  assert.equal(formatActiveWorkTitle({ cwd: common.cwd }), 'cwd-choice');
 });
 
-test('Task focus, native session name, and subject fallback precedence stays explicit', () => {
+test('native session name, subject, and directory fallback precedence stays explicit', () => {
   const common = {
     sessionName: 'Native session name',
     subject: { state: 'set', title: 'Session subject' } as const,
     cwd: '/work/cwd-choice',
   };
 
+  assert.equal(formatActiveWorkTitle({ ...common }), `Native session name`);
   assert.equal(
-    formatActiveWorkTitle({ focus: { mode: 'none' }, ...common }),
-    `Native session name`,
-  );
-  assert.equal(
-    formatActiveWorkTitle({
-      focus: { mode: 'none' },
-      ...common,
-      sessionName: undefined,
-    }),
+    formatActiveWorkTitle({ ...common, sessionName: undefined }),
     `Session subject`,
   );
   assert.equal(
     formatActiveWorkTitle({
-      focus: { mode: 'task', change, taskId, awaitingValidation: false },
       ...common,
+      sessionName: undefined,
+      subject: { state: 'clear' },
     }),
-    `${change} › ${taskId}`,
+    `cwd-choice`,
   );
 });
 
@@ -1476,45 +1452,25 @@ test('fallback titles normalize hostile session text and remain bounded', async 
   }
 });
 
-test('focused hostile headlines are sanitized and bounded independently', async () => {
-  const hostileHeadline = `\n\u0007${'🧪'.repeat(500)} FORBIDDEN-SUFFIX`;
-  const harness = new RuntimeHarness({
-    focusedTaskTitle: hostileHeadline,
-    entries: [seededFocusEntry(change, taskId)],
-  });
-  try {
-    await harness.emit('session_start', { reason: 'startup' });
-    await waitFor(
-      () => harness.titles.at(-1)?.includes('🧪') === true,
-      () => titleDiagnostics(harness),
-    );
-
-    const title = harness.titles.at(-1) ?? '';
-    const prefix = `${change} › ${taskId} `;
-    const headline = title.slice(prefix.length);
-    assert.ok(title.startsWith(prefix));
-    assert.doesNotMatch(title, /[\u0000-\u001f\u007f]/u);
-    assert.equal(Array.from(headline).length, 72);
-    assert.ok(headline.endsWith('…'));
-    assert.doesNotMatch(title, /FORBIDDEN-SUFFIX/u);
-    assert.ok(Array.from(title).length <= 180);
-  } finally {
-    await harness.stop();
-  }
-});
-
 test('the overall title bound is exactly 180 Unicode code points', () => {
   const title = formatActiveWorkTitle({
-    focus: {
-      mode: 'task',
-      change: '🛰'.repeat(500),
-      taskId,
-      awaitingValidation: false,
-    },
+    sessionName: '🛰'.repeat(500),
     cwd: '/work/cwd-choice',
   });
 
   assert.equal(Array.from(title).length, 180);
   assert.ok(title.endsWith('…'));
   assert.ok(title.length > 180, 'the bound must count code points, not UTF-16 units');
+});
+
+test('the left title accepts no openspec input — the signature is the law', () => {
+  // Layout law 2026-11-10: focus, taskTitle, and gateAct are not formatter
+  // options; TypeScript rejects them here, and the right work tile owns
+  // every openspec segment (see title-state tests in both packages).
+  const subject = { state: 'set', title: 'Session subject' } as const;
+  assert.equal(
+    formatActiveWorkTitle({ subject, sessionName: 'Native', cwd: '/w/d' }),
+    'Native',
+  );
+  assert.equal(formatActiveWorkTitle({ subject, cwd: '/w/d' }), 'Session subject');
 });

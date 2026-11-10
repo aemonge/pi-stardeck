@@ -41,6 +41,7 @@ const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
 const ARTIFACTS_MAX = 16;
+const GATE_ACT_MAX = 180;
 const TURN_TOKENS_MAX = 999_999_999;
 const TURN_ELAPSED_MAX = (99 * 60 + 59) * 1_000 + 999;
 
@@ -61,6 +62,8 @@ export type DeckTitleWorkState = {
   awaitingValidation?: boolean;
   focusAt?: number;
   focusStale?: boolean;
+  /** The gate's relayed act line — dim commentary in the optional slot. */
+  gateAct?: string;
 };
 
 export type DeckTitleActivityState = {
@@ -185,6 +188,8 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
   if ('focusStale' in value && typeof value.focusStale !== 'boolean') {
     return undefined;
   }
+  const gateAct = boundedText(value.gateAct, GATE_ACT_MAX, { required: false });
+  if (gateAct === null) return undefined;
   const extras = {
     ...(schemaName ? { schemaName } : {}),
     ...(artifacts ? { artifacts } : {}),
@@ -192,6 +197,7 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
     ...(value.awaitingValidation === true ? { awaitingValidation: true } : {}),
     ...(focusAt !== undefined ? { focusAt } : {}),
     ...(value.focusStale === true ? { focusStale: true } : {}),
+    ...(gateAct ? { gateAct } : {}),
   };
   return task === undefined ? { change, ...extras } : { change, task, ...extras };
 }
@@ -265,10 +271,13 @@ export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
 export type DeckWorkSegment = { text: string; color: string; bold?: boolean };
 
 /**
- * The Work label as colored segments — the truthful, de-duplicated tile:
- * `execute 4/4 › 󰄱 12/15` — current artifact + artifact progress + the
- * current artifact's file-truth item count. The change name lives on the
- * subject side and never repeats here. Attention is derived, never authored:
+ * The Work label as colored segments — the truthful, de-duplicated tile
+ * under the layout law (truthful-rendered-state 2026-11-10):
+ * `<slug> › <artifact> <done/total> › gate: <act> › 󰄱 <items>` — the
+ * slug leads because openspec identity renders exclusively on the right
+ * (the left band is Human-owned title), then current artifact + artifact
+ * progress, the gate's relayed act dim in the optional slot, and the
+ * current artifact's file-truth item count. Attention is derived, never authored:
  * `⏸ awaiting you` (warning) replaces the whole tile; a stale focus fact
  * (`⚠ focus <age> old`, dim, humanized at render time) replaces the artifact
  * group. Unknown facts drop their segments — absent items never render as
@@ -284,10 +293,15 @@ export function deckWorkSegments(
   if (work.awaitingValidation) {
     return compact ? [] : [{ text: '⏸ awaiting you', color: 'warning' }];
   }
-  const segments: DeckWorkSegment[] = [];
+  // The slug leads the right side — openspec identity renders exclusively
+  // here (Human layout law 2026-11-10); the left band is Human-owned.
+  const segments: DeckWorkSegment[] = [
+    { text: work.change, color: 'success', bold: true },
+  ];
   const stale = work.focusStale === true && work.focusAt !== undefined;
   if (!compact) {
     if (stale) {
+      segments.push({ text: ' › ', color: 'accent' });
       segments.push({
         text: `⚠ focus ${compactActivityAge(Math.max(0, now - (work.focusAt ?? 0)))} old`,
         color: 'dim',
@@ -307,11 +321,22 @@ export function deckWorkSegments(
         // One hue per state: success only when the artifacts are done AND
         // the current artifact's items are settled — otherwise work is open.
         const complete = done === artifacts.length && itemsSettled;
-        segments.push({
-          text: `${current} ${done}/${artifacts.length}`,
-          color: complete ? 'success' : 'accent',
-        });
+        segments.push(
+          { text: ' › ', color: 'accent' },
+          {
+            text: `${current} ${done}/${artifacts.length}`,
+            color: complete ? 'success' : 'accent',
+          },
+        );
       }
+    }
+    // The {optional} slot: the gate's relayed act — dim commentary that
+    // yields first on narrow frames.
+    if (work.gateAct) {
+      segments.push(
+        { text: ' › ', color: 'accent' },
+        { text: `gate: ${work.gateAct}`, color: 'dim' },
+      );
     }
   }
   const items = work.currentArtifact
