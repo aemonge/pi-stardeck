@@ -33,11 +33,11 @@ function containedChangeRoot(projectRoot: string, change: string): string | unde
 
 /**
  * The gate's teaching line for one change, relayed verbatim:
- * `pios-gate act <slug>` owns truth and words; this module owns only
- * placement and cost. Any non-zero exit (the act command exits 2 on
- * unknown changes), timeout kill, spawn failure, or empty output yields
- * `undefined` — declared focus renders alone, quietly. The meta file is
- * never parsed: its mtime only keys the cache.
+ * `pios-gate <slug>` — the aim — owns truth and words; this module owns
+ * only placement and cost. Any non-zero exit (unknown changes error),
+ * timeout kill, spawn failure, or empty output yields `undefined` —
+ * declared focus renders alone, quietly. The meta file is never parsed:
+ * its mtime only keys the cache.
  */
 export async function resolveGateAct(options: {
   change: string;
@@ -68,7 +68,7 @@ export async function resolveGateAct(options: {
 
   let line: string | undefined;
   try {
-    const result = await options.runner('pios-gate', ['act', options.change], {
+    const result = await options.runner('pios-gate', [options.change], {
       cwd: options.projectRoot,
       timeoutMs: GATE_PROBE_TIMEOUT_MS,
     });

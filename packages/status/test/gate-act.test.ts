@@ -66,7 +66,7 @@ test('the gate act first line is relayed verbatim through the runner', async () 
   assert.equal(await resolveGateAct({ change, projectRoot: root, runner }), ACT_LINE);
   assert.deepEqual(probe.last, {
     command: 'pios-gate',
-    args: ['act', change],
+    args: [change],
     cwd: root,
     timeoutMs: 2_000,
   });
