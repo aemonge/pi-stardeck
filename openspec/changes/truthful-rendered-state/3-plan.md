@@ -53,21 +53,21 @@ render hook is superseded by the dim `{optional}` slot on the right.
 
 ### Slice 2 — file-truth counts
 
-- [ ] `packages/status/src/types.ts`: `OpenSpecState.completedTasks`/
+- [x] `packages/status/src/types.ts`: `OpenSpecState.completedTasks`/
       `totalTasks`/`progressPercent` become optional
-- [ ] `packages/status/src/openspec.ts`: count ladder — checkbox tasks →
+- [x] `packages/status/src/openspec.ts`: count ladder — checkbox tasks →
       done/total artifacts (`status.artifacts[].done`) → absent; the
       instruction-progress and `change.completedTasks/totalTasks`
       fallbacks are removed outright; `complete` = `change.status` or
       counts-complete
-- [ ] `packages/status/src/publisher.ts`: `formatOpenSpec` renders no
+- [x] `packages/status/src/publisher.ts`: `formatOpenSpec` renders no
       progress segment when counts are absent; the header progress
       array's `totalTasks` guard is verified, not changed
-- [ ] tests: `openspec.test.ts` (spec-schema, one artifact drafted →
+- [x] tests: `openspec.test.ts` (spec-schema, one artifact drafted →
       1 done / 4 total; nothing readable → counts absent),
       `publisher.test.ts` (progress array emits 1/4; absent → no
       counters — never 0/N), parity fixture remains valid
-- [ ] verify: full chain again + `node scripts/check-baseline.mjs
+- [x] verify: full chain again + `node scripts/check-baseline.mjs
       --write` and rerun `npm run check:baseline`
 - [ ] commit `fix(status): count work from file truth, never CLI
       opinion` — **final Task commit, held for Human validation**
@@ -86,3 +86,10 @@ dim in the optional slot.
 - 2026-11-10 — drafted after approved brainstorm and investigate; no
   deviations yet. Slice 2's commit is the final Task commit and waits
   for Human validation per repo convention.
+- 2026-11-10 — Slice 1 implemented and committed (`fix(deck): openspec
+  renders exclusively on the right work tile`); every check green
+  (159 status + 163 deck tests). Slice 2 implemented; every check green
+  (161 status tests, baseline manifest updated, passing). The tile now
+  counts file truth: checkbox tasks → done/total artifacts → nothing.
+- 2026-11-10 — Human validated the change ("VALID"); the final Task
+  commit executes on that receipt, headed for release v0.14.0.

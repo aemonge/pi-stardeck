@@ -780,3 +780,26 @@ test('header events carry the per-turn cost meter beside the title state', () =>
   });
   assert.deepEqual(idleTurn.turn, { tokens: 0, elapsedMs: 0 });
 });
+
+test('absent counts render no progress prefix and no header counter', () => {
+  const absent = {
+    ...openSpec,
+    completedTasks: undefined,
+    totalTasks: undefined,
+    progressPercent: undefined,
+  };
+  // Absence never becomes 0/N — the prefix and the counter drop out.
+  assert.equal(
+    formatOpenSpec(absent, null, false),
+    'Pi-first closed-loop development harness',
+  );
+  assert.equal(
+    formatOpenSpec(absent, '3.8', false),
+    '▶ 3.8 Gondolin-backed permission profiles',
+  );
+  const event = publisherModule.buildHeaderStatusEvent([], {
+    openSpec: absent,
+    focusedTaskId: '3.8',
+  });
+  assert.deepEqual(event.progress, []);
+});

@@ -71,3 +71,93 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-10T14:17:15Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-10T14:17:38Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:17:53Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:18:02Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:18:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:19:41Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/types.ts · at 2026-11-10T14:20:30Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/openspec.ts · at 2026-11-10T14:20:30Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/publisher.ts · at 2026-11-10T14:20:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:21:51Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/openspec.test.ts · at 2026-11-10T14:22:19Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/publisher.test.ts · at 2026-11-10T14:22:20Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:22:24Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:22:58Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:23:02Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:23:09Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/publisher.test.ts · at 2026-11-10T14:23:34Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:23:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:23:59Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:24:06Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/publisher.test.ts · at 2026-11-10T14:24:15Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:24:22Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/publisher.test.ts · at 2026-11-10T14:24:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:24:34Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:25:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:46:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:47:08Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:49:06Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:49:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:49:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:51:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:52:24Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T14:53:02Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:12:08Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/gate-act.ts · at 2026-11-10T16:14:17Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/status/test/gate-act.test.ts · at 2026-11-10T16:14:17Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:14:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:15:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:18:52Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:19:07Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:19:15Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:19:23Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:19:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:44:45Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:48:26Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:51:51Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-10T16:52:00Z

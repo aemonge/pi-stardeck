@@ -256,8 +256,9 @@ test('shows a newly created incomplete change before tasks exist', async () => {
     });
     assert.equal(state?.changeId, 'a');
     assert.equal(state?.phase, 'no-tasks');
-    assert.equal(state?.completedTasks, 0);
-    assert.equal(state?.totalTasks, 0);
+    // No tasks and no artifact facts: counts stay absent — never 0/0.
+    assert.equal('completedTasks' in (state ?? {}), false);
+    assert.equal('totalTasks' in (state ?? {}), false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -370,7 +371,7 @@ test('ticked execution artifacts count even when CLI progress says zero', async 
   }
 });
 
-test('blocked apply progress never shadows honest list counts', async () => {
+test('blocked apply with no readable facts keeps counts absent', async () => {
   const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
   const runner: CommandRunner = async (_command, args) => {
     if (args[0] === 'list') {
@@ -414,8 +415,10 @@ test('blocked apply progress never shadows honest list counts', async () => {
       configuredChange: 'demo',
     });
     assert.equal(state?.changeId, 'demo');
-    assert.equal(state?.completedTasks, 4);
-    assert.equal(state?.totalTasks, 7);
+    // No tasks and no artifact facts: the CLI's list opinion stays OUT of
+    // the state — it cannot back a rendered count (truthful-rendered-state).
+    assert.equal('completedTasks' in (state ?? {}), false);
+    assert.equal('totalTasks' in (state ?? {}), false);
     assert.equal(state?.phase, 'in-progress');
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -502,9 +505,11 @@ test('collects artifacts, currentArtifact, and file-truth item counts', async ()
       { id: 'requirements', done: true, items: { done: 1, total: 1 } },
       { id: 'research', done: false, items: { done: 1, total: 2 } },
     ]);
-    // File-truth item counting never touches the CLI's change totals.
-    assert.equal(state?.completedTasks, 4);
-    assert.equal(state?.totalTasks, 14);
+    // Artifact file presence is the count truth on checkbox-less schemas:
+    // 2 done of 3 artifacts (truthful-rendered-state).
+    assert.equal(state?.completedTasks, 2);
+    assert.equal(state?.totalTasks, 3);
+    assert.equal(state?.progressPercent, 67);
     // The change directory's newest file mtime feeds attention staleness.
     const stat = await fsStat(join(changeDir, 'research.md'));
     assert.equal(state?.changeModifiedAt, stat.mtimeMs);
@@ -583,6 +588,9 @@ test('unreadable or empty artifact files emit no item counts — never zeros', a
       { id: 'ghost', done: false },
       { id: 'pathless', done: true },
     ]);
+    // The artifact ladder: one done of three artifacts — file presence.
+    assert.equal(state?.completedTasks, 1);
+    assert.equal(state?.totalTasks, 3);
     // Once everything is done, the fallback names the last done artifact.
     allDone = true;
     const finished = await collectOpenSpec({
@@ -592,6 +600,10 @@ test('unreadable or empty artifact files emit no item counts — never zeros', a
       configuredChange: 'demo',
     });
     assert.equal(finished?.currentArtifact, 'pathless');
+    // Everything done: 3/3 from file presence, and the change completes.
+    assert.equal(finished?.completedTasks, 3);
+    assert.equal(finished?.totalTasks, 3);
+    assert.equal(finished?.phase, 'complete');
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -635,4 +647,73 @@ test('readArtifactItems caches by mtime and retries unreadable files', async () 
   // Unreadable paths stay undefined without throwing.
   assert.equal(await readArtifactItems(join(root, 'missing.md')), undefined);
   await rm(root, { recursive: true, force: true });
+});
+
+test('spec schema with one artifact drafted counts 1/4 from file presence', async () => {
+  // Live-caught 2026-11-10 (lab cold room): the CLI pinned 0/4 on the
+  // spec schema; the artifact ladder reads the drafted file instead.
+  const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
+  const changeDir = join(root, 'openspec', 'changes', 'lab-run');
+  await mkdir(changeDir, { recursive: true });
+  await writeFile(join(changeDir, '1-brainstorm.md'), '# Brainstorm\n');
+  const runner: CommandRunner = async (_command, args) => {
+    if (args[0] === 'list') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          changes: [
+            {
+              name: 'lab-run',
+              completedTasks: 0,
+              totalTasks: 4,
+              lastModified: '2026-01-01T00:00:00Z',
+              status: 'proposed',
+            },
+          ],
+          root: { path: root },
+        }),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'show') {
+      return { code: 0, stdout: JSON.stringify({ title: 'Lab run' }), stderr: '' };
+    }
+    if (args[0] === 'status') {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          schemaName: 'spec',
+          changeRoot: changeDir,
+          artifacts: [
+            { id: 'brainstorm', status: 'done', outputPath: '1-brainstorm.md' },
+            { id: 'investigate', status: 'ready' },
+            { id: 'plan', status: 'blocked' },
+            { id: 'execute', status: 'blocked' },
+          ],
+        }),
+        stderr: '',
+      };
+    }
+    return {
+      code: 0,
+      stdout: JSON.stringify({ state: 'blocked', tasks: [] }),
+      stderr: '',
+    };
+  };
+
+  try {
+    const state = await collectOpenSpec({
+      cwd: root,
+      runner,
+      now: 100,
+      configuredChange: 'lab-run',
+    });
+    assert.equal(state?.currentArtifact, 'investigate');
+    assert.equal(state?.completedTasks, 1);
+    assert.equal(state?.totalTasks, 4);
+    assert.equal(state?.progressPercent, 25);
+    assert.equal(state?.phase, 'proposed');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

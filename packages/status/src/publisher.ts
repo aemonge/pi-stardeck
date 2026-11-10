@@ -99,7 +99,13 @@ export function formatOpenSpec(
   focusedTaskId: string | null,
   compact = false,
 ): string {
-  const progress = `${state.completedTasks}/${state.totalTasks}`;
+  // File-truth counts only — absent counts render no progress prefix at
+  // all (absence never becomes zero, truthful-rendered-state).
+  const progress =
+    state.totalTasks !== undefined
+      ? `${state.completedTasks ?? 0}/${state.totalTasks}`
+      : '';
+  const lead = progress ? `${progress}  ` : '';
   const title = compact
     ? compactChangeTitle(state.title, 26)
     : normalizeChangeTitle(state.title);
@@ -107,16 +113,16 @@ export function formatOpenSpec(
     ? `  stale ${ageText(state.meta.updatedAt, Date.now()) ?? ''}`.trimEnd()
     : '';
 
-  if (state.phase === 'complete') return `${progress}  ${title}${stale}`;
+  if (state.phase === 'complete') return `${lead}${title}${stale}`;
 
   const activeTask = focusedTaskId
     ? (state.allTasks ?? state.pendingTasks).find((task) => task.id === focusedTaskId)
     : undefined;
   if (activeTask) {
-    return `${progress}  ▶ ${focusedTaskText(activeTask, compact)}${stale}`;
+    return `${lead}▶ ${focusedTaskText(activeTask, compact)}${stale}`;
   }
 
-  return `${progress}  ${title}${stale}`;
+  return `${lead}${title}${stale}`;
 }
 
 function diagnosticsColor(state: DiagnosticsState, now: number): WidgetColor {
@@ -917,16 +923,19 @@ export function buildHeaderStatusEvent(
       ...projectedActivity,
     };
   }
-  const progress = options.openSpec?.totalTasks
-    ? [
-        {
-          icon: '󰘬',
-          completed: options.openSpec.completedTasks,
-          total: options.openSpec.totalTasks,
-          color: openSpecColor(options.openSpec),
-        },
-      ]
-    : [];
+  const openSpec = options.openSpec;
+  const progress =
+    typeof openSpec?.totalTasks === 'number' &&
+    typeof openSpec.completedTasks === 'number'
+      ? [
+          {
+            icon: '󰘬',
+            completed: openSpec.completedTasks,
+            total: openSpec.totalTasks,
+            color: openSpecColor(openSpec),
+          },
+        ]
+      : [];
 
   return {
     protocol: 1,

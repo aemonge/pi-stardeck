@@ -91,9 +91,12 @@ export interface OpenSpecState {
   changeId: string;
   title: string;
   phase: string;
-  completedTasks: number;
-  totalTasks: number;
-  progressPercent: number;
+  /** File-truth counts — checkbox tasks first, then done/total
+   *  artifacts. Absent when neither is readable: absence never becomes
+   *  zero (truthful-rendered-state). */
+  completedTasks?: number;
+  totalTasks?: number;
+  progressPercent?: number;
   pendingTasks: OpenSpecTask[];
   allTasks?: OpenSpecTask[];
   tasksPath?: string;

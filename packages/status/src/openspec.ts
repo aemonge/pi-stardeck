@@ -517,7 +517,6 @@ export async function collectOpenSpec(options: {
 
   let tasks: OpenSpecTask[] = [];
   let tasksPath: string | undefined;
-  let instructionProgress: ApplyInstructionsResult['progress'];
   let hierarchy: OpenSpecHierarchyProgress | undefined;
   try {
     const instructions = parseApplyInstructions(
@@ -530,7 +529,6 @@ export async function collectOpenSpec(options: {
     );
     tasks = instructions.tasks;
     tasksPath = instructions.tasksPath;
-    instructionProgress = instructions.progress;
 
     if (tasksPath) {
       try {
@@ -552,28 +550,38 @@ export async function collectOpenSpec(options: {
   // tile at 0/N (simplify-deck-defaults). CLI progress and list counts
   // remain fallbacks; the blocked-apply zero-guard stays for the
   // no-tasks case.
+  // File-truth ladder: checkbox tasks first, then done/total artifacts
+  // (file presence via `openspec status`) — CLI task opinion cannot count
+  // custom schemas and pins 0/N (truthful-rendered-state). With neither
+  // readable, counts stay absent — absence never becomes zero.
+  const artifactCounts = artifacts
+    ? {
+        done: artifacts.filter((artifact) => artifact.done).length,
+        total: artifacts.length,
+      }
+    : undefined;
   const completedTasks =
-    tasks.length > 0
-      ? tasks.filter((task) => task.done).length
-      : Math.max(0, Math.trunc(instructionProgress?.complete ?? change.completedTasks));
-  const totalTasks =
-    tasks.length > 0
-      ? tasks.length
-      : Math.max(0, Math.trunc(instructionProgress?.total ?? change.totalTasks));
+    tasks.length > 0 ? tasks.filter((task) => task.done).length : artifactCounts?.done;
+  const totalTasks = tasks.length > 0 ? tasks.length : artifactCounts?.total;
   const complete =
-    change.status === 'complete' || (totalTasks > 0 && completedTasks >= totalTasks);
+    change.status === 'complete' ||
+    (totalTasks !== undefined && totalTasks > 0 && (completedTasks ?? 0) >= totalTasks);
 
   return {
     projectRoot,
     changeId: change.name,
     title,
     phase: complete ? 'complete' : change.status,
-    completedTasks,
-    totalTasks,
-    progressPercent:
-      totalTasks > 0
-        ? Math.max(0, Math.min(100, Math.round((completedTasks / totalTasks) * 100)))
-        : 0,
+    ...(completedTasks !== undefined ? { completedTasks } : {}),
+    ...(totalTasks !== undefined ? { totalTasks } : {}),
+    ...(totalTasks !== undefined && totalTasks > 0
+      ? {
+          progressPercent: Math.max(
+            0,
+            Math.min(100, Math.round(((completedTasks ?? 0) / totalTasks) * 100)),
+          ),
+        }
+      : {}),
     pendingTasks: tasks.filter((task) => !task.done),
     allTasks: tasks,
     ...(tasksPath ? { tasksPath } : {}),
