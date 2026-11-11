@@ -42,7 +42,7 @@
       packages/status/src/openspec.ts, packages/pi-stardeck/test/deck.test.ts,
       packages/status/test/openspec.test.ts
 - [ ] chore: plain wording sweep
-      hash:
+      hash: 2701606
 
 ## Slice 4 — README pi-title note
 
@@ -50,7 +50,7 @@
       started_at: 2026-11-11T10:28Z · ended_at: 2026-11-11T10:29Z · total: ~1m ·
       check: format ✓ · paths: README.md
 - [ ] docs: recommend pi-title in the README
-      hash:
+      hash: 45d063b
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
@@ -405,3 +405,5 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:37:58Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:38:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:38:12Z
