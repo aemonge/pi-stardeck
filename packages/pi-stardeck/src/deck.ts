@@ -400,7 +400,7 @@ const COMPANION_ERROR_PATTERN = /(error|fail|down|unreachable|unhealthy)/iu;
 type ChipSeverity = 'healthy' | 'degraded' | 'error' | 'off';
 
 function companionSeverity(text: string | undefined): ChipSeverity {
-  // Error-grade words outrank degrade-grade when both appear.
+  // Error-grade words win over degrade-grade when both appear.
   if (text === undefined) return 'off';
   if (COMPANION_ERROR_PATTERN.test(text)) return 'error';
   if (COMPANION_DEGRADE_PATTERN.test(text)) return 'degraded';
@@ -472,13 +472,13 @@ const BLOCKED_NOTICE = '\u26d4 blocked';
 const APPROVAL_NOTICE = 'approval required';
 
 /** Narrowest frame that hosts the id-bearing sentinel cluster (12 cells
- * plus breathing room for the machine ladder). */
+ * plus breathing room for the machine order). */
 const SENTINEL_ID_MIN_WIDTH = 24;
 const SENTINEL_BUG = '\u{F082D}';
 
 function companionWarningTexts(state: HeaderDeckState): string[] {
   // Same sources as the capability-health chips: the known companions'
-  // native-status texts, ranked after blocked/approval.
+  // native-status texts, ordered after blocked/approval.
   const texts = new Map<string, string>();
   for (const item of state.piStatus?.nativeStatuses ?? []) {
     if (texts.has(item.key)) continue;
@@ -499,7 +499,7 @@ function companionWarningTexts(state: HeaderDeckState): string[] {
 
 /**
  * Aggregate the deck's scattered warning signals into one notice slot
- * (Task 3.1). Ranked per the spec's accepted mixed render: the companion
+ * (Task 3.1). Ordered per the spec's accepted mixed render: the companion
  * group (blocked, approval, warning texts), then the diagnostics count —
  * `·`-joined, empty when clean.
  */
@@ -522,7 +522,7 @@ export function collectDeckNotices(state: HeaderDeckState): string[] {
 function noticeTile(state: HeaderDeckState, theme: Theme, width: number): string {
   const notices = collectDeckNotices(state);
   // Healthy sentinel (Human-directed 2026-10-19, reversing the retirement):
-  // when the ladder is silent the dim ladybug holds the right end — the
+  // when the notice order is silent the dim ladybug holds the right end — the
   // deck's signature glyph and a reserved one (safeText strips 󰠭 from
   // published text), so the status row always speaks: ⚠ with notices,
   // the quiet ladybug when all is well. Ladybug-session-id amendment
@@ -615,7 +615,7 @@ function deckCornerRight(state: HeaderDeckState, theme: Theme, width: number): s
   return width - visibleWidth(engine) - 1 >= 20 ? engine : '';
 }
 
-function machineCornerLadder(
+function machineCornerNotices(
   state: HeaderDeckState,
   theme: Theme,
   width: number,
@@ -777,7 +777,7 @@ export function renderHeaderDeck(
   // now: ⚠ notices or the dim ladybug sentinel when clean. The engine
   // group moved to line 1 right.
   const statusRight = noticeTile(state, theme, boundedWidth);
-  const machineRow = machineCornerLadder(
+  const machineRow = machineCornerNotices(
     state,
     theme,
     statusRight === '' ? boundedWidth : boundedWidth - visibleWidth(statusRight) - 1,

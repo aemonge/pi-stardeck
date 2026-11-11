@@ -7,7 +7,7 @@
 - [x] room-aim.ts reader + aimed tile branch + fixtures + gate-act retirement
       started_at: 2026-11-11T09:22Z · ended_at: 2026-11-11T09:35Z · total: ~13m · check: status 160 ✓ · stardeck 163 ✓ · work-state 13 ✓ · footer 28 ✓ · vim 37 ✓ · format ✓ · lint ✓ · tsc ✓ · baseline PASS ✓ · paths: packages/status/{src/room-aim.ts,src/title-state.ts,index.ts,src/gate-act.ts✝,test/room-aim.test.ts,test/title-state.test.ts,test/gate-act.test.ts✝}, packages/pi-stardeck/{src/title-state.ts,test/title-state.test.ts}, baseline/source.sha256
 - [ ] feat(deck): render the room aim verbatim
-      hash:
+      hash: a35538e
 
 <!-- gate receipts land here while work runs; per-Slice H2s mirror the Plan's H3s -->
 
@@ -29,8 +29,28 @@
       package.json, docs/status-architecture.md, packages/status/README.md,
       baseline/source.sha256
 - [x] refactor(status): retire the session-fact focus store
-      hash: (fix-forward: compact law corrected to yield only the dim next-step;
-      stardeck fixtures realigned)
+      hash: a475335 + acc287d (fix-forward: compact law corrected to yield only
+      the dim next-step; stardeck fixtures realigned)
+
+## Slice 3 — plain wording sweep
+
+- [x] 16 leftover wording hits replaced with plain language; the retired-v1
+      graveyard fixture retired with the store in Slice 2
+      started_at: 2026-11-11T10:24Z · ended_at: 2026-11-11T10:27Z · total: ~3m ·
+      check: stardeck 149 ✓ · status 140 ✓ · format ✓ · paths:
+      packages/pi-stardeck/src/deck.ts (machineCornerLadder → machineCornerNotices),
+      packages/status/src/openspec.ts, packages/pi-stardeck/test/deck.test.ts,
+      packages/status/test/openspec.test.ts
+- [ ] chore: plain wording sweep
+      hash:
+
+## Slice 4 — README pi-title note
+
+- [x] one recommended-pairing line in the root README
+      started_at: 2026-11-11T10:28Z · ended_at: 2026-11-11T10:29Z · total: ~1m ·
+      check: format ✓ · paths: README.md
+- [ ] docs: recommend pi-title in the README
+      hash:
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
@@ -371,3 +391,17 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:31:34Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:33:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:34:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:34:42Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/README.md · at 2026-11-11T10:35:59Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:36:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:36:33Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:37:58Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:38:03Z

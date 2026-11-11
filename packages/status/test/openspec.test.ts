@@ -588,7 +588,7 @@ test('unreadable or empty artifact files emit no item counts — never zeros', a
       { id: 'ghost', done: false },
       { id: 'pathless', done: true },
     ]);
-    // The artifact ladder: one done of three artifacts — file presence.
+    // The artifact counts: one done of three artifacts — file presence.
     assert.equal(state?.completedTasks, 1);
     assert.equal(state?.totalTasks, 3);
     // Once everything is done, the fallback names the last done artifact.
@@ -651,7 +651,7 @@ test('readArtifactItems caches by mtime and retries unreadable files', async () 
 
 test('spec schema with one artifact drafted counts 1/4 from file presence', async () => {
   // Live-caught 2026-11-10 (lab cold room): the CLI pinned 0/4 on the
-  // spec schema; the artifact ladder reads the drafted file instead.
+  // spec schema; the artifact counts read the drafted file instead.
   const root = await mkdtemp(join(tmpdir(), 'galactica-openspec-'));
   const changeDir = join(root, 'openspec', 'changes', 'lab-run');
   await mkdir(changeDir, { recursive: true });

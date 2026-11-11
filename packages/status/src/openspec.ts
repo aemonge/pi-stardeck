@@ -270,7 +270,7 @@ export function parseApplyInstructions(value: unknown): ApplyInstructionsResult 
         complete: finiteNumber(value.progress.complete),
       }
     : undefined;
-  // A blocked apply (mid-ladder, artifacts missing) reports zero progress;
+  // A blocked apply (part-way through, artifacts missing) reports zero progress;
   // those zeros must never shadow the honest `openspec list` counts.
   const progress =
     state !== 'blocked' && (reportedProgress?.total ?? 0) > 0
@@ -550,7 +550,7 @@ export async function collectOpenSpec(options: {
   // tile at 0/N (simplify-deck-defaults). CLI progress and list counts
   // remain fallbacks; the blocked-apply zero-guard stays for the
   // no-tasks case.
-  // File-truth ladder: checkbox tasks first, then done/total artifacts
+  // File-truth precedence: checkbox tasks first, then done/total artifacts
   // (file presence via `openspec status`) — CLI task opinion cannot count
   // custom schemas and pins 0/N (truthful-rendered-state). With neither
   // readable, counts stay absent — absence never becomes zero.

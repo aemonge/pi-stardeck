@@ -1260,7 +1260,7 @@ test('retires the band between tools; no phase words, never awaiting Human', () 
     false,
   );
 
-  // A live observed activity outranks everything else.
+  // A live observed activity wins over everything else.
   const toolState = titleFixture({
     title: {
       ...IDLE_TITLE,
@@ -1893,7 +1893,7 @@ test('the dim ladybug sentinel yields to notices and survives bare states', () =
 });
 
 test('the clean sentinel wears the short session id between two ladybugs', () => {
-  // Ladybug-session-id amendment: only when the ladder is silent and the
+  // Ladybug-session-id amendment: only when the notice order is silent and the
   // frame is wide enough — blue bugs (accent), purple id (thinkingHigh);
   // the census is two cluster bugs (the clock anchor retired 2026-10-23).
   const withId = titleFixture({ title: IDLE_TITLE });
@@ -1939,7 +1939,7 @@ test('the clean sentinel wears the short session id between two ladybugs', () =>
   );
 
   // A notice still displaces the whole cluster — the id never competes
-  // with a speaking ladder.
+  // with a speaking notice.
   const warned = titleFixture({ title: IDLE_TITLE });
   warned.sessionShortId = '01a157fd';
   warned.piStatus = {
@@ -1962,7 +1962,7 @@ test('the clean sentinel wears the short session id between two ladybugs', () =>
 
 // --- Step 3.1: the unified notice slot --------------------------------------
 
-test('aggregates mixed notices ranked companion, diagnostics', () => {
+test('aggregates mixed notices ordered companion, diagnostics', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
@@ -2028,7 +2028,7 @@ test('restores blocked and approval signals as companion-group notices', () => {
   assert.ok(colors.includes('warning:⚠ approval required'));
 });
 
-test('notices ride the narrow ladder beside the engine group', () => {
+test('notices ride the narrow slot beside the engine group', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.piStatus = {
     errors: 0,
@@ -2043,7 +2043,7 @@ test('notices ride the narrow ladder beside the engine group', () => {
   assert.ok(wide4.trimEnd().endsWith('⚠ appa unreachable'));
   assert.ok(wide4.includes('$5.16'), 'machine tail rides beside the notice');
 
-  // The notice rides the same fit ladder as the machine group: it renders
+  // The notice rides the same fit order as the machine group: it renders
   // only when it fits beside the engine group at full width.
   const fits = renderHeaderDeck(state, 79, plainTheme as never).map(plain);
   assert.ok(
