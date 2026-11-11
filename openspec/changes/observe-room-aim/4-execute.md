@@ -28,8 +28,9 @@
       packages/pi-stardeck/{src/activity-age.ts✝,test/activity-age.test.ts✝}, src/index.ts,
       package.json, docs/status-architecture.md, packages/status/README.md,
       baseline/source.sha256
-- [ ] refactor(status): retire the session-fact focus store
-      hash:
+- [x] refactor(status): retire the session-fact focus store
+      hash: (fix-forward: compact law corrected to yield only the dim next-step;
+      stardeck fixtures realigned)
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
@@ -312,3 +313,61 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:20:06Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:20:31Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:20:38Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:22:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:22:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:22:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:23:20Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:23:45Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:23:53Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:24:03Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-11T10:24:43Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:24:48Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:25:20Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:25:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:25:33Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:26:07Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:26:14Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:26:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:26:39Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:26:47Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:27:07Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:27:25Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/title-state.ts · at 2026-11-11T10:27:57Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:28:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:28:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:28:55Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:29:01Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:31:14Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/package.json · at 2026-11-11T10:31:29Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:31:34Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T10:33:29Z

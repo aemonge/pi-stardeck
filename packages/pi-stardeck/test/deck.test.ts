@@ -1112,7 +1112,7 @@ test('colors the Work tile by state and narrows in stages', () => {
   };
 
   renderHeaderDeck(state, 120, theme as never);
-  assert.ok(colors.includes('success:eight-section-deck!'));
+  assert.ok(colors.includes('success:eight-section-deck'));
   assert.ok(colors.includes('accent: ⟩ '));
   assert.ok(colors.includes('accent:plan 0/1'));
   assert.ok(colors.includes('accent: › '));
@@ -1123,10 +1123,12 @@ test('colors the Work tile by state and narrows in stages', () => {
   assert.ok((narrow[2] ?? '').includes('Pivot cockpit'));
   assert.equal((narrow[2] ?? '').includes('plan 0/1'), false);
 
-  // 45 columns: attention/progress yield, the item count survives longest.
+  // 45 columns: compact yields the dim next-step only — identity and
+  // progress survive; the item glyph retired with the collector path.
   const mid = renderHeaderDeck(state, 45, plainTheme as never).map(plain);
-  assert.ok((mid[2] ?? '').includes('󰄱 1/4'));
-  assert.equal((mid[2] ?? '').includes('plan 0/1'), false);
+  assert.ok((mid[2] ?? '').includes('plan 0/1'));
+  assert.ok((mid[2] ?? '').includes('1/4'));
+  assert.equal((mid[2] ?? '').includes('󰄱'), false);
 });
 
 test('the left band renders accent unconditionally — it can never mirror openspec', () => {

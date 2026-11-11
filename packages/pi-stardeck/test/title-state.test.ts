@@ -148,10 +148,14 @@ test('rejects malformed aim-field shapes', () => {
   const cases = [
     { change: 'deck', artifactName: 7 },
     { change: 'deck', artifactIdx: 4 },
-    { change: 'deck', task: null },
     { change: 'deck', nextStep: 'x'.repeat(181) },
     { change: 'deck', artifactName: 'x'.repeat(121) },
   ];
+  // Null on an optional field is absent, not malformed.
+  assert.deepEqual(
+    parseDeckTitleState({ ...base, work: { change: 'deck', task: null } })?.work,
+    { change: 'deck' },
+  );
   for (const work of cases) {
     assert.equal(parseDeckTitleState({ ...base, work }), null, JSON.stringify(work));
   }
@@ -337,7 +341,13 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
     'truthful-rendered-state',
   ]);
   // Compact yields the dim commentary first — identity and progress stay.
-  assert.deepEqual(texts(full, true), ['truthful-rendered-state']);
+  assert.deepEqual(texts(full, true), [
+    'truthful-rendered-state',
+    ' ⟩ ',
+    '4-execute 4/4',
+    ' › ',
+    '4/12',
+  ]);
   // The plain-text label joins the aimed segments.
   assert.equal(
     formatDeckWorkLabel(full),

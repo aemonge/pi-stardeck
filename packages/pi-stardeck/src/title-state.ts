@@ -221,24 +221,24 @@ export function deckWorkSegments(
   const segments: DeckWorkSegment[] = [
     { text: work.change, color: 'success', bold: true },
   ];
-  if (!compact) {
-    if (work.artifactName) {
-      segments.push({ text: ' ⟩ ', color: 'accent' });
-      segments.push({
-        text: work.artifactIdx
-          ? `${work.artifactName} ${work.artifactIdx}`
-          : work.artifactName,
-        color: 'accent',
-      });
-    }
-    if (work.task) {
-      segments.push({ text: ' › ', color: 'accent' });
-      segments.push({ text: work.task, color: 'accent' });
-    }
-    if (work.nextStep) {
-      segments.push({ text: ' ⟩ ', color: 'accent' });
-      segments.push({ text: work.nextStep, color: 'dim' });
-    }
+  if (work.artifactName) {
+    segments.push({ text: ' ⟩ ', color: 'accent' });
+    segments.push({
+      text: work.artifactIdx
+        ? `${work.artifactName} ${work.artifactIdx}`
+        : work.artifactName,
+      color: 'accent',
+    });
+  }
+  if (work.task) {
+    segments.push({ text: ' › ', color: 'accent' });
+    segments.push({ text: work.task, color: 'accent' });
+  }
+  // The dim commentary yields first on narrow frames — identity and
+  // progress survive longest.
+  if (work.nextStep && !compact) {
+    segments.push({ text: ' ⟩ ', color: 'accent' });
+    segments.push({ text: work.nextStep, color: 'dim' });
   }
   return segments;
 }

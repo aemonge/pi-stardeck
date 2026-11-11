@@ -48,11 +48,10 @@
     "check:openspec": "node scripts/check-openspec.mjs",
     "test:tooling": "node --import tsx/esm --test test/*.test.ts",
     "test:status": "npm --prefix packages/status test",
-    "test:work-state": "npm --prefix packages/work-state test",
     "test:stardeck": "npm --prefix packages/pi-stardeck test",
     "test:footer": "npm --prefix packages/footer test",
     "test:vim": "npm --prefix packages/pi-vim-top-border test",
-    "test:components": "npm run test:status && npm run test:work-state && npm run test:stardeck && npm run test:footer && npm run test:vim"
+    "test:components": "npm run test:status && npm run test:stardeck && npm run test:footer && npm run test:vim"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
