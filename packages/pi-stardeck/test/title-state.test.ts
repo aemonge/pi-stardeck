@@ -285,29 +285,29 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
     );
   // Full row: read as-is, printed as-is — no prefixes, no relabeling.
   assert.deepEqual(texts(full), [
-    '4-execute 4/4',
+    '󰈙 4-execute 4/4',
     ' › ',
     '4/12',
     ' ⟩ ',
     'eospec approve',
   ]);
   assert.deepEqual(colors(full), [
-    'accent:4-execute 4/4',
+    'accent:󰈙 4-execute 4/4',
     'accent: › ',
     'accent:4/12',
     'accent: ⟩ ',
     'dim:eospec approve',
   ]);
-  // Missing artifact_name drops the group; artifact_idx drops with it.
+  // Missing artifact_name drops the group; the icon leads the task and
+  // the dangling separator dies with the artifact group.
   assert.deepEqual(texts({ ...full, artifactName: undefined }), [
-    ' › ',
-    '4/12',
+    '󰈙 4/12',
     ' ⟩ ',
     'eospec approve',
   ]);
   // Missing artifact_idx: the name prints alone — counts never 0/N.
   assert.deepEqual(texts({ ...full, artifactIdx: undefined }), [
-    '4-execute',
+    '󰈙 4-execute',
     ' › ',
     '4/12',
     ' ⟩ ',
@@ -315,22 +315,25 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
   ]);
   // Missing task: the minor separator dies with the segment.
   assert.deepEqual(texts({ ...full, task: undefined }), [
-    '4-execute 4/4',
+    '󰈙 4-execute 4/4',
     ' ⟩ ',
     'eospec approve',
   ]);
   // Missing next-step: the trailing major separator dies.
   assert.deepEqual(texts({ ...full, nextStep: undefined }), [
-    '4-execute 4/4',
+    '󰈙 4-execute 4/4',
     ' › ',
     '4/12',
   ]);
   // Only change: today's bare aim, verbatim.
   assert.deepEqual(texts({ change: 'truthful-rendered-state' }), []);
   // Compact yields the dim commentary first — identity and progress stay.
-  assert.deepEqual(texts(full, true), ['4-execute 4/4', ' › ', '4/12']);
+  assert.deepEqual(texts(full, true), ['󰈙 4-execute 4/4', ' › ', '4/12']);
   // The plain-text label joins the aimed segments.
-  assert.equal(formatDeckWorkLabel(full), '4-execute 4/4 › 4/12 ⟩ eospec approve');
+  assert.equal(
+    formatDeckWorkLabel(full),
+    ['󰈙 4-execute 4/4 › 4/12 ⟩', full.nextStep].join(' '),
+  );
   // Overlong next-step text rejects the whole work object on parse.
   assert.equal(
     parseDeckTitleState({

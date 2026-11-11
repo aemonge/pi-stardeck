@@ -1091,8 +1091,8 @@ test('colors the Work tile by state and narrows in stages', () => {
   };
 
   renderHeaderDeck(state, 120, theme as never);
-  assert.ok(colors.includes('success:eight-section-deck'));
-  assert.ok(colors.includes('accent:plan 0/1'));
+  assert.ok(colors.includes('success:󰈙 eight-section-deck'));
+  assert.ok(colors.includes('accent:󰈙 plan 0/1'));
   assert.ok(colors.includes('accent: › '));
   assert.ok(colors.includes('accent:1/4'));
 
@@ -1795,7 +1795,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // verbatim render law.
   assert.match(
     lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+plan 0\/1 › 1\/4$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+󰈙 plan 0\/1 › 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
@@ -1805,7 +1805,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // Dotted seams inside; the engine row closes the deck with the sentinel.
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
-  assert.match(lines[6] ?? '', /\u{F0726} \$5\.16\s+eight-section-deck$/u);
+  assert.match(lines[6] ?? '', /\u{F0726} \$5\.16\s+󰈙 eight-section-deck$/u);
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {

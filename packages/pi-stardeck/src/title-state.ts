@@ -212,6 +212,10 @@ export type DeckWorkSegment = { text: string; color: string; bold?: boolean };
  * identity and progress survive longest. Separators are chrome with
  * hard deck-wide colors — `›` accent like every minor separator.
  */
+/** The OpenSpec mark — nf-md file-document-outline. One constant: the
+ * glyph is a taste choice, the placement is law (both lines). */
+export const OPEN_SPEC_ICON = '󰈙';
+
 export function deckWorkSegments(
   work: DeckTitleWorkState,
   compact = false,
@@ -219,11 +223,21 @@ export function deckWorkSegments(
   // Human amendment (reorder-deck-frame, 2026-11-11): the slug moved to
   // the engine row — the focus spec's home. Line 2 carries the progress
   // fields and the dim action hint:
-  // `{artifact_name} {artifact-idx} › {task} ⟩ {next-step}` — read as-is,
-  // printed as-is; the dim hint yields first on narrow frames.
+  // `{icon} {artifact_name} {artifact-idx} › {task} ⟩ {next-step}` — read
+  // as-is, printed as-is; the icon leads the first rendered segment; the
+  // dim hint yields first on narrow frames.
   const segments: DeckWorkSegment[] = [];
+  let iconPending = true;
+  const lead = (segment: DeckWorkSegment): void => {
+    if (iconPending) {
+      iconPending = false;
+      segments.push({ ...segment, text: `${OPEN_SPEC_ICON} ${segment.text}` });
+      return;
+    }
+    segments.push(segment);
+  };
   if (work.artifactName) {
-    segments.push({
+    lead({
       text: work.artifactIdx
         ? `${work.artifactName} ${work.artifactIdx}`
         : work.artifactName,
@@ -231,12 +245,15 @@ export function deckWorkSegments(
     });
   }
   if (work.task) {
-    segments.push({ text: ' › ', color: 'accent' });
-    segments.push({ text: work.task, color: 'accent' });
+    // A separator only follows a segment — a leading one dangles.
+    if (segments.length > 0) {
+      segments.push({ text: ' › ', color: 'accent' });
+    }
+    lead({ text: work.task, color: 'accent' });
   }
   if (work.nextStep && !compact) {
-    segments.push({ text: ' ⟩ ', color: 'accent' });
-    segments.push({ text: work.nextStep, color: 'dim' });
+    if (segments.length > 0) segments.push({ text: ' ⟩ ', color: 'accent' });
+    lead({ text: work.nextStep, color: 'dim' });
   }
   return segments;
 }

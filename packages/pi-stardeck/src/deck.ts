@@ -11,7 +11,7 @@ import type {
 } from './gauge.ts';
 import type { ResourceTelemetry } from './process-resources.ts';
 import { formatDeckCountdown } from './gauge.ts';
-import { deckWorkSegments } from './title-state.ts';
+import { deckWorkSegments, OPEN_SPEC_ICON } from './title-state.ts';
 
 export interface HeaderDeckModeRail {
   plain: string;
@@ -761,7 +761,7 @@ export function renderHeaderDeck(
   const aimRight =
     focusSpec === ''
       ? color(theme, 'dim', '(unfocus openspec)')
-      : color(theme, 'success', focusSpec);
+      : color(theme, 'success', `${OPEN_SPEC_ICON} ${focusSpec}`);
   const machineRow = machineCornerNotices(
     state,
     theme,

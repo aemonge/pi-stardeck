@@ -86,6 +86,20 @@
 - [x] feat(deck): the focus spec takes the engine row
       hash: f129202
 
+## Slice 7 — the OpenSpec mark on both lines (Human ask, live)
+
+- [x] `OPEN_SPEC_ICON` (nf-md file-document-outline 󰈙) leads the first
+      rendered tile segment and the engine-row slug; the aimless gray
+      placeholder stays bare; a leading separator never dangles when the
+      task segment leads
+      started_at: 2026-11-11T15:20Z · ended_at: 2026-11-11T15:30Z · total: ~10m ·
+      check: stardeck 148 ✓ · status 140 ✓ · format ✓ · lint ✓ · tsc ✓ ·
+      baseline PASS ✓ · paths: packages/pi-stardeck/{src/deck.ts,
+      src/title-state.ts,test/deck.test.ts,test/title-state.test.ts},
+      baseline/source.sha256
+- [ ] feat(deck): the OpenSpec mark on both lines
+      hash:
+
 - [ ] Human validation — response: · outcome: · surfaced:
 
   gate-attributed · tool: write · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/room-aim.ts · at 2026-11-11T09:25:22Z
@@ -657,3 +671,89 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T15:11:45Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T15:12:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:08Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:36Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:36Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:43Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:50Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:50Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:58Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:26:58Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:27:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:27:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:27:20Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:27:20Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:27:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:09Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:09Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:59Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:28:59Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:12Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:12Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:22Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:49Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:29:49Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:30:36Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:30:36Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:31:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:31:37Z
