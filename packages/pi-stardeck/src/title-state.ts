@@ -222,10 +222,11 @@ export function deckWorkSegments(
 ): DeckWorkSegment[] {
   // Human amendment (reorder-deck-frame, 2026-11-11): the slug moved to
   // the engine row — the focus spec's home. Line 2 carries the progress
-  // fields and the dim action hint:
+  // fields and the green action hint (Human-directed 2026-11-11,
+  // move-warning-below-prompt slice 2):
   // `{icon} {artifact_name} {artifact-idx} › {task} ⟩ {next-step}` — read
   // as-is, printed as-is; the icon leads the first rendered segment; the
-  // dim hint yields first on narrow frames.
+  // green hint yields first on narrow frames.
   const segments: DeckWorkSegment[] = [];
   let iconPending = true;
   const lead = (segment: DeckWorkSegment): void => {
@@ -253,7 +254,7 @@ export function deckWorkSegments(
   }
   if (work.nextStep && !compact) {
     if (segments.length > 0) segments.push({ text: ' ⟩ ', color: 'accent' });
-    lead({ text: work.nextStep, color: 'dim' });
+    lead({ text: work.nextStep, color: 'success' });
   }
   return segments;
 }

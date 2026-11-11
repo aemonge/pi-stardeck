@@ -296,7 +296,7 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
     'accent: › ',
     'accent:4/12',
     'accent: ⟩ ',
-    'dim:eospec approve',
+    'success:eospec approve',
   ]);
   // Missing artifact_name drops the group; the icon leads the task and
   // the dangling separator dies with the artifact group.
@@ -327,7 +327,7 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
   ]);
   // Only change: today's bare aim, verbatim.
   assert.deepEqual(texts({ change: 'truthful-rendered-state' }), []);
-  // Compact yields the dim commentary first — identity and progress stay.
+  // Compact yields the green commentary first — identity and progress stay.
   assert.deepEqual(texts(full, true), ['󰈙 4-execute 4/4', ' › ', '4/12']);
   // The plain-text label joins the aimed segments.
   assert.equal(
