@@ -303,7 +303,7 @@ test('deck mode registers the deck above and the warning below the editor', asyn
     assert.ok(cleanDeck.length > 0);
     assert.deepEqual(warningComponent?.render(120), []);
 
-    // A published status snapshot moves the  below the prompt and
+    // A published status snapshot moves the 🔔 below the prompt and
     // keeps the deck clean.
     for (const handler of sharedHandlers.get('pi-stardeck:pi-status/v1') ?? []) {
       handler({
@@ -319,13 +319,13 @@ test('deck mode registers the deck above and the warning below the editor', asyn
       (warningComponent?.render(120) ?? []).map((line) =>
         line.replace(/\u001b\[[0-9;]*m/g, ''),
       ),
-      [' appa unreachable'],
+      ['🔔 appa unreachable'],
     );
     assert.equal(
       (deckComponent?.render(120) ?? [])
         .map((line) => line.replace(/\u001b\[[0-9;]*m/g, ''))
         .join('\n')
-        .includes(''),
+        .includes('🔔'),
       false,
       'the deck never carries the warning',
     );

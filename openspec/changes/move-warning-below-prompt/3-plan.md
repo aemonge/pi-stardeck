@@ -90,6 +90,18 @@ alert (U+F727) like every deck icon.
 - [ ] Post-commit human validation (see Verification)
       started_at: · ended_at: · total: · check: · paths:
 
+### Slice 4 — the notice rings the bell (amendment)
+
+Surfaced at validation, Human-directed 2026-11-11: the Nerd alert didn't
+read as warning — the notice line rings `🔔` (U+1F514) instead.
+- [ ] `packages/pi-stardeck/src/deck.ts` + the two test files: the notice
+      glyph swaps to the bell
+      started_at: · ended_at: · total: · check: · paths:
+- [ ] Commit `fix(deck): ring the bell on the notice line`
+      started_at: · ended_at: · total: · check: · paths:
+- [ ] Post-commit human validation (see Verification)
+      started_at: · ended_at: · total: · check: · paths:
+
 ## Verification
 
 Deterministic, nearest first: `npm run test:stardeck` ·

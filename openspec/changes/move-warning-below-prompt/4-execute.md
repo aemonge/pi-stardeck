@@ -73,10 +73,24 @@
       error, clean silence — no extension, no temp litter
       (`node --import tsx/esm scripts/warning-preview.mjs`)
       started_at: 2026-11-11T18:50Z · ended_at: 2026-11-11T18:52Z ·
-      total: ~2 min · check: eslint + prettier clean ·
+      total: ~2 min · check: eslint + prettier clean · commit 027e4a9 ·
       paths: scripts/warning-preview.mjs
 - [x] Commit `fix(deck): use the nerd alert glyph on the notice line`
       hash: cc2b8570422b386b885ab7abcb997179825773dd
+- [ ] Post-commit human validation — see Verification
+
+## Slice 4 — the notice rings the bell (amendment)
+
+- [x] `packages/pi-stardeck/src/deck.ts`: the notice glyph swaps
+      `\u{F727}` → `\u{1F514}` (the bell); the comment records the
+      Human-directed reason; the two test files follow (26 references)
+      started_at: 2026-11-11T18:58Z · ended_at: 2026-11-11T19:00Z ·
+      total: ~2 min · check: 149/149, prettier clean ·
+      paths: packages/pi-stardeck/src/deck.ts,
+      packages/pi-stardeck/test/deck.test.ts,
+      packages/pi-stardeck/test/surface.test.ts
+- [ ] Commit `fix(deck): ring the bell on the notice line`
+      hash:
 - [ ] Post-commit human validation — see Verification
 
 - [ ] Human validation — response: · outcome: · surfaced:
