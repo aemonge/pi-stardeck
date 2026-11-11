@@ -14,9 +14,13 @@ granted_plan: 2026-11-11T09:19:49Z
 granted_execute: 2026-11-11T09:21:35Z
 approved_at: 2026-11-11T09:21:35Z
 
-x-granted: brainstorm,investigate,plan
+x-granted: brainstorm,investigate,plan,execute
 x-granted_brainstorm: 2026-11-11T14:56:28Z
 
 x-granted_investigate: 2026-11-11T14:57:23Z
 
 x-granted_plan: 2026-11-11T14:59:56Z
+
+x-granted_execute: 2026-11-11T15:43:01Z
+x-status: approved
+x-approved_at: 2026-11-11T15:43:01Z
