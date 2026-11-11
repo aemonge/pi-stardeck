@@ -753,20 +753,21 @@ export function renderHeaderDeck(
       )
     : '';
   // deck-reshape, swap amendment (reorder-deck-frame 2026-11-11): the
-  // bottom row carries the MACHINE tail on the left and the room aim's
-  // action hint on the right — read-as-is from `openspec/.focus`, dim
-  // commentary. The engine group moved to line 1 right.
-  const nextStep = safeText(state.header?.title?.work?.nextStep ?? '');
-  const aimRight = nextStep === '' ? '' : color(theme, 'dim', nextStep);
+  // bottom row carries the MACHINE tail on the left and THE FOCUS SPEC
+  // on the right — the room aim's change slug, read as-is from
+  // `openspec/.focus`. An aimless room wears the gray placeholder;
+  // nothing else ever sits in this seat.
+  const focusSpec = safeText(state.header?.title?.work?.change ?? '');
+  const aimRight =
+    focusSpec === ''
+      ? color(theme, 'dim', '(unfocus openspec)')
+      : color(theme, 'success', focusSpec);
   const machineRow = machineCornerNotices(
     state,
     theme,
-    aimRight === '' ? boundedWidth : boundedWidth - visibleWidth(aimRight) - 1,
+    boundedWidth - visibleWidth(aimRight) - 1,
   );
-  const engineRow =
-    aimRight === '' && machineRow === ''
-      ? ''
-      : alignedSingleRow(machineRow, aimRight, boundedWidth);
+  const engineRow = alignedSingleRow(machineRow, aimRight, boundedWidth);
   const warning = warningLine(state, theme);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4

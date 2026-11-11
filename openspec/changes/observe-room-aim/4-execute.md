@@ -71,6 +71,21 @@
 - [x] feat(deck): the aim's action row and the warning line
       hash: b2d65d6
 
+## Slice 6 — the focus spec takes the engine row (Human live-frame pass)
+
+- [x] the duplicate dies: `next-step` out of the tile builder — line 2
+      prints `artifact_name artifact-idx › task ⟩ next-step`; the engine
+      row right carries the slug verbatim (success), gray
+      `(unfocus openspec)` when the room has no aim; `task: ""` unwraps
+      symmetric YAML quote pairs before the emptiness check
+      started_at: 2026-11-11T15:05Z · ended_at: 2026-11-11T15:20Z · total: ~15m ·
+      check: stardeck 148 ✓ · status 140 ✓ · format ✓ · lint ✓ · tsc ✓ ·
+      baseline PASS ✓ · paths: packages/status/src/room-aim.ts,
+      packages/pi-stardeck/{src/deck.ts,src/title-state.ts,
+      test/deck.test.ts,test/title-state.test.ts}, baseline/source.sha256
+- [ ] feat(deck): the focus spec takes the engine row
+      hash:
+
 - [ ] Human validation — response: · outcome: · surfaced:
 
   gate-attributed · tool: write · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/room-aim.ts · at 2026-11-11T09:25:22Z
@@ -576,3 +591,65 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T14:40:00Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T14:40:10Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:00:08Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:00:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:00:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:00:46Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:00:54Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:01:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:01:13Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:01:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:03:46Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:03:59Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:04:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:04:23Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:04:31Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:04:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:04:50Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:05:17Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:05:24Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:06:34Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:06:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:07:32Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:07:39Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:08:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:08:36Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:08:43Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:08:59Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:09:07Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:09:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:09:47Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:09:54Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:10:33Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:11:40Z

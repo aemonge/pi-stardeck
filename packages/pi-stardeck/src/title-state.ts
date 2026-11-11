@@ -216,13 +216,13 @@ export function deckWorkSegments(
   work: DeckTitleWorkState,
   compact = false,
 ): DeckWorkSegment[] {
-  // The slug leads the right side — openspec identity renders exclusively
-  // here (Human layout law 2026-11-10); the left band is Human-owned.
-  const segments: DeckWorkSegment[] = [
-    { text: work.change, color: 'success', bold: true },
-  ];
+  // Human amendment (reorder-deck-frame, 2026-11-11): the slug moved to
+  // the engine row — the focus spec's home. Line 2 carries the progress
+  // fields and the dim action hint:
+  // `{artifact_name} {artifact-idx} › {task} ⟩ {next-step}` — read as-is,
+  // printed as-is; the dim hint yields first on narrow frames.
+  const segments: DeckWorkSegment[] = [];
   if (work.artifactName) {
-    segments.push({ text: ' ⟩ ', color: 'accent' });
     segments.push({
       text: work.artifactIdx
         ? `${work.artifactName} ${work.artifactIdx}`
@@ -234,8 +234,6 @@ export function deckWorkSegments(
     segments.push({ text: ' › ', color: 'accent' });
     segments.push({ text: work.task, color: 'accent' });
   }
-  // The dim commentary yields first on narrow frames — identity and
-  // progress survive longest.
   if (work.nextStep && !compact) {
     segments.push({ text: ' ⟩ ', color: 'accent' });
     segments.push({ text: work.nextStep, color: 'dim' });

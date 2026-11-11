@@ -304,9 +304,9 @@ test('chip color encodes severity: blue healthy, yellow degraded, red error and 
     'error renders error red',
   );
   assert.equal(
-    seen.some((e) => /[[\]()]/u.test(e.text)),
+    seen.some((e) => /[[\]]/u.test(e.text)),
     false,
-    'no enclosures survive',
+    'no bracket enclosures survive — parens belong to the gray placeholder',
   );
   const line1 = renderHeaderDeck(state, 120, plainTheme as never).map(plain)[0] ?? '';
   assert.match(
@@ -684,8 +684,8 @@ test('the engine group rides line 1 right; the machine tail anchors the bottom r
   );
   assert.match(
     lines.at(-1) ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
-    'the full machine tail rides the bottom row',
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\(unfocus openspec\)$/u,
+    'the full machine tail rides the bottom row — the gray aim placeholder closes it',
   );
   assert.equal(lines.length, 5, 'five-row clean deck');
 });
@@ -832,11 +832,12 @@ test('renders unavailable optional telemetry honestly', () => {
   assert.equal(all.includes('awaiting Human'), false);
   assert.equal(all.includes('tok'), false);
   // reorder-deck-frame: absent facts remove their slots — the bare tail
-  // closes the frame with its one surviving reading, no sentinel suffix.
+  // keeps its one surviving reading and the gray placeholder closes it.
+  const bareTail = plain(lines.at(-1) ?? '');
+  assert.ok(bareTail.includes('󰎞 2'), 'the counter survives');
   assert.ok(
-    plain(lines.at(-1) ?? '')
-      .trimEnd()
-      .endsWith('󰎞 2'),
+    bareTail.trimEnd().endsWith('(unfocus openspec)'),
+    'the placeholder closes it',
   );
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
@@ -1032,10 +1033,14 @@ test('renders line 2 as Subject with the Work label on the right', () => {
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
   assert.ok(titleRow.startsWith('Pivot cockpit to pure pi-starship-header chrome'));
-  // Layout law 2026-11-10: the slug leads the right tile; the left band
-  // stays the Human-owned subject alone. Render law: verbatim fields.
-  assert.ok(titleRow.includes('eight-section-deck ⟩ plan 0/1 › 1/4'));
-  assert.ok(titleRow.indexOf('eight-section-deck') > titleRow.indexOf('Pivot cockpit'));
+  // Layout law 2026-11-10 amended (reorder-deck-frame): line 2 carries
+  // the progress fields; the slug lives on the engine row's right end.
+  assert.ok(titleRow.includes('plan 0/1 › 1/4'));
+  const engineLine = lines.at(-1) ?? '';
+  assert.ok(
+    engineLine.trimEnd().endsWith('eight-section-deck'),
+    'the focus spec closes the engine row',
+  );
 });
 
 test('an absent work slot renders an empty tile — no sentinel narration', () => {
@@ -1087,7 +1092,6 @@ test('colors the Work tile by state and narrows in stages', () => {
 
   renderHeaderDeck(state, 120, theme as never);
   assert.ok(colors.includes('success:eight-section-deck'));
-  assert.ok(colors.includes('accent: ⟩ '));
   assert.ok(colors.includes('accent:plan 0/1'));
   assert.ok(colors.includes('accent: › '));
   assert.ok(colors.includes('accent:1/4'));
@@ -1506,8 +1510,8 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   );
   assert.match(
     plain(renderHeaderDeck(state, 60, plainTheme as never).at(-1) ?? ''),
-    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
-    'the full machine tail rides the bottom row at 60 beside the sentinel',
+    /\u{F039E} 2\s+\(unfocus openspec\)$/u,
+    'the machine tail rides the bottom row at 60 — cost yields, the gray placeholder closes',
   );
 });
 
@@ -1578,8 +1582,12 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   assert.ok(mcpAt > machineAt, 'mcp rides the machine tail');
   assert.ok(costAt > mcpAt, 'global cost anchors the row');
   assert.ok(
-    costAt > mcpAt && line4.trimEnd().endsWith('$5.16'),
-    'the cost anchors the clean row',
+    costAt > mcpAt && line4.includes('$5.16'),
+    'the cost rides the machine tail',
+  );
+  assert.ok(
+    line4.includes('(unfocus openspec)'),
+    'the gray aim placeholder anchors the clean row',
   );
   const engineAt = line1.indexOf('GPT-5.6 Sol');
   const calendarAt = line1.indexOf('12%');
@@ -1739,7 +1747,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   // the bottom row directly beneath the seam; the sentinel closes it.
   assert.match(
     lines[4] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\(unfocus openspec\)$/u,
   );
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
@@ -1787,7 +1795,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // verbatim render law.
   assert.match(
     lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck ⟩ plan 0\/1 › 1\/4$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+plan 0\/1 › 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(
@@ -1797,10 +1805,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // Dotted seams inside; the engine row closes the deck with the sentinel.
   assert.match(lines[3] ?? '', /^\u2508+$/u);
   assert.match(lines[5] ?? '', /^\u2508+$/u);
-  assert.match(
-    lines[6] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
-  );
+  assert.match(lines[6] ?? '', /\u{F0726} \$5\.16\s+eight-section-deck$/u);
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {
@@ -1872,7 +1877,7 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
   };
   const bareLines = renderHeaderDeck(bare, 120, plainTheme as never).map(plain);
   assert.ok(
-    (bareLines.at(-1) ?? '').trimEnd().endsWith('󰎞 2'),
+    (bareLines.at(-1) ?? '').trimEnd().endsWith('(unfocus openspec)'),
     'a bare deck closes with the machine tail — the right end stays empty',
   );
 });

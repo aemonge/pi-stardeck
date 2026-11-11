@@ -36,9 +36,20 @@ const AIM_FIELDS = new Set([
 ]);
 
 /** Collapse control characters to spaces and trim — the one cleanliness a
- * terminal printer owes; honest content passes untouched. */
+ * terminal printer owes; honest content passes untouched. A symmetric
+ * YAML quote pair is syntax, not content: `"…"` and '…' unwrap before the
+ * emptiness check, so `task: ""` drops its segment like any missing
+ * field. */
 function printable(value: string): string {
-  return value.replace(CONTROL_CHARACTERS, ' ').trim();
+  const text = value.replace(CONTROL_CHARACTERS, ' ').trim();
+  if (
+    text.length >= 2 &&
+    ((text.startsWith('"') && text.endsWith('"')) ||
+      (text.startsWith("'") && text.endsWith("'")))
+  ) {
+    return text.slice(1, -1).trim();
+  }
+  return text;
 }
 
 /** Over-bound or empty values drop their field — absence, never a
