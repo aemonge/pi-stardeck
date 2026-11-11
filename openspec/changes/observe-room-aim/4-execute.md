@@ -83,8 +83,8 @@
       baseline PASS ✓ · paths: packages/status/src/room-aim.ts,
       packages/pi-stardeck/{src/deck.ts,src/title-state.ts,
       test/deck.test.ts,test/title-state.test.ts}, baseline/source.sha256
-- [ ] feat(deck): the focus spec takes the engine row
-      hash:
+- [x] feat(deck): the focus spec takes the engine row
+      hash: f129202
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
