@@ -54,6 +54,11 @@ fail soft when absent. Pi core remains the API authority.
   its only argument, opens it in the enclosing Neovim instance, and exits when that
   buffer closes.
 
+**Recommended pairing — [pi-title](https://www.npmjs.com/package/pi-title):** the deck's
+left title band prefers the native session name, and pi-title names each session from
+its first request. Install it alongside the deck and every session opens already named;
+manual titles are never replaced automatically.
+
 The bridge is deliberately not shipped: connecting to a private Neovim server is
 machine-specific and belongs in your trusted user configuration.
 
