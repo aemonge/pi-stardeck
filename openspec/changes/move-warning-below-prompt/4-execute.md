@@ -89,8 +89,8 @@
       paths: packages/pi-stardeck/src/deck.ts,
       packages/pi-stardeck/test/deck.test.ts,
       packages/pi-stardeck/test/surface.test.ts
-- [ ] Commit `fix(deck): ring the bell on the notice line`
-      hash:
+- [x] Commit `fix(deck): ring the bell on the notice line`
+      hash: 9f585793f80a92b97508b280c9400577ea7f0a7a
 - [ ] Post-commit human validation — see Verification
 
 - [ ] Human validation — response: · outcome: · surfaced:
