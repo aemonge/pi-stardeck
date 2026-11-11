@@ -21,7 +21,7 @@ Set PlaybackSpeed 1
 # stays attached so the recording does not stall on a cold cache. Keep setup
 # out of the recording.
 Hide
-Type "export DEMO_HOME=/tmp/pi-stardeck-demo && rm -rf $DEMO_HOME && mkdir -p $DEMO_HOME && export NPM_CACHE_KEEP=$HOME/.npm && export HOME=$DEMO_HOME && export NPM_CONFIG_PREFIX=$HOME/.npm-global && export npm_config_cache=$NPM_CACHE_KEEP && export PATH=$NPM_CONFIG_PREFIX/bin:$PATH && clear"
+Type "export DEMO_HOME=/tmp/pi-stardeck-demo && rm -rf $DEMO_HOME && mkdir -p $DEMO_HOME/demo-room/openspec/changes/hello-script && printf '# one active change per room — eospec writes, verbs refresh\nchange: hello-script\nartifact-name: 1-brainstorm.md\nartifact-idx: 1/4\ntask: \"\"\nnext-step: draft 1-brainstorm.md\n' > $DEMO_HOME/demo-room/openspec/.focus && export NPM_CACHE_KEEP=$HOME/.npm && export HOME=$DEMO_HOME && export NPM_CONFIG_PREFIX=$HOME/.npm-global && export npm_config_cache=$NPM_CACHE_KEEP && export PATH=$NPM_CONFIG_PREFIX/bin:$PATH && clear"
 Enter
 Wait
 Show
@@ -37,13 +37,16 @@ Show
 Wait+Screen@30s /Installed npm:@aemonge-dev\/pi-stardeck/
 Sleep 1s
 
-# Launch a clean cockpit session from the fresh install.
-Type "clear && pi --offline --no-session --no-context-files --tui-mode regular"
+# Launch a clean cockpit session inside the aimed demo room: the room aim
+# (openspec/.focus) drives the verbatim work tile and the focus spec on
+# the engine row.
+Type "cd $DEMO_HOME/demo-room && clear && pi --offline --no-session --no-context-files --tui-mode regular"
 Enter
 Hide
 Sleep 12s
 Show
 Wait+Screen@60s /waiting/
+Wait+Screen@10s /hello-script/
 Sleep 4s
 
 # Exercise a real ephemeral title change without creating a session.

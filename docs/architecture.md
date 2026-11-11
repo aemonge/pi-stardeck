@@ -44,7 +44,8 @@ The composed modules currently coordinate through:
 
 These channels are compatibility boundaries. Consolidation may centralize their types
 but must not silently change semantics or permit sensitive payloads. Selection is an
-additive protocol-1 projection of explicit OpenSpec or Session Work state;
+additive protocol-1 projection of explicit Session Work state; the focused change
+lives in the room aim (`openspec/.focus`) and renders verbatim without selection;
 suggestion is controlled vocabulary rather than generated prose. Active-run telemetry
 contains only bounded child and subagent counts derived from Pi lifecycle events. It
 never carries prompts, names, process identities, arguments, or child output. The deck

@@ -28,8 +28,21 @@ The package composes four bounded modules in dependency-safe order:
 
 - **Footer telemetry** — session usage cost for the deck's telemetry row, with an
   empty quota seam;
-- **Status provider** — lifecycle, OpenSpec, Session Work, and diagnostic state;
-- **Header Deck** — current activity, focus, project state, and compact telemetry.
+- **Status provider** — lifecycle, the room aim's OpenSpec state, and diagnostic
+  state;
+- **Header Deck** — current activity, the focused change, project state, and compact
+  telemetry.
+
+The focused change is the room aim — `openspec/.focus`, written by your terminal
+(`eospec`/`pios-gate` verbs) and read verbatim by the cockpit:
+
+```text
+{icon} {artifact-name} {artifact-idx} › {task} ⟩ {next-step}   ← line 2, right
+{icon} {change}                                                ← engine row, right
+```
+
+An aimless room wears gray `(unfocus openspec)` in that slot; warnings speak on their
+own dynamic line; nothing renders when there is nothing to say.
   Companion extensions surface as leading telemetry icons:
 
   | Chip | Extension | Meaning |
