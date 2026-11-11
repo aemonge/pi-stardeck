@@ -17,7 +17,7 @@ import {
 } from './src/active-work.ts';
 import { collectDiagnostics } from './src/diagnostics.ts';
 import { loadConfig } from './src/config.ts';
-import { resolveGateAct } from './src/gate-act.ts';
+import { readRoomAim } from './src/room-aim.ts';
 import { collectOpenSpec, collectOpenSpecOverview } from './src/openspec.ts';
 import { collectOrchestration } from './src/orchestration.ts';
 import {
@@ -176,10 +176,6 @@ class GalacticaStatusRuntime {
    *  construction, refreshed on every accepted focus change; staleness
    *  compares it against the change directory's file truth. */
   private focusAt: number | undefined;
-  /** The gate's relayed act line for the focused change — commentary
-   *  beside the declared focus, never a replacement; cleared whenever
-   *  the focus moves so stale gate truth never survives a switch. */
-  private gateAct: { change: string; line?: string } | undefined;
   private subject: SessionSubject;
   private sessionName: string | undefined;
   private diagnosticsPath: string | undefined;
@@ -464,19 +460,6 @@ class GalacticaStatusRuntime {
     ) {
       return;
     }
-    // The gate act is focus-owned commentary: resolved only for a task
-    // focus inside an OpenSpec project, after the commit guard, so a
-    // superseded refresh never spends a probe on stale truth.
-    if (focus.mode === 'task' && hasOpenSpecProject) {
-      this.gateAct = {
-        change: focus.change,
-        line: await resolveGateAct({
-          change: focus.change,
-          projectRoot,
-          runner: this.runner,
-        }),
-      };
-    }
     const previous = this.store.get();
     this.updateRefreshHealth(
       'openspec',
@@ -654,10 +637,7 @@ class GalacticaStatusRuntime {
     // The left title is Human-owned — session name, subject, directory —
     // never openspec text (truthful-rendered-state law 2026-11-10); the
     // gate act rides the work slot for the right-side tile.
-    const gateAct =
-      facts.openSpec.mode === 'task' && this.gateAct?.change === facts.openSpec.change
-        ? this.gateAct.line
-        : undefined;
+    const aim = readRoomAim(snapshot.projectRoot);
     const subjectTitle = formatActiveWorkTitle({
       subject: facts.subject,
       ...(this.sessionName ? { sessionName: this.sessionName } : {}),
@@ -667,10 +647,10 @@ class GalacticaStatusRuntime {
     return buildTitleState({
       subject: { state: 'set', title: subjectTitle },
       focus: facts.openSpec,
+      aim,
       openspec: snapshot.openspec,
       activity: this.titleActivity.current(),
       focusAt: this.focusAt,
-      ...(gateAct ? { gateAct } : {}),
     });
   }
 
@@ -708,9 +688,6 @@ class GalacticaStatusRuntime {
     if (sameOpenSpecFocus(this.focus, focus)) return;
     this.focus = focus;
     this.focusAt = Date.now();
-    if (focus.mode !== 'task' || this.gateAct?.change !== focus.change) {
-      this.gateAct = undefined;
-    }
     this.recordEvent({ type: 'focus/openspec', at: Date.now(), focus });
     this.store.clearOpenSpec();
     if (focus.mode === 'task' && focus.awaitingValidation) {

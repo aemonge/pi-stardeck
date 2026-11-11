@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   DECK_TITLE_ACTIVITY_CLASSES,
   type DeckTitleState,
+  type DeckTitleWorkState,
   deckWorkSegments,
   formatDeckWorkLabel,
   parseDeckTitleState,
@@ -499,48 +500,110 @@ test('the plain-text label joins the segments', () => {
   );
 });
 
-test('the gate act sits dim in the optional slot; compact yields it first', () => {
-  const work = {
+test('the room aim prints verbatim — the render law, one row per case', () => {
+  const full = {
     change: 'truthful-rendered-state',
-    artifacts: [
-      { id: 'brainstorm', done: true },
-      { id: 'investigate', done: true },
-      { id: 'plan', done: true },
-      { id: 'execute', done: false, items: { done: 2, total: 5 } },
-    ],
-    currentArtifact: 'execute',
-    gateAct: 'awaiting draft of 4-execute.md (artifact execute)',
+    artifactName: '4-execute',
+    artifactIdx: '4/4',
+    aimTask: '4/12',
+    nextStep: 'eospec approve',
   };
-  assert.deepEqual(
+  const texts = (work: DeckTitleWorkState, compact = false) =>
+    deckWorkSegments(work, NOW, compact).map((segment) => segment.text);
+  const colors = (work: DeckTitleWorkState) =>
     deckWorkSegments(work, NOW).map(
       (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
-    ),
-    [
-      'success:truthful-rendered-state!',
-      'accent: › ',
-      'accent:execute 3/4',
-      'accent: › ',
-      'dim:gate: awaiting draft of 4-execute.md (artifact execute)',
-      'accent: › ',
-      'accent:󰄱 2/5',
-    ],
+    );
+  // Full row: read as-is, printed as-is — no prefixes, no relabeling.
+  assert.deepEqual(texts(full), [
+    'truthful-rendered-state',
+    ' ⟩ ',
+    '4-execute 4/4',
+    ' › ',
+    '4/12',
+    ' ⟩ ',
+    'eospec approve',
+  ]);
+  assert.deepEqual(colors(full), [
+    'success:truthful-rendered-state!',
+    'accent: ⟩ ',
+    'accent:4-execute 4/4',
+    'accent: › ',
+    'accent:4/12',
+    'accent: ⟩ ',
+    'dim:eospec approve',
+  ]);
+  // Missing artifact_name drops the group; artifact_idx drops with it.
+  assert.deepEqual(texts({ ...full, artifactName: undefined }), [
+    'truthful-rendered-state',
+    ' › ',
+    '4/12',
+    ' ⟩ ',
+    'eospec approve',
+  ]);
+  // Missing artifact_idx: the name prints alone — counts never 0/N.
+  assert.deepEqual(texts({ ...full, artifactIdx: undefined }), [
+    'truthful-rendered-state',
+    ' ⟩ ',
+    '4-execute',
+    ' › ',
+    '4/12',
+    ' ⟩ ',
+    'eospec approve',
+  ]);
+  // Missing task: the minor separator dies with the segment.
+  assert.deepEqual(texts({ ...full, aimTask: undefined }), [
+    'truthful-rendered-state',
+    ' ⟩ ',
+    '4-execute 4/4',
+    ' ⟩ ',
+    'eospec approve',
+  ]);
+  // Missing next-step: the trailing major separator dies.
+  assert.deepEqual(texts({ ...full, nextStep: undefined }), [
+    'truthful-rendered-state',
+    ' ⟩ ',
+    '4-execute 4/4',
+    ' › ',
+    '4/12',
+  ]);
+  // Only change: today's bare aim, verbatim.
+  assert.deepEqual(
+    texts({
+      ...full,
+      artifactName: undefined,
+      aimTask: undefined,
+      nextStep: undefined,
+    }),
+    ['truthful-rendered-state'],
   );
-  // Compact yields the commentary first — identity and truth survive.
+  // Compact yields the dim commentary first — identity and progress stay.
+  assert.deepEqual(texts(full, true), ['truthful-rendered-state']);
+  // The plain-text label joins the aimed segments.
   assert.equal(
-    deckWorkSegments(work, NOW, true)
-      .map((segment) => segment.text)
-      .join(''),
-    'truthful-rendered-state › 󰄱 2/5',
+    formatDeckWorkLabel(full),
+    'truthful-rendered-state ⟩ 4-execute 4/4 › 4/12 ⟩ eospec approve',
   );
-  // Overlong gate text rejects the whole work object on parse.
+  // Overlong next-step text rejects the whole work object on parse.
   assert.equal(
     parseDeckTitleState({
       v: 2,
       subject: null,
-      work: { change: 'deck', gateAct: 'x'.repeat(181) },
+      work: { change: 'deck', nextStep: 'x'.repeat(181) },
       activity: null,
       waiver: null,
     }),
     null,
+  );
+  // The aimed fields survive the wire contract.
+  assert.deepEqual(
+    parseDeckTitleState({
+      v: 2,
+      subject: null,
+      work: full,
+      activity: null,
+      waiver: null,
+    })?.work,
+    full,
   );
 });

@@ -1,4 +1,5 @@
 import type { OpenSpecFocus, SessionSubject } from './active-work.ts';
+import type { RoomAim } from './room-aim.ts';
 import type { OpenSpecState } from './types.ts';
 
 /**
@@ -38,7 +39,6 @@ const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
 const ARTIFACTS_MAX = 16;
-const GATE_ACT_MAX = 180;
 
 export type TitleArtifactState = {
   id: string;
@@ -57,8 +57,12 @@ export type TitleWorkState = {
   awaitingValidation?: boolean;
   focusAt?: number;
   focusStale?: boolean;
-  /** The gate's relayed act line — dim commentary in the optional slot. */
-  gateAct?: string;
+  /** Room-aim verbatim fields (observe-room-aim render law): printed
+   * as-is — the deck is a printer, not a translator. */
+  artifactName?: string;
+  artifactIdx?: string;
+  aimTask?: string;
+  nextStep?: string;
 };
 
 export type TitleActivityState = {
@@ -180,8 +184,18 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
   if ('focusStale' in value && typeof value.focusStale !== 'boolean') {
     return undefined;
   }
-  const gateAct = boundedText(value.gateAct, GATE_ACT_MAX, { required: false });
-  if (gateAct === null) return undefined;
+  const artifactName = boundedText(value.artifactName, IDENTIFIER_MAX, {
+    required: false,
+  });
+  if (artifactName === null) return undefined;
+  const artifactIdx = boundedText(value.artifactIdx, TASK_ID_MAX, {
+    required: false,
+  });
+  if (artifactIdx === null) return undefined;
+  const aimTask = boundedText(value.aimTask, TASK_ID_MAX, { required: false });
+  if (aimTask === null) return undefined;
+  const nextStep = boundedText(value.nextStep, NOTICE_MAX, { required: false });
+  if (nextStep === null) return undefined;
   const extras = {
     ...(schemaName ? { schemaName } : {}),
     ...(artifacts ? { artifacts } : {}),
@@ -189,7 +203,10 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
     ...(value.awaitingValidation === true ? { awaitingValidation: true } : {}),
     ...(focusAt !== undefined ? { focusAt } : {}),
     ...(value.focusStale === true ? { focusStale: true } : {}),
-    ...(gateAct ? { gateAct } : {}),
+    ...(artifactName ? { artifactName } : {}),
+    ...(artifactIdx ? { artifactIdx } : {}),
+    ...(aimTask ? { aimTask } : {}),
+    ...(nextStep ? { nextStep } : {}),
   };
   return task === undefined ? { change, ...extras } : { change, task, ...extras };
 }
@@ -248,7 +265,7 @@ export function shortenTitleTarget(value: string): string {
 export function deriveTitleWork(
   focus: OpenSpecFocus,
   openspec: OpenSpecState | null | undefined,
-  options: { focusAt?: number; gateAct?: string } = {},
+  options: { focusAt?: number } = {},
 ): TitleWorkState | null {
   // Artifact facts come straight from the collector; nothing is invented
   // here — absent facts simply drop out of the contract.
@@ -273,14 +290,27 @@ export function deriveTitleWork(
       ...(focus.awaitingValidation ? { awaitingValidation: true } : {}),
       ...(options.focusAt !== undefined ? { focusAt: options.focusAt } : {}),
       ...(stale ? { focusStale: true } : {}),
-      ...(options.gateAct ? { gateAct: options.gateAct } : {}),
     };
   }
   if (!openspec) return null;
   return {
     change: openspec.changeId,
     ...extras(openspec),
-    ...(options.gateAct ? { gateAct: options.gateAct } : {}),
+  };
+}
+
+/**
+ * The aimed work slot — the room aim's five fields, verbatim (render
+ * law). `change` is the keystone; every other field drops when missing,
+ * and the deck prints what remains exactly as the file wrote it.
+ */
+export function aimTitleWork(aim: RoomAim): TitleWorkState {
+  return {
+    change: aim.change,
+    ...(aim.artifactName ? { artifactName: aim.artifactName } : {}),
+    ...(aim.artifactIdx ? { artifactIdx: aim.artifactIdx } : {}),
+    ...(aim.task ? { aimTask: aim.task } : {}),
+    ...(aim.nextStep ? { nextStep: aim.nextStep } : {}),
   };
 }
 
@@ -292,20 +322,21 @@ export function deriveTitleWork(
 export function buildTitleState(options: {
   subject: SessionSubject;
   focus: OpenSpecFocus;
+  /** The room aim — when present it owns the work slot outright. */
+  aim?: RoomAim | null;
   openspec?: OpenSpecState | null;
   activity?: TitleActivityState | null;
   /** Publisher-owned timestamp of the current focus fact. */
   focusAt?: number;
-  /** The gate's relayed act line for the focused change, if resolved. */
-  gateAct?: string;
 }): TitleState {
   return {
     v: TITLE_STATE_VERSION,
     subject: options.subject.state === 'set' ? options.subject.title : null,
-    work: deriveTitleWork(options.focus, options.openspec, {
-      focusAt: options.focusAt,
-      ...(options.gateAct ? { gateAct: options.gateAct } : {}),
-    }),
+    work: options.aim
+      ? aimTitleWork(options.aim)
+      : deriveTitleWork(options.focus, options.openspec, {
+          focusAt: options.focusAt,
+        }),
     activity: options.activity ?? null,
     waiver: null,
   };

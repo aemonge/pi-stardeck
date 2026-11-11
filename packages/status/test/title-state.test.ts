@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { OpenSpecState } from '../src/types.ts';
 import {
+  aimTitleWork,
   buildTitleState,
   deriveTitleWork,
   parseTitleState,
@@ -590,58 +591,58 @@ test('debug line prints the compact live title-state JSON', () => {
   );
 });
 
-test('the gate act rides the work contract and never the subject', () => {
+test('the room aim owns the work slot verbatim', () => {
   const focus = {
     mode: 'task' as const,
     change: 'eight-section-deck',
     taskId: '1.2',
     awaitingValidation: false,
   };
-  assert.deepEqual(deriveTitleWork(focus, openSpec, { gateAct: 'awaiting grant' }), {
-    change: 'eight-section-deck',
-    task: '1.2',
-    artifacts: openSpec.artifacts,
-    currentArtifact: 'plan',
-    gateAct: 'awaiting grant',
-  });
-  // Passive work carries it too.
-  assert.deepEqual(
-    deriveTitleWork({ mode: 'none' }, openSpec, { gateAct: 'awaiting grant' }),
-    {
-      ...deriveTitleWork({ mode: 'none' }, openSpec),
-      gateAct: 'awaiting grant',
-    },
-  );
-  // Absent gate act stays absent — never an empty string.
-  assert.equal('gateAct' in (deriveTitleWork(focus, openSpec) ?? {}), false);
-  // The builder routes it into the work slot; the subject never sees it.
+  const aim = {
+    change: 'observe-room-aim',
+    artifactName: '4-execute',
+    artifactIdx: '4/4',
+    task: '4/12',
+    nextStep: 'eospec approve',
+    mtimeMs: 0,
+  };
+  // The builder routes the aim into the work slot verbatim; the subject
+  // never sees it.
   const built = buildTitleState({
     subject: { state: 'set', title: 'Session subject' },
     focus,
-    openspec: openSpec,
-    gateAct: 'awaiting grant',
+    aim,
   });
   assert.equal(built.subject, 'Session subject');
-  assert.equal(built.work?.gateAct, 'awaiting grant');
-  // Overlong gate text rejects the whole work object on parse.
+  assert.deepEqual(built.work, {
+    change: 'observe-room-aim',
+    artifactName: '4-execute',
+    artifactIdx: '4/4',
+    aimTask: '4/12',
+    nextStep: 'eospec approve',
+  });
+  // Missing fields drop out — absence, never zeros or empty strings.
+  assert.deepEqual(aimTitleWork({ change: 'observe-room-aim', mtimeMs: 0 }), {
+    change: 'observe-room-aim',
+  });
+  // Parse round-trip: the aim fields survive the wire contract.
+  const parsed = parseTitleState({
+    v: 2,
+    subject: 'Session subject',
+    work: { change: 'observe-room-aim', nextStep: 'eospec approve' },
+    activity: null,
+    waiver: null,
+  });
+  assert.equal(parsed?.work?.nextStep, 'eospec approve');
+  // Overlong next-step text rejects the whole work object on parse.
   assert.equal(
     parseTitleState({
       v: 2,
       subject: 'Session subject',
-      work: { change: 'eight-section-deck', gateAct: 'x'.repeat(181) },
+      work: { change: 'observe-room-aim', nextStep: 'x'.repeat(181) },
       activity: null,
       waiver: null,
     }),
     null,
-  );
-  assert.equal(
-    parseTitleState({
-      v: 2,
-      subject: 'Session subject',
-      work: { change: 'eight-section-deck', gateAct: 'awaiting grant' },
-      activity: null,
-      waiver: null,
-    })?.work?.gateAct,
-    'awaiting grant',
   );
 });
