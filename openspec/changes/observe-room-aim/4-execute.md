@@ -52,6 +52,25 @@
 - [ ] docs: recommend pi-title in the README
       hash: 45d063b
 
+## Slice 5 — frame re-order (Human mockup, 2026-11-11)
+
+- [x] work tile drops `next-step`; engine row right carries it verbatim
+      (dim); the session-id sentinel retires whole (`sessionShortId`,
+      `SENTINEL_BUG`, `SENTINEL_ID_MIN_WIDTH`, `shortSessionId`, wire
+      spread); warnings own a dynamic line beneath the engine row with a
+      seam that exists only when a warning speaks
+      started_at: 2026-11-11T10:52Z · ended_at: 2026-11-11T11:45Z · total: ~53m
+      (incl. the hang hunt) · check: stardeck 148 ✓ · status 140 ✓ · footer 28 ✓
+      · vim 37 ✓ · tooling 24 ✓ · format ✓ · lint ✓ · tsc ✓ · baseline PASS
+      (96 files) ✓ · paths: packages/pi-stardeck/{src/deck.ts,src/title-state.ts,
+      index.ts,test/deck.test.ts,test/title-state.test.ts,test/surface.test.ts},
+      openspec/changes/observe-room-aim/{3-plan.md,4-execute.md},
+      baseline/source.sha256
+      learned: the surface.test hang was a skipped `session_shutdown` —
+      cleanup now rides a `finally`, never assertions
+- [ ] feat(deck): the aim's action row and the warning line
+      hash:
+
 - [ ] Human validation — response: · outcome: · surfaced:
 
   gate-attributed · tool: write · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/room-aim.ts · at 2026-11-11T09:25:22Z
@@ -413,3 +432,139 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:39:17Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T10:40:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T12:27:15Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T12:29:49Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/deck.ts · at 2026-11-11T12:30:51Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/src/deck.ts · at 2026-11-11T12:31:11Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T12:31:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T12:31:39Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-11T12:32:31Z
+
+  gate-attributed · tool: edit · paths: /home/aemonge/projects/pi-stardeck/packages/pi-stardeck/test/deck.test.ts · at 2026-11-11T12:32:54Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T12:33:12Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T12:33:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T13:34:00Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T13:34:46Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T13:34:53Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T13:37:12Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T13:37:52Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:25:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:25:39Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:26:19Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:26:55Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:27:55Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:28:01Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:28:07Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:28:13Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:28:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:28:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:28:45Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:29:04Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:29:10Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:29:31Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:29:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:29:49Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:00Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:09Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:16Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:26Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:31Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:39Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:46Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:30:55Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:31:02Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:31:28Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:31:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:31:43Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:32:05Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:32:13Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:32:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:32:42Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:32:50Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:33:21Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:33:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:33:48Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:34:00Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:34:11Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:34:17Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:34:46Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:34:52Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:34:58Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:35:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:35:24Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:35:41Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:36:03Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:36:10Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:36:20Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:36:30Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:36:35Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:36:43Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:37:27Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:38:32Z

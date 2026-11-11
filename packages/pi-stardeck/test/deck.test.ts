@@ -93,36 +93,6 @@ test('formats fixed-width minute activity age with visible hundredths', () => {
 });
 
 test('renders the approved rich wide header without side borders or spacer rows', () => {
-  console.error(
-    'FIX120:',
-    JSON.stringify(renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain)),
-  );
-  console.error(
-    'FIXLAST60:',
-    JSON.stringify(
-      renderHeaderDeck(fixture(), 60, plainTheme as never)
-        .map(plain)
-        .at(-1),
-    ),
-  );
-  console.error(
-    'FIXLAST40:',
-    JSON.stringify(
-      renderHeaderDeck(fixture(), 40, plainTheme as never)
-        .map(plain)
-        .at(-1),
-    ),
-  );
-
-  console.error(
-    'DUMP:',
-    JSON.stringify(renderHeaderDeck(fixture(), 160, plainTheme as never).map(plain)),
-  );
-  console.error(
-    'DUMP120:',
-    JSON.stringify(renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain)),
-  );
-
   const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
 
   // deck-reshape (amended), quiet-activity-row: five rows — L1, ─, L2,
@@ -157,15 +127,14 @@ test('renders the approved rich wide header without side borders or spacer rows'
     plain(lines[0] ?? ''),
     /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
   );
-  // deck-reshape: the engine group anchors line 1's right end beside
-  // the machine corner; the clean status row carries only the sentinel.
+  // deck-reshape: the machine tail anchors the bottom row's left; the
+  // right end stays empty unless the room aim speaks (reorder-deck-frame).
   assert.equal(lines.join('\n').includes('32K/128K'), false);
   assert.equal(lines.join('\n').includes('healthy'), false, 'placeholder retired');
   assert.ok(lines.every((line) => line.length > 0));
   assert.ok(lines.every((line) => !line.startsWith('│}') && !line.endsWith('│')));
-  // Ladybug census (2026-10-23 amendment): exactly one — the line-4
-  // healthy sentinel; the clock anchor retired with the timer.
-  assert.equal(lines.join('').split('󰠭').length - 1, 1);
+  // Ladybug census: zero — the sentinel retired with the session id.
+  assert.equal(lines.join('').split('󰠭').length - 1, 0);
   assert.equal(lines.join('').includes('󱒋 LSP'), false);
 });
 
@@ -715,7 +684,7 @@ test('the engine group rides line 1 right; the machine tail anchors the bottom r
   );
   assert.match(
     lines.at(-1) ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
     'the full machine tail rides the bottom row',
   );
   assert.equal(lines.length, 5, 'five-row clean deck');
@@ -790,9 +759,8 @@ test('preserves width and essential deck structure through responsive collapse',
       lines.some((line) => plain(line).includes('Read-only preflight')),
       String(width),
     );
-    // Healthy sentinel alone — the clock is gone (Human amendment
-    // 2026-10-23); the ladybug census is one.
-    assert.equal(lines.join('').split('󰠭').length - 1, 1, String(width));
+    // The sentinel retired with the session id — the census is zero.
+    assert.equal(lines.join('').split('󰠭').length - 1, 0, String(width));
     assert.doesNotMatch(lines.join('\n'), /000:07'00/u, String(width));
     if (width >= 100) {
       // deck-reshape: the engine joined the corner — context survives
@@ -863,7 +831,13 @@ test('renders unavailable optional telemetry honestly', () => {
   // engine row closes the deck.
   assert.equal(all.includes('awaiting Human'), false);
   assert.equal(all.includes('tok'), false);
-  assert.ok(plain(lines[4] ?? '').includes('\u{F082D}'), 'the engine row closes');
+  // reorder-deck-frame: absent facts remove their slots — the bare tail
+  // closes the frame with its one surviving reading, no sentinel suffix.
+  assert.ok(
+    plain(lines.at(-1) ?? '')
+      .trimEnd()
+      .endsWith('󰎞 2'),
+  );
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
 });
@@ -1532,7 +1506,7 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   );
   assert.match(
     plain(renderHeaderDeck(state, 60, plainTheme as never).at(-1) ?? ''),
-    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
+    /\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
     'the full machine tail rides the bottom row at 60 beside the sentinel',
   );
 });
@@ -1591,10 +1565,6 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
       { label: '7d', percent: 12 },
     ],
   };
-  console.error(
-    'FL160:',
-    JSON.stringify(renderHeaderDeck(state, 160, plainTheme as never).map(plain)),
-  );
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
   const line1 = lines[0] ?? '';
   const flameAt = (lines.at(-1) ?? '').indexOf('82%');
@@ -1607,7 +1577,10 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   assert.ok(flameAt >= 0 && machineAt > flameAt, 'quota flame leads the machine tail');
   assert.ok(mcpAt > machineAt, 'mcp rides the machine tail');
   assert.ok(costAt > mcpAt, 'global cost anchors the row');
-  assert.ok(line4.trimEnd().endsWith('󰠭'), 'the sentinel closes the clean row');
+  assert.ok(
+    costAt > mcpAt && line4.trimEnd().endsWith('$5.16'),
+    'the cost anchors the clean row',
+  );
   const engineAt = line1.indexOf('GPT-5.6 Sol');
   const calendarAt = line1.indexOf('12%');
   assert.ok(
@@ -1637,15 +1610,21 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
     nativeStatuses: [{ key: 'graphify', text: 'graphify stale · update recommended' }],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const line4 = lines.at(-1) ?? '';
-  // Task 3.1 placement default: non-empty notices own line 4's right end;
-  // the engine group stays left. deck-machine-corner: the machine group
-  // stays on line 1 through the warning — notices can no longer starve it.
+  const warningRow = lines.at(-1) ?? '';
+  // reorder-deck-frame: the warning owns its own dynamic line beneath the
+  // engine rows; the machine readings stay on line 1 (deck-reshape swap)
+  // and never share a row with a warning.
   assert.ok(
-    line4.trimEnd().endsWith('⚠ graphify stale · update recommended'),
-    'notice anchors the right end',
+    warningRow.startsWith('⚠ graphify stale · update recommended') &&
+      warningRow.trimEnd().endsWith('⚠ graphify stale · update recommended'),
+    'the notice owns its line whole',
   );
-  assert.ok(line4.startsWith('󰍛'), 'machine tail anchors the row left');
+  assert.equal(
+    (lines.at(-2) ?? '').trim(),
+    '┈'.repeat(160),
+    'the dotted seam travels with the warning',
+  );
+  assert.equal(warningRow.includes('󰍛'), false, 'no machine tail beside the warning');
   assert.match(
     lines[0] ?? '',
     /\/pi-status \u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
@@ -1760,7 +1739,7 @@ test('renders the accepted idle mockup at wide widths', () => {
   // the bottom row directly beneath the seam; the sentinel closes it.
   assert.match(
     lines[4] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
   );
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
@@ -1820,7 +1799,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   assert.match(lines[5] ?? '', /^\u2508+$/u);
   assert.match(
     lines[6] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\u{F082D}$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16$/u,
   );
 });
 
@@ -1846,15 +1825,16 @@ test('renders both mockups identically at 100 and 120 columns', () => {
   }
 });
 
-test('the dim ladybug sentinel yields to notices and survives bare states', () => {
-  // Sentinel amendment (healthy-ladybug-sentinel): the status right end
-  // always speaks. Clean -> dim 󰠭; any notice replaces it wholesale; a
-  // zero-telemetry deck still closes with the sentinel row.
+test('a bare deck closes with the machine tail alone — no sentinel narration', () => {
+  // reorder-deck-frame (2026-11-11): the right end speaks only when it has
+  // something to say — clean frames end on the machine tail; notices own
+  // their own dynamic line beneath it.
   const clean = titleFixture({ title: IDLE_TITLE });
   const cleanLines = renderHeaderDeck(clean, 120, plainTheme as never).map(plain);
-  assert.ok(
-    (cleanLines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
-    'clean ends with the sentinel',
+  assert.equal(
+    (cleanLines.at(-1) ?? '').includes('󰠭'),
+    false,
+    'the ladybug retired with the session id',
   );
 
   const warned = titleFixture({ title: IDLE_TITLE });
@@ -1865,12 +1845,17 @@ test('the dim ladybug sentinel yields to notices and survives bare states', () =
     nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
   };
   const warnedLines = renderHeaderDeck(warned, 120, plainTheme as never).map(plain);
-  assert.ok(
-    (warnedLines.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
-    'a notice displaces the sentinel',
+  // The warning owns its own dynamic line beneath the engine row — the
+  // dotted seam travels with it.
+  const warnedLast = warnedLines.at(-1) ?? '';
+  assert.ok(warnedLast.startsWith('⚠ appa unreachable'), 'the warning owns its line');
+  assert.equal(
+    warnedLines.at(-2) ?? '',
+    '┈'.repeat(120),
+    'the dotted seam exists only when a warning speaks',
   );
   assert.equal(
-    (warnedLines.at(-1) ?? '').includes('󰠭'),
+    warnedLines.join('\n').includes('󰠭'),
     false,
     'no sentinel beside a notice',
   );
@@ -1887,76 +1872,8 @@ test('the dim ladybug sentinel yields to notices and survives bare states', () =
   };
   const bareLines = renderHeaderDeck(bare, 120, plainTheme as never).map(plain);
   assert.ok(
-    (bareLines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
-    'a bare deck still closes with the sentinel row',
-  );
-});
-
-test('the clean sentinel wears the short session id between two ladybugs', () => {
-  // Ladybug-session-id amendment: only when the notice order is silent and the
-  // frame is wide enough — blue bugs (accent), purple id (thinkingHigh);
-  // the census is two cluster bugs (the clock anchor retired 2026-10-23).
-  const withId = titleFixture({ title: IDLE_TITLE });
-  withId.sessionShortId = '01a157fd';
-  const lines = renderHeaderDeck(withId, 120, plainTheme as never).map(plain);
-  assert.ok(
-    (lines.at(-1) ?? '').trimEnd().endsWith('󰠭 01a157fd 󰠭'),
-    'the clean right end wears the id cluster',
-  );
-  assert.equal(lines.join('').split('󰠭').length - 1, 2, 'census: two cluster bugs');
-  const colors: string[] = [];
-  renderHeaderDeck(withId, 120, {
-    fg: (name: string, text: string) => {
-      colors.push(`${name}:${text}`);
-      return text;
-    },
-    bold: (text: string) => text,
-  } as never);
-  assert.ok(colors.includes('accent:󰠭'), 'the cluster bugs render accent');
-  assert.ok(colors.includes('thinkingHigh:01a157fd'), 'the id renders purple');
-  assert.ok(!colors.includes('dim:󰠭'), 'the plain dim bug yields to the cluster');
-
-  // No id known: the plain dim sentinel stays exactly as before.
-  const withoutId = titleFixture({ title: IDLE_TITLE });
-  const plainLines = renderHeaderDeck(withoutId, 120, plainTheme as never).map(plain);
-  assert.ok(
-    (plainLines.at(-1) ?? '').trimEnd().endsWith('󰠭') &&
-      !(plainLines.at(-1) ?? '').includes('01a157fd'),
-    'without an id the sentinel stays a single dim bug',
-  );
-
-  // Narrow frames degrade to the plain bug rather than crowding the row.
-  for (const width of [20, 23]) {
-    const narrow = renderHeaderDeck(withId, width, plainTheme as never).map(plain);
-    const last = narrow.at(-1) ?? '';
-    assert.ok(last.trimEnd().endsWith('󰠭'), String(width));
-    assert.equal(last.includes('01a157fd'), false, String(width));
-  }
-  const wide = renderHeaderDeck(withId, 24, plainTheme as never).map(plain);
-  assert.ok(
-    (wide.at(-1) ?? '').includes('01a157fd'),
-    'the cluster hosts from 24 columns up',
-  );
-
-  // A notice still displaces the whole cluster — the id never competes
-  // with a speaking notice.
-  const warned = titleFixture({ title: IDLE_TITLE });
-  warned.sessionShortId = '01a157fd';
-  warned.piStatus = {
-    errors: 0,
-    warnings: 0,
-    nativeStatusCount: 1,
-    nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
-  };
-  const warnedLines = renderHeaderDeck(warned, 120, plainTheme as never).map(plain);
-  assert.ok(
-    (warnedLines.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
-    'notices still own the slot',
-  );
-  assert.equal(
-    (warnedLines.at(-1) ?? '').includes('01a157fd'),
-    false,
-    'no id beside a notice',
+    (bareLines.at(-1) ?? '').trimEnd().endsWith('󰎞 2'),
+    'a bare deck closes with the machine tail — the right end stays empty',
   );
 });
 
@@ -2037,36 +1954,21 @@ test('notices ride the narrow slot beside the engine group', () => {
     nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
   };
 
-  // Wide: the notice owns the right end; the machine group yielded.
-  const wide = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const wide4 = wide.at(-1) ?? '';
-  assert.ok(wide4.trimEnd().endsWith('⚠ appa unreachable'));
-  assert.ok(wide4.includes('$5.16'), 'machine tail rides beside the notice');
-
-  // The notice rides the same fit order as the machine group: it renders
-  // only when it fits beside the engine group at full width.
-  const fits = renderHeaderDeck(state, 79, plainTheme as never).map(plain);
-  assert.ok(
-    (fits.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
-    'notice fits beside the engine group at 79',
-  );
-  // deck-corner-context: the global group lost context and compaction,
-  // so the notice fits beside it at 60 as well.
-  const sixty = renderHeaderDeck(state, 60, plainTheme as never).map(plain);
-  assert.ok(
-    (sixty.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
-    'notice fits beside the engine group at 60',
-  );
-  for (const width of [39, 20]) {
-    const narrow = renderHeaderDeck(state, width, plainTheme as never);
-    // deck-reshape: the status row is standalone — it survives narrow
-    // widths while the merged corner yields (identity leads line 1).
+  // The notice owns its own dynamic line at every width — wide, mid,
+  // and narrow; it never shares a row with the machine tail again.
+  for (const width of [160, 79, 60, 39, 20]) {
+    const rendered = renderHeaderDeck(state, width, plainTheme as never).map(plain);
     assert.ok(
-      plain(narrow.at(-1) ?? '').includes('⚠ appa unreachable'),
-      `status row survives at ${width}`,
+      (rendered.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
+      `the notice owns its line at ${width}`,
+    );
+    assert.equal(
+      rendered.at(-2)?.includes('⚠ appa unreachable'),
+      false,
+      `no notice beside the machine tail at ${width}`,
     );
     assert.ok(
-      narrow.every((line) => visibleWidth(line) <= width),
+      rendered.every((line) => visibleWidth(line) <= width),
       String(width),
     );
   }
@@ -2091,29 +1993,11 @@ test('keeps the notice slot sentinel-only when clean', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // Clean: no ⚠ glyph — the dim ladybug sentinel owns the status right
-  // end while the calendar rides the engine on line 1.
+  // Clean: no ⚠ glyph and no ladybug — the frame speaks only its machine
+  // readings; no reserved row exists when there is nothing to say.
   assert.equal(lines.join('\n').includes('⚠'), false);
-  assert.equal(lines.length, 5, 'engine row stays when clean');
+  assert.equal(lines.join('\n').includes('󰠭'), false, 'no sentinel on the clean frame');
   assert.ok((lines[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
-  assert.ok(
-    (lines.at(-1) ?? '').trimEnd().endsWith('󰠭'),
-    'the sentinel owns the clean right end',
-  );
-  const colors: string[] = [];
-  renderHeaderDeck(state, 120, {
-    fg: (name: string, text: string) => {
-      colors.push(`${name}:${text}`);
-      return text;
-    },
-    bold: (text: string) => text,
-  } as never);
-  assert.equal(colors.includes('dim:healthy'), false, 'text placeholder stays retired');
-  assert.ok(colors.includes('dim:󰠭'), 'the sentinel renders dim');
-  assert.ok(
-    (lines.at(-1) ?? '').includes('48.2%'),
-    'machine readings stay on the bottom row',
-  );
   // Healthy companion texts never surface as notices.
   assert.equal(lines.join('\n').includes('report available'), false);
 });
@@ -2180,9 +2064,10 @@ test('removing the waiver restores exactly its notice', () => {
   const restoredLines = renderHeaderDeck(restored, 140, plainTheme as never).map(plain);
   const restoredLine = restoredLines.at(-1) ?? '';
   assert.ok(restoredLine.trimEnd().endsWith(`⚠ ${noticeText}`));
-  assert.ok(
+  assert.equal(
     restoredLine.includes('$5.16'),
-    'machine tail rides beside the restored notice',
+    false,
+    'the machine tail never rides beside the restored notice',
   );
 });
 

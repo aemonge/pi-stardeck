@@ -73,6 +73,18 @@ pick between.
 - [ ] one recommended-pairing line in the root `README.md` — honest,
       no marketing
 
+### Slice 5 — frame re-order (Human mockup, 2026-11-11)
+
+- [ ] work tile drops `next-step` — line 2 keeps `{change} ⟩ {artifact_name}
+      {artifact-idx} › {task}`
+- [ ] engine row right carries `next-step` verbatim (dim); the session-id
+      sentinel retires whole — `sessionShortId`, `SENTINEL_BUG`,
+      `SENTINEL_ID_MIN_WIDTH`, `shortSessionId`, its wire spread
+- [ ] warnings get a dynamic line of their own: dotted seam + `⚠ notices`
+      between the engine row and the bottom rule, absent when clean
+- [ ] fixtures: engine-row next-step rows, warning-line presence/absence,
+      sentinel retirement
+
 ## Verification
 
 Deterministic: `npm run check:baseline` before first mutation; per

@@ -39,8 +39,6 @@ export interface HeaderDeckState {
   lsp: LspCapability | null;
   mcp: McpCapability | null;
   mode: VimMode;
-  /** Git-style first 8 chars of the Pi session id; worn by the sentinel. */
-  sessionShortId?: string;
 }
 
 const ANSI_ESCAPE = new RegExp(
@@ -471,11 +469,6 @@ function identityCluster(
 const BLOCKED_NOTICE = '\u26d4 blocked';
 const APPROVAL_NOTICE = 'approval required';
 
-/** Narrowest frame that hosts the id-bearing sentinel cluster (12 cells
- * plus breathing room for the machine order). */
-const SENTINEL_ID_MIN_WIDTH = 24;
-const SENTINEL_BUG = '\u{F082D}';
-
 function companionWarningTexts(state: HeaderDeckState): string[] {
   // Same sources as the capability-health chips: the known companions'
   // native-status texts, ordered after blocked/approval.
@@ -519,24 +512,12 @@ export function collectDeckNotices(state: HeaderDeckState): string[] {
   return waiver ? notices.filter((notice) => notice !== waiver.notice) : notices;
 }
 
-function noticeTile(state: HeaderDeckState, theme: Theme, width: number): string {
+function warningLine(state: HeaderDeckState, theme: Theme): string {
+  // Dynamic line, Human-directed 2026-11-11 (reorder-deck-frame): the
+  // warning exists only when there is something to say — its dotted seam
+  // exists with it. Silence renders nothing, never a reserved slot.
   const notices = collectDeckNotices(state);
-  // Healthy sentinel (Human-directed 2026-10-19, reversing the retirement):
-  // when the notice order is silent the dim ladybug holds the right end — the
-  // deck's signature glyph and a reserved one (safeText strips 󰠭 from
-  // published text), so the status row always speaks: ⚠ with notices,
-  // the quiet ladybug when all is well. Ladybug-session-id amendment
-  // (Human-directed 2026-10-20): a clean frame with a known session id
-  // wears it between two ladybugs — blue bugs, purple id — so the deck
-  // doubles as a track-and-restore handle; the plain dim bug stays when
-  // the id is unknown or the frame is too narrow for the cluster.
-  if (notices.length === 0) {
-    const id = state.sessionShortId;
-    if (id !== undefined && width >= SENTINEL_ID_MIN_WIDTH) {
-      return `${color(theme, 'accent', SENTINEL_BUG)} ${color(theme, 'thinkingHigh', id)} ${color(theme, 'accent', SENTINEL_BUG)}`;
-    }
-    return color(theme, 'dim', SENTINEL_BUG);
-  }
+  if (notices.length === 0) return '';
   // Blocked carries the error severity it wore on the deleted lifecycle
   // tile; every other notice renders at warning.
   const semantic = notices.includes(BLOCKED_NOTICE) ? 'error' : 'warning';
@@ -771,21 +752,22 @@ export function renderHeaderDeck(
         boundedWidth,
       )
     : '';
-  // deck-reshape, swap amendment: the bottom row carries the MACHINE
-  // tail on the left (yielding right-to-left into whatever width the
-  // status leaves) and the status on the right — which always speaks
-  // now: ⚠ notices or the dim ladybug sentinel when clean. The engine
-  // group moved to line 1 right.
-  const statusRight = noticeTile(state, theme, boundedWidth);
+  // deck-reshape, swap amendment (reorder-deck-frame 2026-11-11): the
+  // bottom row carries the MACHINE tail on the left and the room aim's
+  // action hint on the right — read-as-is from `openspec/.focus`, dim
+  // commentary. The engine group moved to line 1 right.
+  const nextStep = safeText(state.header?.title?.work?.nextStep ?? '');
+  const aimRight = nextStep === '' ? '' : color(theme, 'dim', nextStep);
   const machineRow = machineCornerNotices(
     state,
     theme,
-    statusRight === '' ? boundedWidth : boundedWidth - visibleWidth(statusRight) - 1,
+    aimRight === '' ? boundedWidth : boundedWidth - visibleWidth(aimRight) - 1,
   );
   const engineRow =
-    statusRight === '' && machineRow === ''
+    aimRight === '' && machineRow === ''
       ? ''
-      : alignedSingleRow(machineRow, statusRight, boundedWidth);
+      : alignedSingleRow(machineRow, aimRight, boundedWidth);
+  const warning = warningLine(state, theme);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
   // amendment): the deck opens with a full ─ rule directly beneath the
@@ -813,6 +795,7 @@ export function renderHeaderDeck(
     ...(bandSpeaks ? [activityRow] : []),
     ...spanRows,
     ...(engineRow.trim() !== '' ? [dottedRule, engineRow] : []),
+    ...(warning.trim() !== '' ? [dottedRule, warning] : []),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }

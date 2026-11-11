@@ -129,81 +129,85 @@ test('editor-deck publishes a renderer without registering an above-editor widge
   });
   handlers.get('session_start')?.[0]?.({}, ctx);
 
-  const renderer = renderers.at(-1);
-  assert.equal(typeof renderer, 'function');
-  const theme = {
-    fg: (_color: string, text: string) => text,
-    bold: (text: string) => text,
-  };
-  const lines = renderer?.(120, theme) ?? [];
-  // Four-line deck lockstep: line 2's clock anchor always leads with its
-  // icon — the old "anchor row collapses without a selection" contract is
-  // superseded by the accepted mockups (clock ⟩ Subject is line 2).
-  assert.equal(
-    lines.some((line) => line.includes('󰠭')),
-    true,
-  );
-  assert.equal(
-    // Gray-out amendment: dim numeric zeros replace every placeholder dash.
-    lines.some((line) => line.includes('—')),
-    false,
-  );
-  assert.ok(lines.length > 0);
-  assert.equal(typeof footerFactories[0], 'function');
+  try {
+    const renderer = renderers.at(-1);
+    assert.equal(typeof renderer, 'function');
+    const theme = {
+      fg: (_color: string, text: string) => text,
+      bold: (text: string) => text,
+    };
+    const lines = renderer?.(120, theme) ?? [];
+    // The ladybug sentinel retired with the session id (reorder-deck-frame
+    // 2026-11-11): no reserved glyph anywhere — the frame only speaks when
+    // it has something to say.
+    assert.equal(
+      lines.some((line) => line.includes('󰠭')),
+      false,
+    );
+    assert.equal(
+      // Gray-out amendment: dim numeric zeros replace every placeholder dash.
+      lines.some((line) => line.includes('—')),
+      false,
+    );
+    assert.ok(lines.length > 0);
+    assert.equal(typeof footerFactories[0], 'function');
 
-  for (const handler of sharedHandlers.get('pi-mcp-adapter/status/v1') ?? []) {
-    handler({
-      version: 1,
-      servers: [
-        { status: 'connected', disabled: false, toolCount: 3 },
-        { status: 'failed', disabled: false, toolCount: 0 },
-      ],
-    });
+    for (const handler of sharedHandlers.get('pi-mcp-adapter/status/v1') ?? []) {
+      handler({
+        version: 1,
+        servers: [
+          { status: 'connected', disabled: false, toolCount: 3 },
+          { status: 'failed', disabled: false, toolCount: 0 },
+        ],
+      });
+    }
+    const degradedCapabilities = emitted
+      .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
+      .at(-1)?.message as
+      { source?: string; conditions?: Array<Record<string, unknown>> } | undefined;
+    assert.equal(degradedCapabilities?.source, 'galactica-context-header');
+    assert.deepEqual(degradedCapabilities?.conditions, [
+      {
+        id: 'mcp',
+        severity: 'warning',
+        summary: '1 MCP servers need attention',
+      },
+    ]);
+
+    for (const handler of sharedHandlers.get('pi-mcp-adapter/status/v1') ?? []) {
+      handler({
+        version: 1,
+        servers: [{ status: 'connected', disabled: false, toolCount: 3 }],
+      });
+    }
+    const recoveredCapabilities = emitted
+      .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
+      .at(-1)?.message as { conditions?: unknown[] } | undefined;
+    assert.deepEqual(recoveredCapabilities?.conditions, []);
+
+    const emptyFooter = (
+      footerFactories[0] as (
+        tui: unknown,
+        theme: unknown,
+        footerData: unknown,
+      ) => { render(width: number): string[] }
+    )({}, {}, {});
+    assert.deepEqual(emptyFooter.render(120), []);
+    const unavailableNativeStatuses = emitted
+      .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
+      .at(-1)?.message as { conditions?: unknown[] } | undefined;
+    assert.deepEqual(unavailableNativeStatuses?.conditions, [
+      {
+        id: 'native-status-api',
+        severity: 'warning',
+        summary: 'Pi native extension statuses are unavailable',
+      },
+    ]);
+  } finally {
+    // A skipped shutdown leaks the activity ticker and hangs the runner —
+    // the frame's cleanup may never be conditional on assertions.
+    handlers.get('session_shutdown')?.[0]?.({});
   }
-  const degradedCapabilities = emitted
-    .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
-    .at(-1)?.message as
-    { source?: string; conditions?: Array<Record<string, unknown>> } | undefined;
-  assert.equal(degradedCapabilities?.source, 'galactica-context-header');
-  assert.deepEqual(degradedCapabilities?.conditions, [
-    {
-      id: 'mcp',
-      severity: 'warning',
-      summary: '1 MCP servers need attention',
-    },
-  ]);
-
-  for (const handler of sharedHandlers.get('pi-mcp-adapter/status/v1') ?? []) {
-    handler({
-      version: 1,
-      servers: [{ status: 'connected', disabled: false, toolCount: 3 }],
-    });
-  }
-  const recoveredCapabilities = emitted
-    .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
-    .at(-1)?.message as { conditions?: unknown[] } | undefined;
-  assert.deepEqual(recoveredCapabilities?.conditions, []);
-
-  const emptyFooter = (
-    footerFactories[0] as (
-      tui: unknown,
-      theme: unknown,
-      footerData: unknown,
-    ) => { render(width: number): string[] }
-  )({}, {}, {});
-  assert.deepEqual(emptyFooter.render(120), []);
-  const unavailableNativeStatuses = emitted
-    .filter(({ channel }) => channel === 'pi-stardeck:status-source/v1')
-    .at(-1)?.message as { conditions?: unknown[] } | undefined;
-  assert.deepEqual(unavailableNativeStatuses?.conditions, [
-    {
-      id: 'native-status-api',
-      severity: 'warning',
-      summary: 'Pi native extension statuses are unavailable',
-    },
-  ]);
-
-  handlers.get('session_shutdown')?.[0]?.({});
   assert.equal(renderers.at(-1), null);
   assert.equal(footerFactories.at(-1), undefined);
   await new Promise((resolve) => setImmediate(resolve));
