@@ -68,8 +68,15 @@
       total: ~1 min · check: 149/149 ·
       paths: packages/pi-stardeck/test/deck.test.ts,
       packages/pi-stardeck/test/surface.test.ts
-- [ ] Commit `fix(deck): use the nerd alert glyph on the notice line`
-      hash:
+- [x] `scripts/warning-preview.mjs`: a committed preview harness that
+      provokes the warning — degraded companion verbatim, blocked at
+      error, clean silence — no extension, no temp litter
+      (`node --import tsx/esm scripts/warning-preview.mjs`)
+      started_at: 2026-11-11T18:50Z · ended_at: 2026-11-11T18:52Z ·
+      total: ~2 min · check: eslint + prettier clean ·
+      paths: scripts/warning-preview.mjs
+- [x] Commit `fix(deck): use the nerd alert glyph on the notice line`
+      hash: cc2b8570422b386b885ab7abcb997179825773dd
 - [ ] Post-commit human validation — see Verification
 
 - [ ] Human validation — response: · outcome: · surfaced:
