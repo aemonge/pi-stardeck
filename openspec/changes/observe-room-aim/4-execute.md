@@ -68,8 +68,8 @@
       baseline/source.sha256
       learned: the surface.test hang was a skipped `session_shutdown` —
       cleanup now rides a `finally`, never assertions
-- [ ] feat(deck): the aim's action row and the warning line
-      hash:
+- [x] feat(deck): the aim's action row and the warning line
+      hash: b2d65d6
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
@@ -568,3 +568,5 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T14:37:27Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T14:38:32Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T14:38:39Z
