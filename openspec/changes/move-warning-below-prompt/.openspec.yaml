@@ -1,0 +1,14 @@
+schema: spec
+created: 2026-11-11
+skip_specs: true
+goal: The deck's ⚠ warning line moves from its deck slot above the prompt to a standalone line below the editor prompt
+
+x-status: proposed
+x-created_by: assistant
+
+x-granted: brainstorm,investigate,plan
+x-granted_brainstorm: 2026-11-11T16:34:45Z
+
+x-granted_investigate: 2026-11-11T16:37:18Z
+
+x-granted_plan: 2026-11-11T16:47:42Z

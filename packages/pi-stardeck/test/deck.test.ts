@@ -5,6 +5,7 @@ import { visibleWidth } from '@earendil-works/pi-tui';
 import {
   formatDeckElapsed,
   renderHeaderDeck,
+  renderWarningLine,
   type HeaderDeckState,
 } from '../src/deck.ts';
 import { parseDeckTitleState } from '../src/title-state.ts';
@@ -1609,7 +1610,7 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
   );
 });
 
-test('line 4 right is notice-only; machine readings never leave line 1', () => {
+test('the warning left the deck; renderWarningLine speaks below the prompt', () => {
   const state = fixture();
   state.piStatus = {
     errors: 2,
@@ -1618,25 +1619,27 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
     nativeStatuses: [{ key: 'graphify', text: 'graphify stale · update recommended' }],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const warningRow = lines.at(-1) ?? '';
-  // reorder-deck-frame: the warning owns its own dynamic line beneath the
-  // engine rows; the machine readings stay on line 1 (deck-reshape swap)
-  // and never share a row with a warning.
-  assert.ok(
-    warningRow.startsWith('⚠ graphify stale · update recommended') &&
-      warningRow.trimEnd().endsWith('⚠ graphify stale · update recommended'),
-    'the notice owns its line whole',
+  // move-warning-below-prompt (2026-11-11): the deck closes on the
+  // machine tail with its dotted seam — no notice row, no trailing seam.
+  assert.equal(
+    lines.join('\n').includes('⚠'),
+    false,
+    'no warning rides the deck anymore',
   );
   assert.equal(
     (lines.at(-2) ?? '').trim(),
     '┈'.repeat(160),
-    'the dotted seam travels with the warning',
+    'the dotted seam closes the engine row',
   );
-  assert.equal(warningRow.includes('󰍛'), false, 'no machine tail beside the warning');
   assert.match(
     lines[0] ?? '',
     /\/pi-status \u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
     'the engine rides line 1 beside the alert',
+  );
+  assert.deepEqual(
+    renderWarningLine(state, 160, plainTheme as never).map(plain),
+    ['⚠ graphify stale · update recommended'],
+    'the notice owns its line whole, below the prompt',
   );
 
   state.piStatus = { errors: 2, warnings: 1, nativeStatusCount: 0 };
@@ -1648,6 +1651,11 @@ test('line 4 right is notice-only; machine readings never leave line 1', () => {
   assert.ok((clean[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
   // Severity counts (line 1) and notices stay distinct surfaces.
   assert.match(plain(clean[0] ?? ''), /⟩ \/pi-status/u);
+  assert.deepEqual(
+    renderWarningLine(state, 160, plainTheme as never),
+    [],
+    'silence below the prompt when there is nothing to say',
+  );
 });
 
 test('machine corner yields right-to-left in frozen order; identity never drops', () => {
@@ -1850,14 +1858,22 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
     nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
   };
   const warnedLines = renderHeaderDeck(warned, 120, plainTheme as never).map(plain);
-  // The warning owns its own dynamic line beneath the engine row — the
-  // dotted seam travels with it.
-  const warnedLast = warnedLines.at(-1) ?? '';
-  assert.ok(warnedLast.startsWith('⚠ appa unreachable'), 'the warning owns its line');
+  // move-warning-below-prompt (2026-11-11): the warning left the deck —
+  // the frame closes on the machine tail alone; the notice speaks below
+  // the prompt via renderWarningLine.
   assert.equal(
-    warnedLines.at(-2) ?? '',
-    '┈'.repeat(120),
-    'the dotted seam exists only when a warning speaks',
+    warnedLines.join('\n').includes('⚠'),
+    false,
+    'no warning rides the deck',
+  );
+  assert.ok(
+    (warnedLines.at(-1) ?? '').includes('(unfocus openspec)'),
+    'the frame still closes on the engine row',
+  );
+  assert.deepEqual(
+    renderWarningLine(warned, 120, plainTheme as never).map(plain),
+    ['⚠ appa unreachable'],
+    'the warning owns its line below the prompt',
   );
   assert.equal(
     warnedLines.join('\n').includes('󰠭'),
@@ -1903,14 +1919,16 @@ test('aggregates mixed notices ordered companion, diagnostics', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const line4 = lines.at(-1) ?? '';
-  // The accepted mixed render, verbatim (spec scenario: appa unreachable,
-  // two diagnostics).
-  assert.ok(line4.trimEnd().endsWith('⚠ appa unreachable · 2 diagnostics'));
-  assert.ok(
-    line4.trimEnd().includes('⚠ appa unreachable'),
-    'notices own the right end',
+  assert.equal(
+    lines.join('\n').includes('⚠'),
+    false,
+    'the deck carries no notice row anymore',
   );
+  // The accepted mixed render, verbatim (spec scenario: appa unreachable,
+  // two diagnostics) — spoken below the prompt.
+  assert.deepEqual(renderWarningLine(state, 120, plainTheme as never).map(plain), [
+    '⚠ appa unreachable · 2 diagnostics',
+  ]);
 });
 
 test('restores blocked and approval signals as companion-group notices', () => {
@@ -1922,9 +1940,11 @@ test('restores blocked and approval signals as companion-group notices', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const line4 = lines.at(-1) ?? '';
+  assert.equal(lines.join('\n').includes('⚠'), false, 'no notice row on the deck');
   // Top of the companion group: blocked before approval, publisher wording.
-  assert.ok(line4.trimEnd().endsWith('⚠ ⛔ blocked · approval required'));
+  assert.deepEqual(renderWarningLine(state, 120, plainTheme as never).map(plain), [
+    '⚠ ⛔ blocked · approval required',
+  ]);
 
   const colors: string[] = [];
   const theme = {
@@ -1934,7 +1954,7 @@ test('restores blocked and approval signals as companion-group notices', () => {
     },
     bold: (text: string) => text,
   };
-  renderHeaderDeck(state, 120, theme as never);
+  renderWarningLine(state, 120, theme as never);
   assert.ok(colors.includes('error:⚠ ⛔ blocked · approval required'));
 
   state.header = {
@@ -1942,15 +1962,15 @@ test('restores blocked and approval signals as companion-group notices', () => {
     blocked: false,
   };
   colors.length = 0;
-  renderHeaderDeck(state, 120, theme as never);
-  const approvalOnly = renderHeaderDeck(state, 120, plainTheme as never)
+  renderWarningLine(state, 120, theme as never);
+  const approvalOnly = renderWarningLine(state, 120, plainTheme as never)
     .map(plain)
     .at(-1);
   assert.ok(approvalOnly?.trimEnd().endsWith('⚠ approval required'));
   assert.ok(colors.includes('warning:⚠ approval required'));
 });
 
-test('notices ride the narrow slot beside the engine group', () => {
+test('the warning line rides every width below the prompt', () => {
   const state = titleFixture({ title: IDLE_TITLE });
   state.piStatus = {
     errors: 0,
@@ -1959,24 +1979,25 @@ test('notices ride the narrow slot beside the engine group', () => {
     nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
   };
 
-  // The notice owns its own dynamic line at every width — wide, mid,
-  // and narrow; it never shares a row with the machine tail again.
+  // The notice owns its own line at every width — wide, mid, and narrow;
+  // the deck never shares a row with it again.
   for (const width of [160, 79, 60, 39, 20]) {
-    const rendered = renderHeaderDeck(state, width, plainTheme as never).map(plain);
+    const rendered = renderWarningLine(state, width, plainTheme as never).map(plain);
     assert.ok(
       (rendered.at(-1) ?? '').trimEnd().endsWith('⚠ appa unreachable'),
       `the notice owns its line at ${width}`,
-    );
-    assert.equal(
-      rendered.at(-2)?.includes('⚠ appa unreachable'),
-      false,
-      `no notice beside the machine tail at ${width}`,
     );
     assert.ok(
       rendered.every((line) => visibleWidth(line) <= width),
       String(width),
     );
   }
+  const deckLines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  assert.equal(
+    deckLines.join('\n').includes('⚠'),
+    false,
+    'no notice rides the deck at any width',
+  );
 });
 
 test('keeps the notice slot sentinel-only when clean', () => {
@@ -2044,10 +2065,11 @@ test('waiver suppresses exactly its matching notice text', () => {
   );
 
   const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
-  const line4 = lines.at(-1) ?? '';
+  assert.equal(lines.join('\n').includes('⚠'), false, 'no notice row on the deck');
   // Exactly the waived text leaves the slot; the other notices remain.
-  assert.ok(line4.trimEnd().endsWith('⚠ appa unreachable'));
-  assert.equal(line4.includes(noticeText), false);
+  assert.deepEqual(renderWarningLine(state, 140, plainTheme as never).map(plain), [
+    '⚠ appa unreachable',
+  ]);
 });
 
 test('removing the waiver restores exactly its notice', () => {
@@ -2060,20 +2082,16 @@ test('removing the waiver restores exactly its notice', () => {
     nativeStatuses: [{ key: 'graphify', text: noticeText }],
   });
 
-  const waivedLine = renderHeaderDeck(waived, 140, plainTheme as never)
-    .map(plain)
-    .find((line) => line.includes('GPT-5.6 Sol'));
-  assert.equal(waivedLine?.includes('⚠'), false, 'waived sole notice empties the slot');
   // Suppression-only semantics: a null waiver restores the notice while
-  // the machine group loses the right end again.
-  const restoredLines = renderHeaderDeck(restored, 140, plainTheme as never).map(plain);
-  const restoredLine = restoredLines.at(-1) ?? '';
-  assert.ok(restoredLine.trimEnd().endsWith(`⚠ ${noticeText}`));
-  assert.equal(
-    restoredLine.includes('$5.16'),
-    false,
-    'the machine tail never rides beside the restored notice',
+  // the waived sole notice empties the slot below the prompt.
+  assert.deepEqual(
+    renderWarningLine(waived, 140, plainTheme as never),
+    [],
+    'waived sole notice empties the slot',
   );
+  assert.deepEqual(renderWarningLine(restored, 140, plainTheme as never).map(plain), [
+    `⚠ ${noticeText}`,
+  ]);
 });
 
 test('a waiver matching no live notice text is inert', () => {
@@ -2083,8 +2101,10 @@ test('a waiver matching no live notice text is inert', () => {
   );
 
   const lines = renderHeaderDeck(state, 140, plainTheme as never).map(plain);
-  const line4 = lines.at(-1) ?? '';
+  assert.equal(lines.join('\n').includes('⚠'), false, 'no notice row on the deck');
   // Exact-text matching: a waiver for a notice that is not live suppresses
   // nothing — the live companion warning still renders.
-  assert.ok(line4.trimEnd().endsWith('⚠ graphify · update recommended'));
+  assert.deepEqual(renderWarningLine(state, 140, plainTheme as never).map(plain), [
+    '⚠ graphify · update recommended',
+  ]);
 });

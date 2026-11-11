@@ -512,16 +512,31 @@ export function collectDeckNotices(state: HeaderDeckState): string[] {
   return waiver ? notices.filter((notice) => notice !== waiver.notice) : notices;
 }
 
-function warningLine(state: HeaderDeckState, theme: Theme): string {
+function warningText(state: HeaderDeckState, theme: Theme): string {
   // Dynamic line, Human-directed 2026-11-11 (reorder-deck-frame): the
-  // warning exists only when there is something to say — its dotted seam
-  // exists with it. Silence renders nothing, never a reserved slot.
+  // warning exists only when there is something to say. Silence renders
+  // nothing, never a reserved slot.
   const notices = collectDeckNotices(state);
   if (notices.length === 0) return '';
   // Blocked carries the error severity it wore on the deleted lifecycle
   // tile; every other notice renders at warning.
   const semantic = notices.includes(BLOCKED_NOTICE) ? 'error' : 'warning';
   return color(theme, semantic, `\u26a0 ${notices.join(' · ')}`);
+}
+
+export function renderWarningLine(
+  state: HeaderDeckState,
+  width: number,
+  theme: Theme,
+): string[] {
+  // Human-directed 2026-11-11 (move-warning-below-prompt): the warning
+  // speaks below the editor prompt — standalone, no seam — and stays
+  // silent when there is nothing to say.
+  const boundedWidth = Math.max(0, Math.floor(width));
+  if (boundedWidth === 0) return [];
+  const warning = warningText(state, theme);
+  if (warning === '') return [];
+  return [fitWithoutDanglingSeparator(warning, boundedWidth)];
 }
 
 export function machineCornerSegments(
@@ -768,7 +783,6 @@ export function renderHeaderDeck(
     boundedWidth - visibleWidth(aimRight) - 1,
   );
   const engineRow = alignedSingleRow(machineRow, aimRight, boundedWidth);
-  const warning = warningLine(state, theme);
 
   // Band adjacency (Human-directed, accepted mockups; third 2.4
   // amendment): the deck opens with a full ─ rule directly beneath the
@@ -796,7 +810,6 @@ export function renderHeaderDeck(
     ...(bandSpeaks ? [activityRow] : []),
     ...spanRows,
     ...(engineRow.trim() !== '' ? [dottedRule, engineRow] : []),
-    ...(warning.trim() !== '' ? [dottedRule, warning] : []),
   ];
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }

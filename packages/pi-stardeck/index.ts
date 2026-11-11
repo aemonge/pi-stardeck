@@ -45,9 +45,14 @@ import {
   type ProcessTreeSample,
   type ResourceTelemetry,
 } from './src/process-resources.ts';
-import { renderHeaderDeck } from './src/deck.ts';
+import {
+  renderHeaderDeck,
+  renderWarningLine,
+  type HeaderDeckState,
+} from './src/deck.ts';
 
 const WIDGET_KEY = 'galactica.work-identity';
+const WIDGET_KEY_WARNING = 'galactica.deck-warning';
 const PI_STATUS_SOURCE_CHANNEL = 'pi-stardeck:status-source/v1';
 const EMPTY_GIT: GitStatusSummary = {
   staged: 0,
@@ -400,45 +405,53 @@ export default function galacticaContextHeader(
     activeCwd = ctx.cwd;
     void refreshGit();
 
-    const renderDeck = (width: number, theme: Theme): string[] => {
-      if (width <= 0) return [];
+    // One width-free state builder feeds both surfaces of the cockpit
+    // (move-warning-below-prompt): the deck above the editor and the
+    // warning line below it read the same live truth.
+    const deckState = (): HeaderDeckState => {
       const usage = ctx.getContextUsage();
       const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow;
       const hasContext =
         typeof usage?.percent === 'number' || typeof usage?.tokens === 'number';
-      return renderHeaderDeck(
-        {
-          elapsedMs: currentActivityAge(),
-          header: currentHeader(),
-          cwd: formatFooterPath(activeCwd || ctx.cwd, process.env.HOME),
-          devbox: process.env.DEVBOX_PROJECT_ROOT !== undefined,
-          branch: formatFooterBranch(branch, 80),
-          gitAvailable,
-          git: gitStatus,
-          model: ctx.model?.name || ctx.model?.id || 'no model',
-          thinking: pi.getThinkingLevel(),
-          ...(hasContext
-            ? {
-                contextPercent: normalizeContextPercent(
-                  usage?.percent,
-                  usage?.tokens,
-                  contextWindow,
-                ),
-              }
-            : {}),
-          ...(typeof usage?.tokens === 'number' ? { contextTokens: usage.tokens } : {}),
-          ...(typeof contextWindow === 'number' ? { contextWindow } : {}),
-          compactionCount: countCompactions(ctx.sessionManager.getBranch()),
-          ...(latestResourceTelemetry ? { resources: latestResourceTelemetry } : {}),
-          ...(footerTelemetry ? { footerTelemetry } : {}),
-          ...(piStatus ? { piStatus } : {}),
-          lsp: lspCapability,
-          mcp: mcpCapability,
-          mode: vimMode,
-        },
-        width,
-        theme,
-      );
+      return {
+        elapsedMs: currentActivityAge(),
+        header: currentHeader(),
+        cwd: formatFooterPath(activeCwd || ctx.cwd, process.env.HOME),
+        devbox: process.env.DEVBOX_PROJECT_ROOT !== undefined,
+        branch: formatFooterBranch(branch, 80),
+        gitAvailable,
+        git: gitStatus,
+        model: ctx.model?.name || ctx.model?.id || 'no model',
+        thinking: pi.getThinkingLevel(),
+        ...(hasContext
+          ? {
+              contextPercent: normalizeContextPercent(
+                usage?.percent,
+                usage?.tokens,
+                contextWindow,
+              ),
+            }
+          : {}),
+        ...(typeof usage?.tokens === 'number' ? { contextTokens: usage.tokens } : {}),
+        ...(typeof contextWindow === 'number' ? { contextWindow } : {}),
+        compactionCount: countCompactions(ctx.sessionManager.getBranch()),
+        ...(latestResourceTelemetry ? { resources: latestResourceTelemetry } : {}),
+        ...(footerTelemetry ? { footerTelemetry } : {}),
+        ...(piStatus ? { piStatus } : {}),
+        lsp: lspCapability,
+        mcp: mcpCapability,
+        mode: vimMode,
+      };
+    };
+
+    const renderDeck = (width: number, theme: Theme): string[] => {
+      if (width <= 0) return [];
+      return renderHeaderDeck(deckState(), width, theme);
+    };
+
+    const renderWarning = (width: number, theme: Theme): string[] => {
+      if (width <= 0) return [];
+      return renderWarningLine(deckState(), width, theme);
     };
 
     if (editorDeckSurface) {
@@ -451,23 +464,32 @@ export default function galacticaContextHeader(
       return;
     }
 
-    ctx.ui.setWidget(
-      WIDGET_KEY,
-      (tui, theme) => {
-        requestRender = () => tui.requestRender();
+    const widgetComponent =
+      (render: (width: number, theme: Theme) => string[]) =>
+      (tui: unknown, theme: Theme) => {
+        requestRender = () => (tui as { requestRender(): void }).requestRender();
         return {
           render(width: number): string[] {
-            return renderDeck(width, theme);
+            return render(width, theme);
           },
           invalidate() {},
         };
-      },
-      { placement: 'aboveEditor' },
-    );
+      };
+
+    // The deck rides above the editor (galactica.work-identity); the
+    // aggregated warning speaks below the prompt
+    // (galactica.deck-warning, move-warning-below-prompt 2026-11-11).
+    ctx.ui.setWidget(WIDGET_KEY, widgetComponent(renderDeck), {
+      placement: 'aboveEditor',
+    });
+    ctx.ui.setWidget(WIDGET_KEY_WARNING, widgetComponent(renderWarning), {
+      placement: 'belowEditor',
+    });
 
     clearWidget = () => {
       requestRender = undefined;
       ctx.ui.setWidget(WIDGET_KEY, undefined);
+      ctx.ui.setWidget(WIDGET_KEY_WARNING, undefined);
     };
   });
 

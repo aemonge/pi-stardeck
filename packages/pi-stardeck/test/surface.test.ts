@@ -212,3 +212,147 @@ test('editor-deck publishes a renderer without registering an above-editor widge
   assert.equal(footerFactories.at(-1), undefined);
   await new Promise((resolve) => setImmediate(resolve));
 });
+
+test('deck mode registers the deck above and the warning below the editor', async () => {
+  const handlers = new Map<string, Array<(event: unknown, ctx?: unknown) => void>>();
+  const sharedHandlers = new Map<string, Array<(message: unknown) => void>>();
+  const widgets: Array<{
+    key: string;
+    placement?: string;
+    factory:
+      | ((
+          tui: unknown,
+          theme: unknown,
+        ) => { render(width: number): string[]; invalidate(): void })
+      | undefined;
+  }> = [];
+  const pi = {
+    events: {
+      on(channel: string, handler: (message: unknown) => void) {
+        const current = sharedHandlers.get(channel) ?? [];
+        current.push(handler);
+        sharedHandlers.set(channel, current);
+        return () => {};
+      },
+      emit(channel: string, message: unknown) {
+        for (const handler of sharedHandlers.get(channel) ?? []) handler(message);
+      },
+    },
+    on(name: string, handler: (event: unknown, ctx?: unknown) => void) {
+      const current = handlers.get(name) ?? [];
+      current.push(handler);
+      handlers.set(name, current);
+    },
+    exec: async () => ({ code: 1, stdout: '', stderr: '' }),
+    getThinkingLevel: () => 'high',
+  };
+  const ctx = {
+    mode: 'tui',
+    hasUI: true,
+    cwd: '/tmp/project',
+    model: { name: 'Test Model', contextWindow: 100_000 },
+    getContextUsage: () => ({ percent: 25, tokens: 25_000 }),
+    sessionManager: {
+      getBranch: () => [],
+      getSessionId: () => '01a157fd-382e-72a8-ba81-26a10cf103ef',
+    },
+    ui: {
+      setWorkingVisible() {},
+      setFooter() {},
+      setWidget(
+        key: string,
+        factory:
+          | ((
+              tui: unknown,
+              theme: unknown,
+            ) => { render(width: number): string[]; invalidate(): void })
+          | undefined,
+        options?: { placement?: string },
+      ) {
+        widgets.push({ key, placement: options?.placement, factory });
+      },
+    },
+  };
+
+  galacticaContextHeader(pi as never);
+  handlers.get('session_start')?.[0]?.({}, ctx);
+
+  try {
+    // move-warning-below-prompt (2026-11-11): the deck rides above the
+    // editor; the aggregated warning speaks below the prompt.
+    assert.deepEqual(
+      widgets.map(({ key, placement }) => ({ key, placement })),
+      [
+        { key: 'galactica.work-identity', placement: 'aboveEditor' },
+        { key: 'galactica.deck-warning', placement: 'belowEditor' },
+      ],
+    );
+
+    const theme = {
+      fg: (_color: string, text: string) => text,
+      bold: (text: string) => text,
+    };
+    const tui = { requestRender() {} };
+    const deckComponent = widgets[0]?.factory?.(tui, theme);
+    const warningComponent = widgets[1]?.factory?.(tui, theme);
+    assert.equal(typeof deckComponent?.render, 'function');
+    assert.equal(typeof warningComponent?.render, 'function');
+
+    // Clean room: the deck speaks, the warning stays silent.
+    const cleanDeck = deckComponent?.render(120) ?? [];
+    assert.ok(cleanDeck.length > 0);
+    assert.deepEqual(warningComponent?.render(120), []);
+
+    // A published status snapshot moves the ⚠ below the prompt and
+    // keeps the deck clean.
+    for (const handler of sharedHandlers.get('pi-stardeck:pi-status/v1') ?? []) {
+      handler({
+        protocol: 1,
+        type: 'snapshot',
+        errors: 0,
+        warnings: 0,
+        nativeStatusCount: 1,
+        nativeStatuses: [{ key: 'appa', text: 'appa unreachable' }],
+      });
+    }
+    assert.deepEqual(
+      (warningComponent?.render(120) ?? []).map((line) =>
+        line.replace(/\u001b\[[0-9;]*m/g, ''),
+      ),
+      ['⚠ appa unreachable'],
+    );
+    assert.equal(
+      (deckComponent?.render(120) ?? [])
+        .map((line) => line.replace(/\u001b\[[0-9;]*m/g, ''))
+        .join('\n')
+        .includes('⚠'),
+      false,
+      'the deck never carries the warning',
+    );
+  } finally {
+    // A skipped shutdown leaks the activity ticker and hangs the runner —
+    // the frame's cleanup may never be conditional on assertions.
+    handlers.get('session_shutdown')?.[0]?.({});
+  }
+
+  // Session re-entry clears both widgets before re-registering them.
+  handlers.get('session_start')?.[0]?.({}, ctx);
+  assert.deepEqual(
+    widgets.slice(-4, -2).map(({ key, factory }) => ({ key, factory })),
+    [
+      { key: 'galactica.work-identity', factory: undefined },
+      { key: 'galactica.deck-warning', factory: undefined },
+    ],
+  );
+  assert.deepEqual(
+    widgets.slice(-2).map(({ key, placement }) => ({ key, placement })),
+    [
+      { key: 'galactica.work-identity', placement: 'aboveEditor' },
+      { key: 'galactica.deck-warning', placement: 'belowEditor' },
+    ],
+  );
+  // The re-entry above armed fresh timers — close the session again so
+  // the runner never waits on a leaked interval.
+  handlers.get('session_shutdown')?.[0]?.({});
+  await new Promise((resolve) => setImmediate(resolve));
+});
