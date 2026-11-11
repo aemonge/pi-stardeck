@@ -35,7 +35,8 @@
       paths: packages/pi-stardeck/test/surface.test.ts
 - [x] Commit `feat(deck): move warning notices below the editor prompt`
       hash: 225a01a110950bb160cac5bb414d924cbaa7c2cf
-- [ ] Post-commit human validation — see Verification
+- [x] Post-commit human validation — see Verification (VALID, live
+      cockpit, 2026-11-11)
 
 ## Slice 2 — the work tile's next step wears green (amendment)
 
@@ -51,7 +52,8 @@
       paths: packages/pi-stardeck/test/title-state.test.ts
 - [x] Commit `feat(deck): paint the work tile's next step green`
       hash: 316a6ef70e279e8a5c8cd585d052515ceb55bbac
-- [ ] Post-commit human validation — see Verification
+- [x] Post-commit human validation — see Verification (VALID, live
+      cockpit, 2026-11-11)
 
 ## Slice 3 — the notice glyph survives the Human's terminal (amendment)
 
@@ -77,7 +79,8 @@
       paths: scripts/warning-preview.mjs
 - [x] Commit `fix(deck): use the nerd alert glyph on the notice line`
       hash: cc2b8570422b386b885ab7abcb997179825773dd
-- [ ] Post-commit human validation — see Verification
+- [x] Post-commit human validation — see Verification (VALID, live
+      cockpit, 2026-11-11 — the bell paints)
 
 ## Slice 4 — the notice rings the bell (amendment)
 
@@ -91,9 +94,13 @@
       packages/pi-stardeck/test/surface.test.ts
 - [x] Commit `fix(deck): ring the bell on the notice line`
       hash: 9f585793f80a92b97508b280c9400577ea7f0a7a
-- [ ] Post-commit human validation — see Verification
+- [x] Post-commit human validation — see Verification (VALID, live
+      cockpit, 2026-11-11)
 
-- [ ] Human validation — response: · outcome: · surfaced:
+- [x] Human validation — response: VALID · outcome: pass · surfaced:
+      none — the glyph saga (U+26A0 blank → Nerd alert → bell) and the
+      green next-step tail landed in-change as slices 2–4; nothing
+      routes to post-delivery
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T17:01:29Z
 
