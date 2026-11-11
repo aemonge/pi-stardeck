@@ -77,6 +77,19 @@ paints the trailing next-step `success` instead of `dim`
 - [ ] Post-commit human validation (see Verification)
       started_at: · ended_at: · total: · check: · paths:
 
+### Slice 3 — the notice glyph survives the Human's terminal (amendment)
+
+Surfaced during live validation, Human-directed 2026-11-11: U+26A0 paints
+blank in the Human's terminal — the notice line adopts the repo's Nerd
+alert (U+F727) like every deck icon.
+- [ ] `packages/pi-stardeck/src/deck.ts` + the two test files: the notice
+      glyph swaps to `\u{F727}`
+      started_at: · ended_at: · total: · check: · paths:
+- [ ] Commit `fix(deck): use the nerd alert glyph on the notice line`
+      started_at: · ended_at: · total: · check: · paths:
+- [ ] Post-commit human validation (see Verification)
+      started_at: · ended_at: · total: · check: · paths:
+
 ## Verification
 
 Deterministic, nearest first: `npm run test:stardeck` ·

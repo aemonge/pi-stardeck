@@ -521,7 +521,11 @@ function warningText(state: HeaderDeckState, theme: Theme): string {
   // Blocked carries the error severity it wore on the deleted lifecycle
   // tile; every other notice renders at warning.
   const semantic = notices.includes(BLOCKED_NOTICE) ? 'error' : 'warning';
-  return color(theme, semantic, `\u26a0 ${notices.join(' · ')}`);
+  // The notice glyph is the repo's Nerd alert (U+F727, the git-conflict
+  // icon's sibling) — Human-directed 2026-11-11 after live validation
+  // showed U+26A0 paints blank in the Human's terminal. Severity stays
+  // color-driven; the icon stays constant.
+  return color(theme, semantic, `\u{F727} ${notices.join(' · ')}`);
 }
 
 export function renderWarningLine(

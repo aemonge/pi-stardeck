@@ -33,8 +33,8 @@
       total: ~10 min · check: focused suite (hang fixed by closing the
       re-entry session) ·
       paths: packages/pi-stardeck/test/surface.test.ts
-- [ ] Commit `feat(deck): move warning notices below the editor prompt`
-      hash:
+- [x] Commit `feat(deck): move warning notices below the editor prompt`
+      hash: 225a01a110950bb160cac5bb414d924cbaa7c2cf
 - [ ] Post-commit human validation — see Verification
 
 ## Slice 2 — the work tile's next step wears green (amendment)
@@ -49,7 +49,26 @@
       started_at: 2026-11-11T18:24Z · ended_at: 2026-11-11T18:25Z ·
       total: ~1 min · check: 149/149 ·
       paths: packages/pi-stardeck/test/title-state.test.ts
-- [ ] Commit `feat(deck): paint the work tile's next step green`
+- [x] Commit `feat(deck): paint the work tile's next step green`
+      hash: 316a6ef70e279e8a5c8cd585d052515ceb55bbac
+- [ ] Post-commit human validation — see Verification
+
+## Slice 3 — the notice glyph survives the Human's terminal (amendment)
+
+- [x] `packages/pi-stardeck/src/deck.ts`: the notice glyph swaps
+      `\u26a0` → `\u{F727}` (repo's Nerd alert, git-conflict sibling);
+      the comment records the Human-directed reason
+      started_at: 2026-11-11T18:40Z · ended_at: 2026-11-11T18:42Z ·
+      total: ~2 min · check: 149/149 ·
+      paths: packages/pi-stardeck/src/deck.ts
+- [x] `packages/pi-stardeck/test/deck.test.ts` +
+      `packages/pi-stardeck/test/surface.test.ts`: all 26 glyph
+      expectations follow the swap
+      started_at: 2026-11-11T18:42Z · ended_at: 2026-11-11T18:43Z ·
+      total: ~1 min · check: 149/149 ·
+      paths: packages/pi-stardeck/test/deck.test.ts,
+      packages/pi-stardeck/test/surface.test.ts
+- [ ] Commit `fix(deck): use the nerd alert glyph on the notice line`
       hash:
 - [ ] Post-commit human validation — see Verification
 
@@ -76,3 +95,5 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T17:02:37Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T17:03:24Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T17:03:29Z
