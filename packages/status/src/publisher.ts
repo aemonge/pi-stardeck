@@ -23,7 +23,6 @@ export const GALACTICA_HEADER_CHANNEL = 'galactica-status:header';
 
 const OPEN_SPEC_WIDGET_ID = 'galactica.openspec';
 const OPEN_SPEC_SCOPE_SEPARATOR_WIDGET_ID = 'galactica.openspec-scope-separator';
-const OPEN_SPEC_PROGRESS_WIDGET_ID = 'galactica.openspec-progress';
 const DIAGNOSTICS_WIDGET_ID = 'galactica.diagnostics';
 const ORCHESTRATION_WIDGET_ID = 'galactica.orchestration';
 
@@ -46,17 +45,6 @@ function normalizeChangeTitle(title: string): string {
 
 function compactChangeTitle(title: string, maximum: number): string {
   return shorten(normalizeChangeTitle(title), maximum);
-}
-
-function focusedTaskText(
-  task: { id: string; title: string },
-  compact: boolean,
-): string {
-  const title = normalizeInline(task.title);
-  const step = title.match(/^(?:Step|Task)\s+(\d+(?:\.\d+)*)(?:[.:])?\s+(.+)$/iu);
-  const id = step?.[1] ?? task.id;
-  const body = step?.[2] ?? title;
-  return `${id} ${compact ? shorten(body, 14) : body}`;
 }
 
 function formatDuration(ms: number | undefined): string | undefined {
@@ -94,11 +82,7 @@ export function formatOpenSpecOverview(overview: OpenSpecOverview): string {
   );
 }
 
-export function formatOpenSpec(
-  state: OpenSpecState,
-  focusedTaskId: string | null,
-  compact = false,
-): string {
+export function formatOpenSpec(state: OpenSpecState, compact = false): string {
   // File-truth counts only — absent counts render no progress prefix at
   // all (absence never becomes zero, truthful-rendered-state).
   const progress =
@@ -114,13 +98,6 @@ export function formatOpenSpec(
     : '';
 
   if (state.phase === 'complete') return `${lead}${title}${stale}`;
-
-  const activeTask = focusedTaskId
-    ? (state.allTasks ?? state.pendingTasks).find((task) => task.id === focusedTaskId)
-    : undefined;
-  if (activeTask) {
-    return `${lead}▶ ${focusedTaskText(activeTask, compact)}${stale}`;
-  }
 
   return `${lead}${title}${stale}`;
 }
@@ -203,7 +180,6 @@ export function buildWidgetSnapshots(
   options: {
     compact?: boolean;
     now?: number;
-    focusedTaskId?: string;
     openSpecFeedback?: OpenSpecFeedback;
     openSpecOverview?: OpenSpecOverview;
     openSpecProjectDetected?: boolean;
@@ -212,7 +188,6 @@ export function buildWidgetSnapshots(
   const compact = options.compact ?? false;
   const now = options.now ?? Date.now();
   const widgets: FancyFooterWidget[] = [];
-
   if (options.openSpecOverview || options.openSpecProjectDetected === false) {
     widgets.push({
       id: OPEN_SPEC_SCOPE_SEPARATOR_WIDGET_ID,
@@ -231,29 +206,8 @@ export function buildWidgetSnapshots(
     });
   }
 
-  if (options.openSpecOverview && options.focusedTaskId) {
-    const overview = options.openSpecOverview;
-    const complete =
-      overview.totalPlans > 0 &&
-      overview.completedPlans >= overview.totalPlans &&
-      (overview.totalTasks === 0 || overview.completedTasks >= overview.totalTasks);
-    const color: WidgetColor =
-      overview.totalPlans === 0 ? 'dim' : complete ? 'success' : 'accent';
-    widgets.push({
-      id: OPEN_SPEC_PROGRESS_WIDGET_ID,
-      label: 'OpenSpec progress',
-      description: 'Aggregate completion across OpenSpec Plans and their Tasks',
-      content: { type: 'text', text: formatOpenSpecOverview(overview) },
-      icon: {
-        glyphs: { nerd: '', emoji: '📋', unicode: '▤', ascii: 'P' },
-        color,
-      },
-      style: { textColor: color },
-      layout: { row: 0, position: 0, align: 'right', fill: 'none', minWidth: 8 },
-    });
-  }
-  // Frozen contract: without an OpenSpec focus there is no progress surface —
-  // no aggregate overview, no 'no OpenSpec' narration.
+  // Frozen contract: without a task focus there is no aggregate progress
+  // surface — no overview widget, no 'no OpenSpec' narration.
 
   if (!snapshot.openspec && options.openSpecFeedback) {
     const unavailable = options.openSpecFeedback === 'unavailable';
@@ -303,7 +257,7 @@ export function buildWidgetSnapshots(
       description: 'Focused OpenSpec change, task progress, and pending work',
       content: {
         type: 'text',
-        text: formatOpenSpec(snapshot.openspec, options.focusedTaskId ?? null, compact),
+        text: formatOpenSpec(snapshot.openspec, compact),
       },
       icon: {
         glyphs: {
@@ -477,34 +431,18 @@ export type HeaderStatusEvent = {
   progress: { icon: string; completed: number; total: number; color: WidgetColor }[];
 };
 
-function narrativeTaskTitle(title: string): string {
-  return normalizeInline(title).replace(
-    /^(?:Step|Task)\s+\d+(?:\.\d+)*(?:[.:])?\s+/iu,
-    '',
-  );
-}
-
-function selectedOpenSpecTitles(
-  state: OpenSpecState,
-  focusedTaskId: string | undefined,
-): string[] {
-  const activeTask = focusedTaskId
-    ? (state.allTasks ?? state.pendingTasks).find((task) => task.id === focusedTaskId)
-    : undefined;
-  return activeTask
-    ? [normalizeInline(state.title), narrativeTaskTitle(activeTask.title)]
-    : [normalizeInline(state.changeId), normalizeInline(focusedTaskId ?? 'no focus')];
+function selectedOpenSpecTitles(state: OpenSpecState): string[] {
+  return [normalizeInline(state.changeId)];
 }
 
 export function headerSelection(options: {
   openSpec?: OpenSpecState | null;
-  focusedTaskId?: string;
   subject?: SessionSubject;
 }): HeaderSelection | null {
   if (options.openSpec) {
     return {
       source: 'openspec',
-      titles: selectedOpenSpecTitles(options.openSpec, options.focusedTaskId),
+      titles: selectedOpenSpecTitles(options.openSpec),
       color: openSpecColor(options.openSpec),
     };
   }
@@ -827,7 +765,6 @@ export function buildHeaderStatusEvent(
   widgets: readonly FancyFooterWidget[],
   options: {
     openSpec?: OpenSpecState | null;
-    focusedTaskId?: string;
     subject?: SessionSubject;
     orchestration?: OrchestrationState | null;
     lifecycle?: HeaderLifecycle;
@@ -899,7 +836,7 @@ export function buildHeaderStatusEvent(
     const state = options.openSpec;
     work = {
       lifecycle,
-      titles: selectedOpenSpecTitles(state, options.focusedTaskId),
+      titles: selectedOpenSpecTitles(state),
       color: openSpecColor(state),
       ...projectedActivity,
     };
@@ -978,13 +915,6 @@ export function buildHeaderStatusEvent(
       ...(options.activeRuns ? { activeRuns: options.activeRuns } : {}),
       ...(options.openSpec?.hierarchy
         ? { tasks: options.openSpec.hierarchy.tasks }
-        : {}),
-      ...(options.openSpec?.hierarchy &&
-      options.focusedTaskId &&
-      options.openSpec.hierarchy.stepsByTask[options.focusedTaskId]
-        ? {
-            steps: options.openSpec.hierarchy.stepsByTask[options.focusedTaskId],
-          }
         : {}),
       ...(orchestration?.completedFiles === undefined ||
       orchestration.totalFiles === undefined

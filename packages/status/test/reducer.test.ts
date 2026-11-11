@@ -3,7 +3,6 @@ import test from 'node:test';
 import type { RunSpan } from '../src/types.ts';
 import {
   applyEvent,
-  deriveTitle,
   derivedStage,
   emptyFacts,
   reduceLedger,
@@ -37,80 +36,17 @@ test('applyEvent is pure: input facts are never mutated', () => {
   assert.equal(facts.runs.size, 0);
 });
 
-test('resolver priority: openspec-task beats all others', () => {
-  const snapshot = reduceLedger([
-    { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
-    {
-      type: 'focus/openspec',
-      at: 4,
-      focus: {
-        mode: 'task',
-        change: 'chg',
-        taskId: '2',
-        awaitingValidation: false,
-      },
-    },
-  ]);
-  assert.deepEqual(snapshot.selection, {
-    kind: 'openspec-task',
-    change: 'chg',
-    task: '2',
-  });
-});
-
-test('resolver priority: subject is the passive fallback, never overriding', () => {
+test('resolver priority: subject is the only selection source', () => {
   const alone = reduceLedger([
     { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'subject' } },
   ]);
   assert.deepEqual(alone.selection, { kind: 'subject', title: 'subject' });
 });
 
-test('derived title never renders placeholder narration (exhibits 2, 3, 5)', () => {
+test('an empty ledger selects none — no placeholder narration exists', () => {
   const none = reduceLedger([]);
-  assert.equal(deriveTitle(none), 'π');
-  const cleared = reduceLedger([
-    { type: 'focus/openspec', at: 1, focus: { mode: 'none' } },
-  ]);
-  const title = deriveTitle(cleared);
-  const forbidden = [
-    '—',
-    'no focus',
-    'no OpenSpec',
-    'OpenSpec clear',
-    'task —',
-    'stps —',
-  ];
-  for (const token of forbidden) {
-    assert.equal(title.includes(token), false, `title must not contain ${token}`);
-  }
-});
-
-test('derived title projects each selection kind (derived-only rule)', () => {
-  assert.equal(
-    deriveTitle(
-      reduceLedger([
-        {
-          type: 'focus/openspec',
-          at: 1,
-          focus: {
-            mode: 'task',
-            change: 'chg',
-            taskId: '3',
-            awaitingValidation: false,
-          },
-        },
-      ]),
-    ),
-    'π chg › 3',
-  );
-  assert.equal(
-    deriveTitle(
-      reduceLedger([
-        { type: 'focus/subject', at: 1, subject: { state: 'set', title: 'S' } },
-      ]),
-    ),
-    'π S',
-  );
+  assert.equal(none.selection.kind, 'none');
+  assert.equal(none.runs.length, 0);
 });
 
 test('runs fold into a span tree with declaration beating inference', () => {

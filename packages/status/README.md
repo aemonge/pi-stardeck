@@ -57,49 +57,36 @@ The provider uses the installed OpenSpec CLI and reads only each listed change's
 5. The task artifact is read once per refresh to recover labels such as `3.8` and kinds
    such as Story, Spike, Lab, or Hack.
 
-The session focus takes precedence over configured `openspec.change`, which takes
-precedence over `PI_OPENSPEC_CHANGE`. Configuration and environment values can select a
-change for collection/debugging, but they do not create session task focus or expose an
+The focused change no longer lives in session state: the cockpit reads the
+room aim (`openspec/.focus`) directly and prints its fields verbatim.
+
 active OpenSpec footer by themselves.
 
-## Session focus and terminal title
+## Room aim and terminal title
 
-A Pi session has zero or one explicit OpenSpec task focus and an independent
-ephemeral Session Work state. Display priority is OpenSpec
-Task → Session Work → safe direct fallback. OpenSpec focus clears active Session
-Work when acquired, preventing hidden or stale work from resurfacing later.
-
-Session Work is a legacy surface: its writer tool and `/work` command are retired, and
-only old sessions' versioned custom entries remain, restored fail-soft on the active
-Pi session branch (never a repository status file). OpenSpec focus is stored the same
-way and supports this lifecycle:
+The focused change is the Human's room aim — `pios-gate <slug>` writes
+`openspec/.focus`, the cockpit reads it on every refresh and renders its five
+fields verbatim on the right work tile:
 
 ```text
-/openspec-focus set <change> <task>
-/openspec-focus validate
-/openspec-focus replace <change> <task>
-/openspec-focus clear
+{change} ⟩ {artifact_name} {artifact-idx} › {task} ⟩ {next-step}
 ```
 
-When no OpenSpec portfolio is available, the matching row-one footer fallback is the
-compact `▶ Focus` or `◇ Validate`; an entirely empty
-project uses ` no OpenSpec`. The detailed Session Work intent remains in the header
-instead of being duplicated in the footer. Active and validation states also replace the
-fallback terminal title. Reload, resume, and tree navigation restore the newest valid
-branch entry. The agent-callable `openspec_focus` tool shares the command's `status`,
-safeguarded `set`, deliberate `replace`, validating `validate`, and persistent `clear`
-transitions; the `awaitingValidation` flag marks a focused task as awaiting Human
-validation and auto-clears on the next `set`, `replace`, or `clear`. The
-retired `work_focus`, `stage`, and `title` instruments are gone: stages
-derive from events and Taskflow phases, the focus row falls back to the
-native session name (named by `pi-title`) and then to legacy `session-subject`
-entries from old sessions, read defensively and fail-soft.
+Read as-is, printed as-is: no prefixes, no relabeling. A missing field drops
+its segment; absence never becomes zero; an aim without a change slug is no
+aim at all. The agent never writes the file — it is the Human's word, written
+by their terminal verbs.
+
+Session Work and the `openspec_focus` tool are retired instruments: old
+sessions' versioned custom entries restore fail-soft and carry no writers.
+The focus row falls back to the native session name (named by `pi-title`)
+and then to legacy `session-subject` entries from old sessions, read
+defensively and fail-soft.
 
 Global routing belongs to native Ramona policy rather than this status package. This
 package does not inject parent routing prompts, block parent tools, create Session Work
 for a global route, or promote a raw request into OpenSpec focus. It continues to own
-branch-local OpenSpec and Session Work state, commands, restoration, titles, and footer
-publication.
+branch-local Session Work restoration, commands, titles, and footer publication.
 
 The header projection uses the rich lifecycle `understanding`, `working`, `waiting`,
 `assuring`, `learning`, `answering`, `blocked`, `listening`, or `aborted`. It separately
@@ -318,8 +305,7 @@ configuration directory in this installation). This repository keeps the source 
 ```
 
 Unknown or invalid fields are ignored and reported by the debug command; they do not
-prevent Pi from starting. `openspec.change` is an explicit collection target, not a
-session-scoped task focus.
+prevent Pi from starting.
 
 ## Commands
 

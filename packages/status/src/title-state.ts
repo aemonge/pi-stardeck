@@ -1,14 +1,13 @@
-import type { OpenSpecFocus, SessionSubject } from './active-work.ts';
+import type { SessionSubject } from './active-work.ts';
 import type { RoomAim } from './room-aim.ts';
-import type { OpenSpecState } from './types.ts';
 
 /**
- * Title-state contract v1 (`deck-title-state`).
+ * Title-state contract v2 (`deck-title-state`).
  *
  * One authoritative object for the deck's upper half: `subject` is authored
- * once, `work` is derived from OpenSpec focus, `activity` is observed from
- * tool executions, and `waiver` suppresses one exact notice text. Rendering
- * code may never write any slot; it only parses defensively.
+ * once, `work` is the room aim's verbatim fields, `activity` is observed
+ * from tool executions, and `waiver` suppresses one exact notice text.
+ * Rendering code may never write any slot; it only parses defensively.
  */
 
 export const TITLE_STATE_VERSION = 2 as const;
@@ -29,39 +28,20 @@ export type TitleActivityClass = (typeof TITLE_ACTIVITY_CLASSES)[number];
  * render-time crop instead of pre-cutting subagent/bash labels). */
 export const TITLE_TARGET_MAX = 120;
 
-/** Task/step totals bound from the accepted schema. */
-export const TITLE_TOTAL_MAX = 999;
-
 const SUBJECT_MAX = 180;
 const IDENTIFIER_MAX = 120;
 const TASK_ID_MAX = 32;
 const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
-const ARTIFACTS_MAX = 16;
-
-export type TitleArtifactState = {
-  id: string;
-  done: boolean;
-  items?: { done: number; total: number };
-};
 
 export type TitleWorkState = {
   change: string;
-  task?: string;
-  schemaName?: string;
-  artifacts?: TitleArtifactState[];
-  /** The artifact the work is in — first not done, else last done. */
-  currentArtifact?: string;
-  /** Attention facts, derived from publisher-owned truth only. */
-  awaitingValidation?: boolean;
-  focusAt?: number;
-  focusStale?: boolean;
   /** Room-aim verbatim fields (observe-room-aim render law): printed
    * as-is — the deck is a printer, not a translator. */
   artifactName?: string;
   artifactIdx?: string;
-  aimTask?: string;
+  task?: string;
   nextStep?: string;
 };
 
@@ -99,15 +79,6 @@ function boundedText(
   return points.join('');
 }
 
-function boundedTotal(value: unknown): number | null {
-  return typeof value === 'number' &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= TITLE_TOTAL_MAX
-    ? value
-    : null;
-}
-
 function parseTitleActivity(value: unknown): TitleActivityState | null | undefined {
   if (value === null) return null;
   if (!isRecord(value)) return undefined;
@@ -133,57 +104,6 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
   if (!isRecord(value)) return undefined;
   const change = boundedText(value.change, IDENTIFIER_MAX);
   if (!change) return undefined;
-  const task = boundedText(value.task, TASK_ID_MAX, { required: false });
-  if (task === null) return undefined;
-  const schemaName = boundedText(value.schemaName, IDENTIFIER_MAX, {
-    required: false,
-  });
-  if (schemaName === null) return undefined;
-  const currentArtifact = boundedText(value.currentArtifact, TASK_ID_MAX, {
-    required: false,
-  });
-  if (currentArtifact === null) return undefined;
-  let artifacts: TitleArtifactState[] | undefined;
-  if ('artifacts' in value) {
-    if (!Array.isArray(value.artifacts) || value.artifacts.length > ARTIFACTS_MAX) {
-      return undefined;
-    }
-    const parsed: TitleArtifactState[] = [];
-    for (const entry of value.artifacts) {
-      if (!isRecord(entry)) return undefined;
-      const id = boundedText(entry.id, TASK_ID_MAX);
-      if (!id) return undefined;
-      if (typeof entry.done !== 'boolean') return undefined;
-      const artifactDone = entry.done;
-      let items: { done: number; total: number } | undefined;
-      if ('items' in entry) {
-        if (!isRecord(entry.items)) return undefined;
-        const done = boundedTotal(entry.items.done);
-        const total = boundedTotal(entry.items.total);
-        if (done === null || total === null) return undefined;
-        items = { done, total };
-      }
-      parsed.push({ id, done: artifactDone, ...(items ? { items } : {}) });
-    }
-    artifacts = parsed;
-  }
-  if ('awaitingValidation' in value && typeof value.awaitingValidation !== 'boolean') {
-    return undefined;
-  }
-  let focusAt: number | undefined;
-  if ('focusAt' in value) {
-    if (
-      typeof value.focusAt !== 'number' ||
-      !Number.isSafeInteger(value.focusAt) ||
-      value.focusAt < 0
-    ) {
-      return undefined;
-    }
-    focusAt = value.focusAt;
-  }
-  if ('focusStale' in value && typeof value.focusStale !== 'boolean') {
-    return undefined;
-  }
   const artifactName = boundedText(value.artifactName, IDENTIFIER_MAX, {
     required: false,
   });
@@ -192,23 +112,17 @@ function parseTitleWork(value: unknown): TitleWorkState | null | undefined {
     required: false,
   });
   if (artifactIdx === null) return undefined;
-  const aimTask = boundedText(value.aimTask, TASK_ID_MAX, { required: false });
-  if (aimTask === null) return undefined;
+  const task = boundedText(value.task, TASK_ID_MAX, { required: false });
+  if (task === null) return undefined;
   const nextStep = boundedText(value.nextStep, NOTICE_MAX, { required: false });
   if (nextStep === null) return undefined;
-  const extras = {
-    ...(schemaName ? { schemaName } : {}),
-    ...(artifacts ? { artifacts } : {}),
-    ...(currentArtifact ? { currentArtifact } : {}),
-    ...(value.awaitingValidation === true ? { awaitingValidation: true } : {}),
-    ...(focusAt !== undefined ? { focusAt } : {}),
-    ...(value.focusStale === true ? { focusStale: true } : {}),
+  return {
+    change,
     ...(artifactName ? { artifactName } : {}),
     ...(artifactIdx ? { artifactIdx } : {}),
-    ...(aimTask ? { aimTask } : {}),
+    ...(task ? { task } : {}),
     ...(nextStep ? { nextStep } : {}),
   };
-  return task === undefined ? { change, ...extras } : { change, task, ...extras };
 }
 
 function parseTitleWaiver(value: unknown): TitleWaiverState | null | undefined {
@@ -222,8 +136,8 @@ function parseTitleWaiver(value: unknown): TitleWaiverState | null | undefined {
 
 /**
  * Defensive parser for incoming title-state payloads. Unknown versions,
- * malformed shapes, and out-of-bounds values (target > 120 characters,
- * totals > 999) reject the whole object with `null`; it never throws.
+ * malformed shapes, and out-of-bounds values (target > 120 characters)
+ * reject the whole object with `null`; it never throws.
  */
 export function parseTitleState(value: unknown): TitleState | null {
   try {
@@ -257,49 +171,6 @@ export function shortenTitleTarget(value: string): string {
 }
 
 /**
- * Derive the `work` slot from the OpenSpec focus and the focused snapshot.
- * A task focus owns its change; without a focus a passively collected change
- * still reports artifact facts, just without a task id. Counts live only on
- * artifact `items` — file truth; absent counts are absent, never zeros.
- */
-export function deriveTitleWork(
-  focus: OpenSpecFocus,
-  openspec: OpenSpecState | null | undefined,
-  options: { focusAt?: number } = {},
-): TitleWorkState | null {
-  // Artifact facts come straight from the collector; nothing is invented
-  // here — absent facts simply drop out of the contract.
-  const extras = (state: OpenSpecState | undefined) => {
-    if (!state) return {};
-    return {
-      ...(state.schemaName ? { schemaName: state.schemaName } : {}),
-      ...(state.artifacts ? { artifacts: state.artifacts } : {}),
-      ...(state.currentArtifact ? { currentArtifact: state.currentArtifact } : {}),
-    };
-  };
-  if (focus.mode === 'task') {
-    const state = openspec && openspec.changeId === focus.change ? openspec : undefined;
-    const stale =
-      options.focusAt !== undefined &&
-      state?.changeModifiedAt !== undefined &&
-      state.changeModifiedAt > options.focusAt;
-    return {
-      change: focus.change,
-      task: focus.taskId,
-      ...extras(state),
-      ...(focus.awaitingValidation ? { awaitingValidation: true } : {}),
-      ...(options.focusAt !== undefined ? { focusAt: options.focusAt } : {}),
-      ...(stale ? { focusStale: true } : {}),
-    };
-  }
-  if (!openspec) return null;
-  return {
-    change: openspec.changeId,
-    ...extras(openspec),
-  };
-}
-
-/**
  * The aimed work slot — the room aim's five fields, verbatim (render
  * law). `change` is the keystone; every other field drops when missing,
  * and the deck prints what remains exactly as the file wrote it.
@@ -309,34 +180,26 @@ export function aimTitleWork(aim: RoomAim): TitleWorkState {
     change: aim.change,
     ...(aim.artifactName ? { artifactName: aim.artifactName } : {}),
     ...(aim.artifactIdx ? { artifactIdx: aim.artifactIdx } : {}),
-    ...(aim.task ? { aimTask: aim.task } : {}),
+    ...(aim.task ? { task: aim.task } : {}),
     ...(aim.nextStep ? { nextStep: aim.nextStep } : {}),
   };
 }
 
 /**
- * Build the v1 title state from publisher-owned facts: the authored session
- * subject entry, the OpenSpec focus (plus its snapshot), and the newest
- * observed activity event. The waiver slot stays null until the notice slice.
+ * Build the title state from publisher-owned facts: the authored session
+ * subject entry, the room aim's verbatim work fields, and the newest
+ * observed activity event.
  */
 export function buildTitleState(options: {
   subject: SessionSubject;
-  focus: OpenSpecFocus;
   /** The room aim — when present it owns the work slot outright. */
   aim?: RoomAim | null;
-  openspec?: OpenSpecState | null;
   activity?: TitleActivityState | null;
-  /** Publisher-owned timestamp of the current focus fact. */
-  focusAt?: number;
 }): TitleState {
   return {
     v: TITLE_STATE_VERSION,
     subject: options.subject.state === 'set' ? options.subject.title : null,
-    work: options.aim
-      ? aimTitleWork(options.aim)
-      : deriveTitleWork(options.focus, options.openspec, {
-          focusAt: options.focusAt,
-        }),
+    work: options.aim ? aimTitleWork(options.aim) : null,
     activity: options.activity ?? null,
     waiver: null,
   };

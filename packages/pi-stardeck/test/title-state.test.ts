@@ -22,9 +22,6 @@ function titleState(overrides: Partial<DeckTitleState> = {}): DeckTitleState {
   };
 }
 
-/** 2026-11-06T12:00:00Z — the fixed render-time clock for age assertions. */
-const NOW = 1_765_113_600_000;
-
 test('parses the idle title state verbatim', () => {
   assert.deepEqual(
     parseDeckTitleState({
@@ -38,16 +35,13 @@ test('parses the idle title state verbatim', () => {
   );
 });
 
-test('parses the mid-work title state with artifacts and attention facts', () => {
+test('parses the aimed work state with the room aim verbatim fields', () => {
   const work = {
-    change: 'eight-section-deck',
-    task: '2.1',
-    schemaName: 'spec',
-    artifacts: [
-      { id: 'brainstorm', done: true, items: { done: 3, total: 3 } },
-      { id: 'plan', done: false, items: { done: 1, total: 4 } },
-    ],
-    currentArtifact: 'plan',
+    change: 'observe-room-aim',
+    artifactName: '4-execute',
+    artifactIdx: '4/4',
+    task: '4/12',
+    nextStep: 'eospec approve',
   };
   assert.deepEqual(
     parseDeckTitleState({
@@ -119,14 +113,19 @@ test('rejects unknown versions and malformed shapes with null, never throws', ()
   });
 });
 
-test('retired v1 work keys normalize away instead of rejecting', () => {
-  // A v1 producer mislabeling itself v2 still parses — the retired keys
-  // (done/total/ladder) drop out and the change name survives.
+test('retired work fields normalize away instead of rejecting', () => {
+  // A producer carrying retired work fields still parses — the retired
+  // keys drop out and the change name survives.
   assert.deepEqual(
     parseDeckTitleState({
       v: 2,
       subject: null,
-      work: { change: 'x', done: 1, total: 4 },
+      work: {
+        change: 'x',
+        schemaName: 'spec',
+        currentArtifact: 'a',
+        artifacts: [{ id: 'a', done: true }],
+      },
       activity: null,
       waiver: null,
     })?.work,
@@ -136,7 +135,7 @@ test('retired v1 work keys normalize away instead of rejecting', () => {
     parseDeckTitleState({
       v: 2,
       subject: null,
-      work: { change: 'x', ladder: { done: 1, total: 2, rung: 'tasks' } },
+      work: { change: 'x', awaitingValidation: true, focusAt: 1, focusStale: true },
       activity: null,
       waiver: null,
     })?.work,
@@ -144,47 +143,34 @@ test('retired v1 work keys normalize away instead of rejecting', () => {
   );
 });
 
-test('rejects malformed artifact and attention shapes', () => {
+test('rejects malformed aim-field shapes', () => {
   const base = { v: 2, subject: null, activity: null, waiver: null };
   const cases = [
-    { change: 'deck', artifacts: 'nope' },
-    {
-      change: 'deck',
-      artifacts: Array.from({ length: 17 }, () => ({ id: 'a', done: true })),
-    },
-    { change: 'deck', artifacts: [{ id: 'a' }] },
-    { change: 'deck', artifacts: [{ id: 'a', done: 'yes' }] },
-    { change: 'deck', artifacts: [{ id: 'a', done: true, items: { done: 1 } }] },
-    {
-      change: 'deck',
-      artifacts: [{ id: 'a', done: true, items: { done: 1_000, total: 4 } }],
-    },
-    { change: 'deck', currentArtifact: '' },
-    { change: 'deck', awaitingValidation: 'yes' },
-    { change: 'deck', focusAt: -5 },
-    { change: 'deck', focusAt: 1.5 },
-    { change: 'deck', focusStale: 'no' },
+    { change: 'deck', artifactName: 7 },
+    { change: 'deck', artifactIdx: 4 },
+    { change: 'deck', task: null },
+    { change: 'deck', nextStep: 'x'.repeat(181) },
+    { change: 'deck', artifactName: 'x'.repeat(121) },
   ];
   for (const work of cases) {
     assert.equal(parseDeckTitleState({ ...base, work }), null, JSON.stringify(work));
   }
-  // Valid shapes pass: bounded items, safe-integer focusAt, truthy flags.
+  // Valid shapes pass.
   const parsed = parseDeckTitleState({
     ...base,
     work: {
       change: 'deck',
-      artifacts: [{ id: 'a', done: true, items: { done: 999, total: 999 } }],
-      currentArtifact: 'a',
-      awaitingValidation: true,
-      focusAt: 4_102_444_800_000,
-      focusStale: true,
+      artifactName: 'a',
+      artifactIdx: '1/1',
+      task: '1/2',
+      nextStep: 'go',
     },
   });
-  assert.equal(parsed?.work?.currentArtifact, 'a');
-  assert.equal(parsed?.work?.focusStale, true);
+  assert.equal(parsed?.work?.artifactName, 'a');
+  assert.equal(parsed?.work?.nextStep, 'go');
 });
 
-test('enforces the schema bounds: targets, items, and label lengths', () => {
+test('enforces the schema bounds: targets and label lengths', () => {
   const long = (length: number) => 'x'.repeat(length);
   assert.equal(
     parseDeckTitleState({
@@ -197,13 +183,10 @@ test('enforces the schema bounds: targets, items, and label lengths', () => {
   assert.equal(
     parseDeckTitleState({
       ...titleState(),
-      work: {
-        change: 'eight-section-deck',
-        artifacts: [{ id: 'a', done: false, items: { done: 1, total: 1_000 } }],
-      },
+      work: { change: 'observe-room-aim', artifactName: long(121) },
     }),
     null,
-    'item total beyond 999 rejects',
+    'artifact name beyond 120 characters rejects',
   );
   assert.equal(
     parseDeckTitleState({ ...titleState(), subject: long(181) }),
@@ -221,6 +204,14 @@ test('enforces the schema bounds: targets, items, and label lengths', () => {
     })?.activity?.target,
     long(48),
     'target at the bound parses',
+  );
+  assert.equal(
+    parseDeckTitleState({
+      ...titleState(),
+      work: { change: 'observe-room-aim', nextStep: long(180) },
+    })?.work?.nextStep,
+    long(180),
+    'next-step at the bound parses',
   );
 });
 
@@ -274,244 +265,18 @@ test('parses turn cost snapshots and rejects malformed meters', () => {
   });
 });
 
-test('focused, working — current artifact, artifact progress, then items', () => {
-  const segments = deckWorkSegments(
-    {
-      change: 'polish-upload-validations',
-      task: '8-1',
-      artifacts: [
-        { id: 'brainstorm', done: true },
-        { id: 'investigate', done: true },
-        { id: 'plan', done: true },
-        { id: 'execute', done: true, items: { done: 12, total: 15 } },
-      ],
-      currentArtifact: 'execute',
-    },
-    NOW,
-  );
-  assert.deepEqual(
-    segments.map(
-      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
-    ),
-    [
-      'success:polish-upload-validations!',
-      'accent: › ',
-      'accent:execute 4/4',
-      'accent: › ',
-      'accent:󰄱 12/15',
-    ],
-  );
-  assert.equal(
-    segments.map((segment) => segment.text).join(''),
-    'polish-upload-validations › execute 4/4 › 󰄱 12/15',
-  );
-});
-
-test('awaiting validation replaces the whole tile', () => {
-  const segments = deckWorkSegments(
-    {
-      change: 'polish-upload-validations',
-      task: '8-1',
-      awaitingValidation: true,
-      artifacts: [{ id: 'execute', done: true, items: { done: 12, total: 15 } }],
-      currentArtifact: 'execute',
-    },
-    NOW,
-  );
-  assert.deepEqual(segments, [{ text: '⏸ awaiting you', color: 'warning' }]);
-});
-
-test('no items — honest absence, no zero', () => {
-  assert.deepEqual(
-    deckWorkSegments(
-      {
-        change: 'polish-upload-validations',
-        artifacts: [
-          { id: 'brainstorm', done: true },
-          { id: 'investigate', done: true },
-          { id: 'plan', done: true },
-          { id: 'execute', done: true },
-        ],
-        currentArtifact: 'execute',
-      },
-      NOW,
-    ),
-    [
-      { text: 'polish-upload-validations', color: 'success', bold: true },
-      { text: ' › ', color: 'accent' },
-      { text: 'execute 4/4', color: 'success' },
-    ],
-  );
-  // Zero checkboxes parse to absence upstream; even a literal 0/0 item pair
-  // would never be emitted by the collector — but the renderer still hides
-  // an empty-total pair defensively, keeping only the artifact group.
-  assert.deepEqual(
-    deckWorkSegments(
-      {
-        change: 'deck',
-        artifacts: [{ id: 'a', done: false, items: { done: 0, total: 0 } }],
-        currentArtifact: 'a',
-      },
-      NOW,
-    ),
-    [
-      { text: 'deck', color: 'success', bold: true },
-      { text: ' › ', color: 'accent' },
-      { text: 'a 0/1', color: 'accent' },
-    ],
-  );
-});
-
-test('stale focus replaces the artifact group; items survive', () => {
-  const segments = deckWorkSegments(
-    {
-      change: 'polish-upload-validations',
-      task: '8-1',
-      focusAt: NOW - 3 * 60 * 60 * 1_000,
-      focusStale: true,
-      artifacts: [{ id: 'execute', done: true, items: { done: 12, total: 15 } }],
-      currentArtifact: 'execute',
-    },
-    NOW,
-  );
-  assert.deepEqual(
-    segments.map(
-      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
-    ),
-    [
-      'success:polish-upload-validations!',
-      'accent: › ',
-      'dim:⚠ focus 3h old',
-      'accent: › ',
-      'accent:󰄱 12/15',
-    ],
-  );
-  // Stale with no items keeps the slug and the attention segment.
-  assert.deepEqual(
-    deckWorkSegments({ change: 'deck', focusAt: NOW - 42_000, focusStale: true }, NOW),
-    [
-      { text: 'deck', color: 'success', bold: true },
-      { text: ' › ', color: 'accent' },
-      { text: '⚠ focus 42s old', color: 'dim' },
-    ],
-  );
-});
-
-test('artifact progress turns success at completion; items tick bold and green', () => {
-  const segments = deckWorkSegments(
-    {
-      change: 'deck',
-      artifacts: [
-        { id: 'plan', done: true, items: { done: 4, total: 4 } },
-        { id: 'execute', done: true },
-      ],
-      currentArtifact: 'plan',
-    },
-    NOW,
-  );
-  assert.deepEqual(
-    segments.map(
-      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
-    ),
-    ['success:deck!', 'accent: › ', 'success:plan 2/2', 'accent: › ', 'success:✔ 4/4!'],
-  );
-  // Mixed state: artifacts done but items still open — one hue, accent.
-  const working = deckWorkSegments(
-    {
-      change: 'deck',
-      artifacts: [
-        { id: 'plan', done: true },
-        { id: 'execute', done: true, items: { done: 12, total: 15 } },
-      ],
-      currentArtifact: 'execute',
-    },
-    NOW,
-  );
-  assert.deepEqual(
-    working.map(
-      (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
-    ),
-    [
-      'success:deck!',
-      'accent: › ',
-      'accent:execute 2/2',
-      'accent: › ',
-      'accent:󰄱 12/15',
-    ],
-  );
-});
-
-test('the slug always leads — openspec identity never yields', () => {
-  assert.deepEqual(deckWorkSegments({ change: 'eight-section-deck' }, NOW), [
-    { text: 'eight-section-deck', color: 'success', bold: true },
-  ]);
-  // Artifact progress is a real fact — 0/1 artifacts done renders; only
-  // absent item counts stay hidden.
-  assert.deepEqual(
-    deckWorkSegments(
-      { change: 'deck', artifacts: [{ id: 'a', done: false }], currentArtifact: 'a' },
-      NOW,
-    ),
-    [
-      { text: 'deck', color: 'success', bold: true },
-      { text: ' › ', color: 'accent' },
-      { text: 'a 0/1', color: 'accent' },
-    ],
-  );
-});
-
-test('compact width: attention and progress yield first, items survive longest', () => {
-  const work = {
-    change: 'polish-upload-validations',
-    artifacts: [
-      { id: 'plan', done: true },
-      { id: 'execute', done: false, items: { done: 12, total: 15 } },
-    ],
-    currentArtifact: 'execute',
-  };
-  assert.deepEqual(
-    deckWorkSegments(work, NOW, true).map((segment) => segment.text),
-    ['polish-upload-validations', ' › ', '󰄱 12/15'],
-  );
-  // Awaiting you yields entirely in compact mode.
-  assert.deepEqual(
-    deckWorkSegments({ change: 'deck', awaitingValidation: true }, NOW, true),
-    [],
-  );
-  // Stale focus yields too; the items remain.
-  assert.deepEqual(
-    deckWorkSegments(
-      { ...work, focusAt: NOW - 60_000, focusStale: true },
-      NOW,
-      true,
-    ).map((segment) => segment.text),
-    ['polish-upload-validations', ' › ', '󰄱 12/15'],
-  );
-});
-
-test('the plain-text label joins the segments', () => {
-  assert.equal(
-    formatDeckWorkLabel({
-      change: 'polish-upload-validations',
-      artifacts: [{ id: 'execute', done: true, items: { done: 12, total: 15 } }],
-      currentArtifact: 'execute',
-    }),
-    'polish-upload-validations › execute 1/1 › 󰄱 12/15',
-  );
-});
-
 test('the room aim prints verbatim — the render law, one row per case', () => {
-  const full = {
+  const full: DeckTitleWorkState = {
     change: 'truthful-rendered-state',
     artifactName: '4-execute',
     artifactIdx: '4/4',
-    aimTask: '4/12',
+    task: '4/12',
     nextStep: 'eospec approve',
   };
   const texts = (work: DeckTitleWorkState, compact = false) =>
-    deckWorkSegments(work, NOW, compact).map((segment) => segment.text);
+    deckWorkSegments(work, compact).map((segment) => segment.text);
   const colors = (work: DeckTitleWorkState) =>
-    deckWorkSegments(work, NOW).map(
+    deckWorkSegments(work).map(
       (segment) => `${segment.color}:${segment.text}${segment.bold ? '!' : ''}`,
     );
   // Full row: read as-is, printed as-is — no prefixes, no relabeling.
@@ -552,7 +317,7 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
     'eospec approve',
   ]);
   // Missing task: the minor separator dies with the segment.
-  assert.deepEqual(texts({ ...full, aimTask: undefined }), [
+  assert.deepEqual(texts({ ...full, task: undefined }), [
     'truthful-rendered-state',
     ' ⟩ ',
     '4-execute 4/4',
@@ -568,15 +333,9 @@ test('the room aim prints verbatim — the render law, one row per case', () => 
     '4/12',
   ]);
   // Only change: today's bare aim, verbatim.
-  assert.deepEqual(
-    texts({
-      ...full,
-      artifactName: undefined,
-      aimTask: undefined,
-      nextStep: undefined,
-    }),
-    ['truthful-rendered-state'],
-  );
+  assert.deepEqual(texts({ change: 'truthful-rendered-state' }), [
+    'truthful-rendered-state',
+  ]);
   // Compact yields the dim commentary first — identity and progress stay.
   assert.deepEqual(texts(full, true), ['truthful-rendered-state']);
   // The plain-text label joins the aimed segments.

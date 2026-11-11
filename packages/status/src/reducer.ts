@@ -1,5 +1,5 @@
 import type { LedgerEvent } from './ledger.ts';
-import type { OpenSpecFocus, SessionSubject } from './active-work.ts';
+import type { SessionSubject } from './active-work.ts';
 import type {
   CockpitSnapshot,
   ProgressFact,
@@ -18,7 +18,6 @@ import type {
  */
 
 export type ReducerFacts = {
-  openSpec: OpenSpecFocus;
   subject: SessionSubject;
   runs: ReadonlyMap<string, RunSpan>;
   progress: ProgressFact | null;
@@ -28,7 +27,6 @@ export const NO_SELECTION: SelectionState = { kind: 'none' };
 
 export function emptyFacts(): ReducerFacts {
   return {
-    openSpec: { mode: 'none' },
     subject: { state: 'clear' },
     runs: new Map(),
     progress: null,
@@ -36,17 +34,7 @@ export function emptyFacts(): ReducerFacts {
 }
 
 /** The single selection resolver. Priority order is contract-frozen. */
-export function resolveSelection(facts: {
-  openSpec: OpenSpecFocus;
-  subject: SessionSubject;
-}): SelectionState {
-  if (facts.openSpec.mode === 'task') {
-    return {
-      kind: 'openspec-task',
-      change: facts.openSpec.change,
-      task: facts.openSpec.taskId,
-    };
-  }
+export function resolveSelection(facts: { subject: SessionSubject }): SelectionState {
   if (facts.subject.state === 'set') {
     return { kind: 'subject', title: facts.subject.title };
   }
@@ -61,8 +49,6 @@ function applyStageRule(span: RunSpan, stage: StageValue, declared: boolean): Ru
 
 export function applyEvent(facts: ReducerFacts, event: LedgerEvent): ReducerFacts {
   switch (event.type) {
-    case 'focus/openspec':
-      return { ...facts, openSpec: event.focus };
     case 'focus/subject':
       return { ...facts, subject: event.subject };
     case 'run/start': {
@@ -128,24 +114,4 @@ export function rootRun(snapshot: CockpitSnapshot): RunSpan | undefined {
 /** Derived stage: the root run's stage, or listening when nothing runs. */
 export function derivedStage(snapshot: CockpitSnapshot): StageValue {
   return rootRun(snapshot)?.stage ?? 'listening';
-}
-
-/**
- * Derived terminal title. `title = f(selection, stage, progress)` — never stored,
- * never updated independently, never a placeholder.
- */
-export function deriveTitle(snapshot: CockpitSnapshot): string {
-  const selection = snapshot.selection;
-  let detail: string;
-  switch (selection.kind) {
-    case 'openspec-task':
-      detail = `${selection.change} › ${selection.task}`;
-      break;
-    case 'subject':
-      detail = selection.title;
-      break;
-    default:
-      detail = '';
-  }
-  return detail ? `π ${detail}` : 'π';
 }

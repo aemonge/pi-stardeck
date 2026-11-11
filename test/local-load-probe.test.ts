@@ -13,7 +13,7 @@ const EXPECTED_COMMANDS = [
   'pi-status',
   'stardeck-health',
 ];
-const EXPECTED_TOOLS = ['openspec_focus'];
+const EXPECTED_TOOLS: string[] = [];
 
 test('chrome-only deck composition activates header footer and status', () => {
   assert.equal(COCKPIT_SURFACES.contextHeader, 'deck');

@@ -21,7 +21,6 @@ export interface GalacticaStatusConfig {
   enabled: boolean;
   openspec: {
     enabled: boolean;
-    change: string | null;
   };
   diagnostics: {
     enabled: boolean;
@@ -208,10 +207,7 @@ export type StageValue =
   | 'listening'
   | 'aborted';
 
-export type SelectionState =
-  | { kind: 'openspec-task'; change: string; task: string }
-  | { kind: 'subject'; title: string }
-  | { kind: 'none' };
+export type SelectionState = { kind: 'subject'; title: string } | { kind: 'none' };
 
 export type RunSpan = {
   id: string;

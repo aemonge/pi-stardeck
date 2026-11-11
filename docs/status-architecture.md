@@ -36,8 +36,7 @@ Selection is the single answer to "what is this session about". It is one slot:
 
 ```text
 selection =
-  | { kind: 'openspec-task', change, task, awaitingValidation }  ← OpenSpec focus (work-state)
-  | { kind: 'subject', title }              ← legacy subject entries; passive fallback, never overrides
+  | { kind: 'subject', title }              ← session subject entries
   | { kind: 'none' }
 ```
 
@@ -46,9 +45,10 @@ Rules:
 - Priority is resolved by exactly one resolver, in the order listed above.
 - `title` never displaces an active selection; it fills the slot only when nothing
   else holds it.
-- The `openspec_focus` and `title` tools keep their persisted session-entry formats;
-  `work_focus` and `stage` are retired instruments — restored legacy entries still
-  render, fail-soft, and no writers remain.
+- The `title` tool keeps its persisted session-entry format; `work_focus`,
+  `stage`, and `openspec_focus` are retired instruments — restored legacy
+  entries render, fail-soft, and no writers remain. The focused change now
+  lives in the room aim (`openspec/.focus`), read directly by the cockpit.
 
 ## runs
 

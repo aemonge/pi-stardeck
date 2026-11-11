@@ -7,18 +7,14 @@ import { promises as fs, watch } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import {
   formatActiveWorkTitle,
-  type OpenSpecFocus,
-  parseOpenSpecFocus,
-  restoreOpenSpecFocus,
   restoreSessionSubject,
-  sameOpenSpecFocus,
   sameSessionSubject,
   type SessionSubject,
 } from './src/active-work.ts';
 import { collectDiagnostics } from './src/diagnostics.ts';
 import { loadConfig } from './src/config.ts';
 import { readRoomAim } from './src/room-aim.ts';
-import { collectOpenSpec, collectOpenSpecOverview } from './src/openspec.ts';
+import { collectOpenSpecOverview } from './src/openspec.ts';
 import { collectOrchestration } from './src/orchestration.ts';
 import {
   buildHeaderStatusEvent,
@@ -171,11 +167,6 @@ class GalacticaStatusRuntime {
   private openSpecFeedback: OpenSpecFeedback | undefined;
   private openSpecOverview: OpenSpecOverview | undefined;
   private openSpecProjectDetected: boolean | undefined;
-  private focus: OpenSpecFocus;
-  /** Publisher-owned timestamp of the current focus fact — seeded at
-   *  construction, refreshed on every accepted focus change; staleness
-   *  compares it against the change directory's file truth. */
-  private focusAt: number | undefined;
   private subject: SessionSubject;
   private sessionName: string | undefined;
   private diagnosticsPath: string | undefined;
@@ -204,30 +195,21 @@ class GalacticaStatusRuntime {
     pi: ExtensionAPI,
     ctx: SessionContext,
     publisher: FancyFooterPublisher,
-    focus: OpenSpecFocus,
     subject: SessionSubject,
     sessionName: string | undefined,
   ) {
     this.pi = pi;
     this.ctx = ctx;
     this.publisher = publisher;
-    this.focus = focus;
     this.subject = subject;
     this.sessionName = sessionName;
-    this.focusAt = Date.now();
-    const restoredAwaitingValidation =
-      focus.mode === 'task' && focus.awaitingValidation;
-    this.liveLifecycle = restoredAwaitingValidation ? 'waiting' : 'listening';
-    this.liveActivity = restoredAwaitingValidation
-      ? { kind: 'awaiting-validation' }
-      : undefined;
+    this.liveLifecycle = 'listening';
     this.store = new AtomicStatusStore({
       cwd: ctx.cwd,
       projectRoot: ctx.cwd,
       configPath: '',
     });
     const seededAt = Date.now();
-    this.recordEvent({ type: 'focus/openspec', at: seededAt, focus });
     this.recordEvent({ type: 'focus/subject', at: seededAt, subject });
   }
 
@@ -380,7 +362,6 @@ class GalacticaStatusRuntime {
     const generation = ++this.generation;
     if (!this.loadedConfig || this.stopped) return;
     const config = this.loadedConfig.config;
-    const focus = this.focus;
     const at = Date.now();
     let projectRoot = await detectProjectRoot(this.ctx.cwd, this.runner);
 
@@ -389,6 +370,9 @@ class GalacticaStatusRuntime {
       openSpecEnabled && (await pathIsDirectory(join(projectRoot, 'openspec')));
     let openSpecOverview: RefreshOutcome<OpenSpecOverview> = { kind: 'absent' };
     let openspec: RefreshOutcome<OpenSpecState> = { kind: 'absent' };
+    // The per-change collector retired with the focus store: the room aim
+    // carries the tile fields verbatim; the overview feeds the rest.
+    void openspec;
 
     if (hasOpenSpecProject) {
       openSpecOverview = await this.outcome('openspec', () =>
@@ -397,31 +381,6 @@ class GalacticaStatusRuntime {
       if (openSpecOverview.kind === 'success') {
         projectRoot = openSpecOverview.value.projectRoot;
       }
-    }
-
-    if (focus.mode === 'none') {
-      const passiveChange = config.openspec.change ?? process.env.PI_OPENSPEC_CHANGE;
-      if (passiveChange) {
-        openspec = await this.outcome('openspec', () =>
-          collectOpenSpec({
-            cwd: projectRoot,
-            runner: this.runner,
-            configuredChange: passiveChange,
-            now: at,
-          }),
-        );
-        if (openspec.kind === 'success') projectRoot = openspec.value.projectRoot;
-      }
-    } else {
-      openspec = await this.outcome('openspec', () =>
-        collectOpenSpec({
-          cwd: projectRoot,
-          runner: this.runner,
-          configuredChange: focus.change,
-          now: at,
-        }),
-      );
-      if (openspec.kind === 'success') projectRoot = openspec.value.projectRoot;
     }
 
     const [diagnostics, orchestration] = await Promise.all([
@@ -453,11 +412,7 @@ class GalacticaStatusRuntime {
           }),
     ]);
 
-    if (
-      this.stopped ||
-      generation !== this.generation ||
-      !sameOpenSpecFocus(focus, this.focus)
-    ) {
+    if (this.stopped || generation !== this.generation) {
       return;
     }
     const previous = this.store.get();
@@ -482,19 +437,18 @@ class GalacticaStatusRuntime {
     } else if (openSpecOverview.kind === 'absent') {
       this.openSpecOverview = undefined;
     }
-    this.openSpecFeedback =
-      !hasOpenSpecProject || focus.mode === 'task'
-        ? undefined
-        : openSpecOverview.kind === 'error'
-          ? 'unavailable'
-          : openSpecOverview.kind === 'success' &&
-              openSpecOverview.value.actionableChanges > 0
-            ? 'no-focus'
-            : 'clear';
+    this.openSpecFeedback = !hasOpenSpecProject
+      ? undefined
+      : openSpecOverview.kind === 'error'
+        ? 'unavailable'
+        : openSpecOverview.kind === 'success' &&
+            openSpecOverview.value.actionableChanges > 0
+          ? 'no-focus'
+          : 'clear';
     this.store.applyRefresh({
       projectRoot,
       at,
-      openspec,
+      openspec: { kind: 'absent' },
       diagnostics,
       orchestration,
     });
@@ -588,21 +542,12 @@ class GalacticaStatusRuntime {
   private publish(): void {
     if (this.stopped) return;
     const snapshot = this.store.get();
-    // Builders read focus facts through the snapshot layer (recordEvent stores
-    // the same object references), so output stays byte-identical while the
-    // ledger becomes the feeding seam.
-    const focus = this.cockpitFacts.openSpec;
     const subject = this.cockpitFacts.subject;
     const title = this.currentTitleState(snapshot);
-    const focusedOpenSpec =
-      focus.mode === 'task' && snapshot.openspec?.changeId === focus.change
-        ? snapshot.openspec
-        : null;
     const widgets = buildWidgetSnapshots(
-      { ...snapshot, openspec: focusedOpenSpec },
+      { ...snapshot, openspec: null },
       {
-        focusedTaskId: focus.mode === 'task' ? focus.taskId : undefined,
-        openSpecFeedback: focus.mode === 'none' ? this.openSpecFeedback : undefined,
+        openSpecFeedback: this.openSpecFeedback,
         openSpecOverview: this.openSpecOverview,
         openSpecProjectDetected: this.openSpecProjectDetected,
       },
@@ -611,8 +556,7 @@ class GalacticaStatusRuntime {
     this.pi.events.emit(
       GALACTICA_HEADER_CHANNEL,
       buildHeaderStatusEvent(widgets, {
-        openSpec: focusedOpenSpec,
-        focusedTaskId: focus.mode === 'task' ? focus.taskId : undefined,
+        openSpec: null,
         subject,
         orchestration: snapshot.orchestration,
         lifecycle: this.liveLifecycle,
@@ -636,7 +580,7 @@ class GalacticaStatusRuntime {
     const facts = this.cockpitFacts;
     // The left title is Human-owned — session name, subject, directory —
     // never openspec text (truthful-rendered-state law 2026-11-10); the
-    // gate act rides the work slot for the right-side tile.
+    // right tile prints the room aim verbatim (observe-room-aim law).
     const aim = readRoomAim(snapshot.projectRoot);
     const subjectTitle = formatActiveWorkTitle({
       subject: facts.subject,
@@ -646,11 +590,8 @@ class GalacticaStatusRuntime {
     });
     return buildTitleState({
       subject: { state: 'set', title: subjectTitle },
-      focus: facts.openSpec,
       aim,
-      openspec: snapshot.openspec,
       activity: this.titleActivity.current(),
-      focusAt: this.focusAt,
     });
   }
 
@@ -662,10 +603,6 @@ class GalacticaStatusRuntime {
 
   cockpitSnapshot(): CockpitSnapshot {
     return snapshotFromFacts(this.cockpitFacts, this.cockpitVersion);
-  }
-
-  currentFocus(): OpenSpecFocus {
-    return this.focus;
   }
 
   currentSubject(): SessionSubject {
@@ -682,21 +619,6 @@ class GalacticaStatusRuntime {
     this.runtimeSpans.beginRoot(this.currentTurnId, 'understanding');
     this.syncSpanEvents();
     this.setLiveProjection('understanding', { kind: 'understanding' });
-  }
-
-  setFocus(focus: OpenSpecFocus): void {
-    if (sameOpenSpecFocus(this.focus, focus)) return;
-    this.focus = focus;
-    this.focusAt = Date.now();
-    this.recordEvent({ type: 'focus/openspec', at: Date.now(), focus });
-    this.store.clearOpenSpec();
-    if (focus.mode === 'task' && focus.awaitingValidation) {
-      this.setLiveProjection('waiting', { kind: 'awaiting-validation' });
-    } else if (focus.mode === 'none') {
-      this.setLiveProjection('listening');
-    }
-    this.publish();
-    this.launch(this.refresh(false), 'openspec');
   }
 
   setSubject(subject: SessionSubject): void {
@@ -881,10 +803,6 @@ class GalacticaStatusRuntime {
       this.publish();
       return;
     }
-    if (this.focus.mode === 'task') {
-      this.setLiveProjection('waiting', { kind: 'awaiting-validation' });
-      return;
-    }
     this.setLiveProjection('listening');
   }
 
@@ -909,13 +827,10 @@ class GalacticaStatusRuntime {
     );
     lines.push(
       snapshot.openspec
-        ? `OpenSpec focus: ${formatOpenSpec(
-            snapshot.openspec,
-            this.focus.mode === 'task' ? this.focus.taskId : null,
-          )}`
+        ? `OpenSpec: ${formatOpenSpec(snapshot.openspec)}`
         : this.openSpecFeedback
-          ? `OpenSpec focus: ${this.openSpecFeedback}`
-          : 'OpenSpec focus: none',
+          ? `OpenSpec: ${this.openSpecFeedback}`
+          : 'OpenSpec: no aim',
     );
     lines.push(
       snapshot.diagnostics
@@ -937,7 +852,6 @@ class GalacticaStatusRuntime {
         projectRoot: snapshot.projectRoot,
         configPath: snapshot.configPath,
         configWarnings: snapshot.configWarnings,
-        focus: this.focus,
         openSpecFeedback: this.openSpecFeedback ?? null,
         openSpecOverview: this.openSpecOverview ?? null,
         detected: {
@@ -988,30 +902,12 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     }
   });
 
-  // work-state owns focus writes and emits `focus-changed` after each
-  // successful one (pi.events); the renderer subscribes for immediate
-  // repaint (pure-renderer-split Slice 2).
-  const stopFocusRepaint = pi.events.on('focus-changed', (data: unknown) => {
-    const focus = parseOpenSpecFocus(data);
-    if (!focus) return;
-    runtime?.setFocus(focus);
-    runtime?.settle();
-  });
-
   pi.on('session_start', (_event, ctx) => {
     runtime?.stop();
     const branch = ctx.sessionManager.getBranch();
-    const focus = restoreOpenSpecFocus(branch);
     const subject = restoreSessionSubject(branch);
     const sessionName = pi.getSessionName() ?? ctx.sessionManager.getSessionName();
-    runtime = new GalacticaStatusRuntime(
-      pi,
-      ctx,
-      publisher,
-      focus,
-      subject,
-      sessionName,
-    );
+    runtime = new GalacticaStatusRuntime(pi, ctx, publisher, subject, sessionName);
     runtime.start();
   });
 
@@ -1021,7 +917,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
 
   pi.on('session_tree', (_event, ctx) => {
     const branch = ctx.sessionManager.getBranch();
-    runtime?.setFocus(restoreOpenSpecFocus(branch));
     runtime?.setSubject(restoreSessionSubject(branch));
     runtime?.settle();
   });
@@ -1108,7 +1003,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     runtime = undefined;
     publisher.removeAll();
     stopReady();
-    stopFocusRepaint();
   });
 
   pi.registerCommand('galactica-status', {

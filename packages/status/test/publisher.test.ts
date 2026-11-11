@@ -237,16 +237,12 @@ test('builds a bounded diagnostics event for the prompt header', () => {
 test('publishes explicit selection and controlled next-action suggestions', () => {
   const selected = publisherModule.buildHeaderStatusEvent([], {
     openSpec,
-    focusedTaskId: '3.8',
     lifecycle: 'assuring',
     activity: { kind: 'verification' },
   });
   assert.deepEqual(selected.selection, {
     source: 'openspec',
-    titles: [
-      'Shape a Pi-first closed-loop development harness',
-      'Gondolin-backed permission profiles',
-    ],
+    titles: ['closed-loop'],
     color: 'accent',
   });
   assert.equal(selected.suggestion, null);
@@ -271,7 +267,6 @@ test('subject selection fills the focus row beneath every higher source', () => 
   const beneathOpenSpec = publisherModule.buildHeaderStatusEvent([], {
     subject,
     openSpec,
-    focusedTaskId: '3.8',
   });
   assert.equal(beneathOpenSpec.selection?.source, 'openspec');
 
@@ -315,27 +310,22 @@ test('projects explicit empty-state titles without inventing direct-response foc
 });
 
 test('unknown focused OpenSpec task uses exact IDs instead of borrowing a headline', () => {
-  const event = publisherModule.buildHeaderStatusEvent([], {
-    openSpec,
-    focusedTaskId: '9.9',
-  });
+  // The unknown-task borrowing path retired with the focus store: the
+  // legacy narrative titles carry the change id alone.
+  const event = publisherModule.buildHeaderStatusEvent([], { openSpec });
 
-  assert.deepEqual(event.work?.titles, [openSpec.changeId, '9.9']);
+  assert.deepEqual(event.work?.titles, [openSpec.changeId]);
 });
 
 test('header event keeps lifecycle and every available narrative title off telemetry', () => {
-  const widgets = buildWidgetSnapshots(snapshot(), { focusedTaskId: '3.8' });
+  const widgets = buildWidgetSnapshots(snapshot());
   const event = publisherModule.buildHeaderStatusEvent(widgets, {
     openSpec,
-    focusedTaskId: '3.8',
   });
 
   assert.deepEqual(event.work, {
     lifecycle: 'listening',
-    titles: [
-      'Shape a Pi-first closed-loop development harness',
-      'Gondolin-backed permission profiles',
-    ],
+    titles: ['closed-loop'],
     color: 'accent',
   });
   assert.deepEqual(event.progress, [
@@ -344,7 +334,6 @@ test('header event keeps lifecycle and every available narrative title off telem
   assert.deepEqual(event.counters, {
     agents: { active: 0, total: 0 },
     tasks: { completed: 2, total: 3 },
-    steps: { completed: 6, total: 8 },
   });
 });
 
@@ -385,7 +374,6 @@ test('header normalizes real Taskflow activity without exposing raw node text', 
 test('attaches controlled Taskflow activity to the real focused conversation title', () => {
   const event = publisherModule.buildHeaderStatusEvent([], {
     openSpec,
-    focusedTaskId: '3.8',
     orchestration: {
       phase: 'verifier',
       state: 'running',
@@ -403,10 +391,7 @@ test('attaches controlled Taskflow activity to the real focused conversation tit
 
   assert.deepEqual(event.work, {
     lifecycle: 'assuring',
-    titles: [
-      'Shape a Pi-first closed-loop development harness',
-      'Gondolin-backed permission profiles',
-    ],
+    titles: ['closed-loop'],
     color: 'accent',
     activity: { kind: 'verification' },
   });
@@ -625,41 +610,17 @@ test('maps only known orchestration vocabulary to bounded activity kinds', () =>
 });
 
 test('unfocused rendering shows progress and the complete change title', () => {
-  const regular = formatOpenSpec(openSpec, null, false);
-  const compact = formatOpenSpec(openSpec, null, true);
+  const regular = formatOpenSpec(openSpec, false);
+  const compact = formatOpenSpec(openSpec, true);
 
   assert.equal(regular, '20/22  Pi-first closed-loop development harness');
   assert.doesNotMatch(regular, /91%|…/u);
   assert.ok(compact.length < regular.length);
 });
 
-test('focused rendering replaces change metadata with the complete active task', () => {
-  const focused = formatOpenSpec(
-    {
-      ...openSpec,
-      pendingTasks: [
-        {
-          id: '1',
-          title:
-            'Step 1.1 Create root-level `greeting.txt` with exact contents beyond the old limit',
-          done: false,
-        },
-      ],
-    },
-    '1',
-    false,
-  );
-
-  assert.equal(
-    focused,
-    '20/22  ▶ 1.1 Create root-level `greeting.txt` with exact contents beyond the old limit',
-  );
-  assert.doesNotMatch(focused, /91%|Pi-first|…/u);
-});
-
 test('complete rendering relies on the state icon and keeps useful progress', () => {
   assert.equal(
-    formatOpenSpec({ ...openSpec, phase: 'complete', completedTasks: 22 }, null, false),
+    formatOpenSpec({ ...openSpec, phase: 'complete', completedTasks: 22 }, false),
     '22/22  Pi-first closed-loop development harness',
   );
 });
@@ -727,7 +688,6 @@ test('resource cleanup is idempotent and prevents duplicate cleanup', () => {
 test('header events carry the title state only when provided', () => {
   const idle = buildTitleState({
     subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
-    focus: { mode: 'none' },
   });
   const withTitle = publisherModule.buildHeaderStatusEvent([], { title: idle });
   assert.deepEqual(withTitle.title, {
@@ -737,15 +697,15 @@ test('header events carry the title state only when provided', () => {
     activity: null,
     waiver: null,
   });
-  const midWork = buildTitleState({
+  const aimed = buildTitleState({
     subject: { state: 'set', title: 'Pivot cockpit to pure pi-starship-header chrome' },
-    focus: {
-      mode: 'task',
+    aim: {
       change: 'closed-loop',
-      taskId: '1.2',
-      awaitingValidation: false,
+      artifactName: 'plan',
+      artifactIdx: '0/1',
+      task: '1/4',
+      mtimeMs: 0,
     },
-    openspec: openSpec,
     activity: {
       class: 'editing',
       target: 'packages/header/src/deck.ts',
@@ -753,12 +713,14 @@ test('header events carry the title state only when provided', () => {
       parent: null,
     },
   });
-  const withWork = publisherModule.buildHeaderStatusEvent([], { title: midWork });
-  // The fixture carries no artifact facts, so the work slot names the
-  // focused change and task alone — counts never clamp in as zeros.
+  const withWork = publisherModule.buildHeaderStatusEvent([], { title: aimed });
+  // The work slot prints the room aim's fields verbatim — counts arrive
+  // in the file, never clamped in as zeros.
   assert.deepEqual(withWork.title?.work, {
     change: 'closed-loop',
-    task: '1.2',
+    artifactName: 'plan',
+    artifactIdx: '0/1',
+    task: '1/4',
   });
   assert.deepEqual(withWork.title?.activity, {
     class: 'editing',
@@ -790,16 +752,9 @@ test('absent counts render no progress prefix and no header counter', () => {
   };
   // Absence never becomes 0/N — the prefix and the counter drop out.
   assert.equal(
-    formatOpenSpec(absent, null, false),
+    formatOpenSpec(absent, false),
     'Pi-first closed-loop development harness',
   );
-  assert.equal(
-    formatOpenSpec(absent, '3.8', false),
-    '▶ 3.8 Gondolin-backed permission profiles',
-  );
-  const event = publisherModule.buildHeaderStatusEvent([], {
-    openSpec: absent,
-    focusedTaskId: '3.8',
-  });
+  const event = publisherModule.buildHeaderStatusEvent([], { openSpec: absent });
   assert.deepEqual(event.progress, []);
 });

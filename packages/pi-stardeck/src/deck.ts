@@ -242,7 +242,7 @@ function workTile(state: HeaderDeckState, theme: Theme, width: number): string {
   if (!title) return '';
   const work = title.work;
   if (!work) return '';
-  return deckWorkSegments(work, Date.now(), width < 56)
+  return deckWorkSegments(work, width < 56)
     .map((segment) => color(theme, segment.color, segment.text, segment.bold === true))
     .join('');
 }

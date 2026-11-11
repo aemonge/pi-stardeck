@@ -1,5 +1,5 @@
 /**
- * Deck-side defensive parser for the title-state contract v1
+ * Deck-side defensive parser for the title-state contract v2
  * (`deck-title-state`, published as the `title` field on
  * `galactica-status:header` with the per-turn `turn` meter beside it).
  *
@@ -11,8 +11,6 @@
  * throws, so older publisher events (missing `title`/`turn`) degrade to
  * the legacy selection/activity rendering.
  */
-
-import { compactActivityAge } from './activity-age.ts';
 
 export const DECK_TITLE_STATE_VERSION = 2 as const;
 
@@ -31,41 +29,22 @@ export type DeckTitleActivityClass = (typeof DECK_TITLE_ACTIVITY_CLASSES)[number
  * render-time width crop owns the real limit now). */
 export const DECK_TITLE_TARGET_MAX = 120;
 
-/** Task/step totals bound from the accepted schema. */
-export const DECK_TITLE_TOTAL_MAX = 999;
-
 const SUBJECT_MAX = 180;
 const IDENTIFIER_MAX = 120;
 const TASK_ID_MAX = 32;
 const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
-const ARTIFACTS_MAX = 16;
 const TURN_TOKENS_MAX = 999_999_999;
 const TURN_ELAPSED_MAX = (99 * 60 + 59) * 1_000 + 999;
 
-export type DeckTitleArtifactState = {
-  id: string;
-  done: boolean;
-  items?: { done: number; total: number };
-};
-
 export type DeckTitleWorkState = {
   change: string;
-  task?: string;
-  schemaName?: string;
-  artifacts?: DeckTitleArtifactState[];
-  /** The artifact the work is in — first not done, else last done. */
-  currentArtifact?: string;
-  /** Attention facts, derived from publisher-owned truth only. */
-  awaitingValidation?: boolean;
-  focusAt?: number;
-  focusStale?: boolean;
   /** Room-aim verbatim fields (observe-room-aim render law): printed
    * as-is — the deck is a printer, not a translator. */
   artifactName?: string;
   artifactIdx?: string;
-  aimTask?: string;
+  task?: string;
   nextStep?: string;
 };
 
@@ -106,15 +85,6 @@ function boundedText(
   return points.join('');
 }
 
-function boundedTotal(value: unknown): number | null {
-  return typeof value === 'number' &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= DECK_TITLE_TOTAL_MAX
-    ? value
-    : null;
-}
-
 function parseTitleActivity(value: unknown): DeckTitleActivityState | null | undefined {
   if (value === null) return null;
   if (!isRecord(value)) return undefined;
@@ -140,57 +110,6 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
   if (!isRecord(value)) return undefined;
   const change = boundedText(value.change, IDENTIFIER_MAX);
   if (!change) return undefined;
-  const task = boundedText(value.task, TASK_ID_MAX, { required: false });
-  if (task === null) return undefined;
-  const schemaName = boundedText(value.schemaName, IDENTIFIER_MAX, {
-    required: false,
-  });
-  if (schemaName === null) return undefined;
-  const currentArtifact = boundedText(value.currentArtifact, TASK_ID_MAX, {
-    required: false,
-  });
-  if (currentArtifact === null) return undefined;
-  let artifacts: DeckTitleArtifactState[] | undefined;
-  if ('artifacts' in value) {
-    if (!Array.isArray(value.artifacts) || value.artifacts.length > ARTIFACTS_MAX) {
-      return undefined;
-    }
-    const parsed: DeckTitleArtifactState[] = [];
-    for (const entry of value.artifacts) {
-      if (!isRecord(entry)) return undefined;
-      const id = boundedText(entry.id, TASK_ID_MAX);
-      if (!id) return undefined;
-      if (typeof entry.done !== 'boolean') return undefined;
-      const artifactDone = entry.done;
-      let items: { done: number; total: number } | undefined;
-      if ('items' in entry) {
-        if (!isRecord(entry.items)) return undefined;
-        const done = boundedTotal(entry.items.done);
-        const total = boundedTotal(entry.items.total);
-        if (done === null || total === null) return undefined;
-        items = { done, total };
-      }
-      parsed.push({ id, done: artifactDone, ...(items ? { items } : {}) });
-    }
-    artifacts = parsed;
-  }
-  if ('awaitingValidation' in value && typeof value.awaitingValidation !== 'boolean') {
-    return undefined;
-  }
-  let focusAt: number | undefined;
-  if ('focusAt' in value) {
-    if (
-      typeof value.focusAt !== 'number' ||
-      !Number.isSafeInteger(value.focusAt) ||
-      value.focusAt < 0
-    ) {
-      return undefined;
-    }
-    focusAt = value.focusAt;
-  }
-  if ('focusStale' in value && typeof value.focusStale !== 'boolean') {
-    return undefined;
-  }
   const artifactName = boundedText(value.artifactName, IDENTIFIER_MAX, {
     required: false,
   });
@@ -199,23 +118,17 @@ function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
     required: false,
   });
   if (artifactIdx === null) return undefined;
-  const aimTask = boundedText(value.aimTask, TASK_ID_MAX, { required: false });
-  if (aimTask === null) return undefined;
+  const task = boundedText(value.task, TASK_ID_MAX, { required: false });
+  if (task === null) return undefined;
   const nextStep = boundedText(value.nextStep, NOTICE_MAX, { required: false });
   if (nextStep === null) return undefined;
-  const extras = {
-    ...(schemaName ? { schemaName } : {}),
-    ...(artifacts ? { artifacts } : {}),
-    ...(currentArtifact ? { currentArtifact } : {}),
-    ...(value.awaitingValidation === true ? { awaitingValidation: true } : {}),
-    ...(focusAt !== undefined ? { focusAt } : {}),
-    ...(value.focusStale === true ? { focusStale: true } : {}),
+  return {
+    change,
     ...(artifactName ? { artifactName } : {}),
     ...(artifactIdx ? { artifactIdx } : {}),
-    ...(aimTask ? { aimTask } : {}),
+    ...(task ? { task } : {}),
     ...(nextStep ? { nextStep } : {}),
   };
-  return task === undefined ? { change, ...extras } : { change, task, ...extras };
 }
 
 function parseTitleWaiver(value: unknown): DeckTitleWaiverState | null | undefined {
@@ -287,113 +200,45 @@ export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
 export type DeckWorkSegment = { text: string; color: string; bold?: boolean };
 
 /**
- * The Work label as colored segments — the truthful, de-duplicated tile.
- * Room-aim render law (observe-room-aim 2026-11-11) when the work carries
- * the file's verbatim fields:
+ * The Work label as colored segments — the render law (observe-room-aim
+ * 2026-11-11), the room aim printed verbatim:
  *
  * `{change} ⟩ {artifact_name} {artifact-idx} › {task} ⟩ {next-step}`
  *
- * — read as-is, printed as-is: the deck is a printer, not a translator.
+ * Read as-is, printed as-is: the deck is a printer, not a translator.
  * No prefixes, no relabeling, no mapping into cockpit words. A missing
  * field drops its segment and the separator that led it; absence never
- * becomes zero. Compact width yields the dim `next-step` first. The
- * legacy collector path keeps the prior law underneath (until the
- * session-fact store retires): `<slug> › <artifact> <done/total> ›
- * 󰄱 <items>` — attention derived, never authored; unknown facts drop
- * their segments; `›` accent like every minor separator.
+ * becomes zero. Compact width yields the dim `next-step` first —
+ * identity and progress survive longest. Separators are chrome with
+ * hard deck-wide colors — `›` accent like every minor separator.
  */
 export function deckWorkSegments(
   work: DeckTitleWorkState,
-  now: number = Date.now(),
   compact = false,
 ): DeckWorkSegment[] {
-  if (
-    work.artifactName !== undefined ||
-    work.aimTask !== undefined ||
-    work.nextStep !== undefined
-  ) {
-    // The slug leads the right side — openspec identity renders
-    // exclusively here (Human layout law 2026-11-10).
-    const segments: DeckWorkSegment[] = [
-      { text: work.change, color: 'success', bold: true },
-    ];
-    if (!compact) {
-      if (work.artifactName) {
-        segments.push({ text: ' ⟩ ', color: 'accent' });
-        segments.push({
-          text: work.artifactIdx
-            ? `${work.artifactName} ${work.artifactIdx}`
-            : work.artifactName,
-          color: 'accent',
-        });
-      }
-      if (work.aimTask) {
-        segments.push({ text: ' › ', color: 'accent' });
-        segments.push({ text: work.aimTask, color: 'accent' });
-      }
-      if (work.nextStep) {
-        segments.push({ text: ' ⟩ ', color: 'accent' });
-        segments.push({ text: work.nextStep, color: 'dim' });
-      }
-    }
-    return segments;
-  }
-  if (work.awaitingValidation) {
-    return compact ? [] : [{ text: '⏸ awaiting you', color: 'warning' }];
-  }
   // The slug leads the right side — openspec identity renders exclusively
   // here (Human layout law 2026-11-10); the left band is Human-owned.
   const segments: DeckWorkSegment[] = [
     { text: work.change, color: 'success', bold: true },
   ];
-  const stale = work.focusStale === true && work.focusAt !== undefined;
   if (!compact) {
-    if (stale) {
-      segments.push({ text: ' › ', color: 'accent' });
+    if (work.artifactName) {
+      segments.push({ text: ' ⟩ ', color: 'accent' });
       segments.push({
-        text: `⚠ focus ${compactActivityAge(Math.max(0, now - (work.focusAt ?? 0)))} old`,
-        color: 'dim',
+        text: work.artifactIdx
+          ? `${work.artifactName} ${work.artifactIdx}`
+          : work.artifactName,
+        color: 'accent',
       });
-    } else {
-      const artifacts = work.artifacts;
-      const current = work.currentArtifact;
-      if (artifacts && artifacts.length > 0 && current) {
-        const done = artifacts.filter((artifact) => artifact.done).length;
-        const currentItems = artifacts.find(
-          (artifact) => artifact.id === current,
-        )?.items;
-        const itemsSettled =
-          currentItems === undefined ||
-          currentItems.total === 0 ||
-          currentItems.done >= currentItems.total;
-        // One hue per state: success only when the artifacts are done AND
-        // the current artifact's items are settled — otherwise work is open.
-        const complete = done === artifacts.length && itemsSettled;
-        segments.push(
-          { text: ' › ', color: 'accent' },
-          {
-            text: `${current} ${done}/${artifacts.length}`,
-            color: complete ? 'success' : 'accent',
-          },
-        );
-      }
     }
-    // The optional slot retired with the gate-act probe — the room
-    // aim's `next-step` prints verbatim in the render-law branch above.
-  }
-  const items = work.currentArtifact
-    ? work.artifacts?.find((artifact) => artifact.id === work.currentArtifact)?.items
-    : undefined;
-  if (items && items.total > 0) {
-    const complete = items.done >= items.total;
-    if (segments.length > 0) {
+    if (work.task) {
       segments.push({ text: ' › ', color: 'accent' });
+      segments.push({ text: work.task, color: 'accent' });
     }
-    segments.push({
-      text: `${complete ? '✔' : '󰄱'} ${items.done}/${items.total}`,
-      color: complete ? 'success' : 'accent',
-      ...(complete ? { bold: true } : {}),
-    });
+    if (work.nextStep) {
+      segments.push({ text: ' ⟩ ', color: 'accent' });
+      segments.push({ text: work.nextStep, color: 'dim' });
+    }
   }
   return segments;
 }

@@ -1022,11 +1022,12 @@ const IDLE_TITLE = {
   waiver: null,
 };
 
-/** A truthful focused-work fixture: artifact facts with file-truth items. */
+/** A truthful aimed-work fixture: the room aim's verbatim fields. */
 const WORK_TITLE = {
   change: 'eight-section-deck',
-  artifacts: [{ id: 'plan', done: false, items: { done: 1, total: 4 } }],
-  currentArtifact: 'plan',
+  artifactName: 'plan',
+  artifactIdx: '0/1',
+  task: '1/4',
 };
 
 function titleFixture(overrides: {
@@ -1058,8 +1059,8 @@ test('renders line 2 as Subject with the Work label on the right', () => {
   const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
   assert.ok(titleRow.startsWith('Pivot cockpit to pure pi-starship-header chrome'));
   // Layout law 2026-11-10: the slug leads the right tile; the left band
-  // stays the Human-owned subject alone.
-  assert.ok(titleRow.includes('eight-section-deck › plan 0/1 › 󰄱 1/4'));
+  // stays the Human-owned subject alone. Render law: verbatim fields.
+  assert.ok(titleRow.includes('eight-section-deck ⟩ plan 0/1 › 1/4'));
   assert.ok(titleRow.indexOf('eight-section-deck') > titleRow.indexOf('Pivot cockpit'));
 });
 
@@ -1111,26 +1112,13 @@ test('colors the Work tile by state and narrows in stages', () => {
   };
 
   renderHeaderDeck(state, 120, theme as never);
+  assert.ok(colors.includes('success:eight-section-deck!'));
+  assert.ok(colors.includes('accent: ⟩ '));
   assert.ok(colors.includes('accent:plan 0/1'));
   assert.ok(colors.includes('accent: › '));
-  assert.ok(colors.includes('accent:󰄱 1/4'));
+  assert.ok(colors.includes('accent:1/4'));
 
-  // Complete artifacts settle the group; settled items tick bold and green.
-  colors.length = 0;
-  const done = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      work: {
-        ...WORK_TITLE,
-        artifacts: [{ id: 'plan', done: true, items: { done: 4, total: 4 } }],
-      },
-    },
-  });
-  renderHeaderDeck(done, 120, theme as never);
-  assert.ok(colors.includes('success:plan 1/1'));
-  assert.ok(colors.includes('success:✔ 4/4'));
-
-  // 39 columns: the whole slot yields.
+  // 39 columns: the whole slot yields to the band fit.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
   assert.ok((narrow[2] ?? '').includes('Pivot cockpit'));
   assert.equal((narrow[2] ?? '').includes('plan 0/1'), false);
@@ -1785,9 +1773,9 @@ test('renders the accepted mid-work mockup at wide widths', () => {
       ...IDLE_TITLE,
       work: {
         change: 'eight-section-deck',
-        task: '2.1',
-        artifacts: [{ id: 'plan', done: false, items: { done: 1, total: 4 } }],
-        currentArtifact: 'plan',
+        artifactName: 'plan',
+        artifactIdx: '0/1',
+        task: '1/4',
       },
       activity: {
         class: 'editing',
@@ -1814,11 +1802,11 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   );
   // Strong rule beneath line 1 (second 2.4 amendment).
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: the slug leads the right tile (layout law), then
-  // `artifact 0/1 › 󰄱 done/total`.
+  // Line 2: the slug leads the right tile (layout law), then the
+  // verbatim render law.
   assert.match(
     lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck › plan 0\/1 › 󰄱 1\/4$/u,
+    /^Pivot cockpit to pure pi-starship-header chrome\s+eight-section-deck ⟩ plan 0\/1 › 1\/4$/u,
   );
   // Line 3: observed activity left, this-turn cost right.
   assert.match(

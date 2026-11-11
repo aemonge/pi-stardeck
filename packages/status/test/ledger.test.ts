@@ -58,7 +58,6 @@ test('LEDGER_EVENT_TYPES covers all contract producer domains', () => {
   assert.deepEqual(
     [...LEDGER_EVENT_TYPES],
     [
-      'focus/openspec',
       'focus/subject',
       'run/start',
       'run/stage',

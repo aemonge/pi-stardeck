@@ -13,7 +13,6 @@ export const DEFAULT_CONFIG: GalacticaStatusConfig = {
   enabled: true,
   openspec: {
     enabled: true,
-    change: null,
   },
   diagnostics: {
     enabled: true,
@@ -126,7 +125,7 @@ export function parseConfig(value: unknown): {
   const diagnostics = isRecord(value.diagnostics) ? value.diagnostics : {};
   const orchestration = isRecord(value.orchestration) ? value.orchestration : {};
 
-  unknownKeys(openspec, ['enabled', 'change'], 'openspec', warnings);
+  unknownKeys(openspec, ['enabled'], 'openspec', warnings);
   unknownKeys(
     diagnostics,
     [
@@ -148,7 +147,6 @@ export function parseConfig(value: unknown): {
       enabled: booleanValue(value.enabled, DEFAULT_CONFIG.enabled),
       openspec: {
         enabled: booleanValue(openspec.enabled, DEFAULT_CONFIG.openspec.enabled),
-        change: nullableString(openspec.change, DEFAULT_CONFIG.openspec.change),
       },
       diagnostics: {
         enabled: booleanValue(diagnostics.enabled, DEFAULT_CONFIG.diagnostics.enabled),

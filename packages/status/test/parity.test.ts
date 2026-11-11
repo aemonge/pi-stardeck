@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { headerSelection } from '../src/publisher.ts';
-import type { OpenSpecState } from '../src/types.ts';
 import {
   reduceLedger,
   resolveSelection,
@@ -12,31 +11,7 @@ import { applyEvent } from '../src/reducer.ts';
 import type { LedgerEvent } from '../src/ledger.ts';
 import type { RunSpan } from '../src/types.ts';
 
-const openSpec: OpenSpecState = {
-  projectRoot: '/project',
-  changeId: 'closed-loop',
-  title: 'Shape a Pi-first closed-loop development harness',
-  phase: 'in-progress',
-  completedTasks: 20,
-  progressPercent: 91,
-  totalTasks: 22,
-  pendingTasks: [],
-  allTasks: [],
-  meta: {
-    source: 'test',
-    refreshedAt: 1,
-    attemptedAt: 1,
-    stale: false,
-  },
-};
-
 const subject = { state: 'set' as const, title: 'Session subject' };
-const taskFocus = {
-  mode: 'task' as const,
-  change: 'closed-loop',
-  taskId: '2',
-  awaitingValidation: false,
-};
 
 function span(overrides: Partial<RunSpan> = {}): RunSpan {
   return {
@@ -60,7 +35,6 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
     {
       name: 'nothing set',
       facts: {
-        openSpec: { mode: 'none' },
         subject: { state: 'clear' },
       },
       legacy: {},
@@ -69,21 +43,10 @@ test('resolver slot matches the legacy headerSelection waterfall (T2 parity)', (
     {
       name: 'subject alone',
       facts: {
-        openSpec: { mode: 'none' },
         subject,
       },
       legacy: { subject },
       expected: 'subject',
-    },
-    {
-      name: 'openspec task beats everything',
-      facts: { openSpec: taskFocus, subject },
-      legacy: {
-        openSpec,
-        focusedTaskId: '2',
-        subject,
-      },
-      expected: 'openspec-task',
     },
   ];
 
