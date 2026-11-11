@@ -100,7 +100,7 @@
 - [x] feat(deck): the OpenSpec mark on both lines
       hash: 5b80f91
 
-- [ ] Human validation — response: · outcome: · surfaced:
+- [x] Human validation — response: "Perfect !!" + live aimed frame (2026-11-11) · outcome: verbatim tile confirmed; frame re-order and slices 6-7 directed and landed · surfaced: the duplicates, the "" task, the slug's engine-row home, the OpenSpec mark
 
   gate-attributed · tool: write · paths: /home/aemonge/projects/pi-stardeck/packages/status/src/room-aim.ts · at 2026-11-11T09:25:22Z
 
@@ -765,3 +765,17 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T15:34:43Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T15:34:49Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:35:36Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:36:04Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:36:11Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:36:17Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:36:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:36:44Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:37:30Z
