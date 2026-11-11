@@ -97,8 +97,8 @@
       baseline PASS ✓ · paths: packages/pi-stardeck/{src/deck.ts,
       src/title-state.ts,test/deck.test.ts,test/title-state.test.ts},
       baseline/source.sha256
-- [ ] feat(deck): the OpenSpec mark on both lines
-      hash:
+- [x] feat(deck): the OpenSpec mark on both lines
+      hash: 5b80f91
 
 - [ ] Human validation — response: · outcome: · surfaced:
 
@@ -757,3 +757,7 @@
   gate-attributed · tool: bash · paths: — · at 2026-11-11T15:31:37Z
 
   gate-attributed · tool: bash · paths: — · at 2026-11-11T15:31:37Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:31:44Z
+
+  gate-attributed · tool: bash · paths: — · at 2026-11-11T15:31:44Z
