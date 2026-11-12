@@ -90,7 +90,7 @@ test('renders the approved rich wide header without side borders or spacer rows'
   // the same frame minus the last two rows.
   assert.equal(lines.length, 5);
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
-  assert.match(plain(lines[1] ?? ''), /^─+$/u);
+  assert.match(plain(lines[1] ?? ''), /^┈+$/u);
   const titleRow = plain(lines[2] ?? '');
   assert.ok(titleRow.startsWith('Read-only preflight'));
   assert.equal(titleRow.includes("000:07'00"), false);
@@ -105,7 +105,7 @@ test('renders the approved rich wide header without side borders or spacer rows'
   assert.equal(titleRow.includes('task 0/1'), false);
   assert.equal(titleRow.includes('stps 6/16'), false);
   assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
-  assert.match(lines[3] ?? '', /^\[2m/u);
+  assert.match(lines[3] ?? '', /^\u001b\[2m/u);
   assert.match(
     plain(lines[0] ?? ''),
     /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/galactica \u{27E9}/u,
@@ -158,7 +158,7 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.ok(colors.includes('dim:/pi-status'));
 });
 
-test('drops the footer count; the strong rule opens the deck', () => {
+test('drops the footer count; the dotted rule opens the deck', () => {
   const state = fixture();
   state.piStatus = { errors: 0, warnings: 0, nativeStatusCount: 3 };
 
@@ -166,7 +166,7 @@ test('drops the footer count; the strong rule opens the deck', () => {
   // Second 2.4 amendment: the solid rule rides beneath line 1 again —
   // clean or alerting, the rule is constant (third amendment: it is the
   // only one; the deck ends at the telemetry row).
-  assert.match(plain(lines[1] ?? ''), /^\u2500+$/u);
+  assert.match(plain(lines[1] ?? ''), /^\u2508+$/u);
   assert.match(plain(lines[2] ?? ''), /^Read-only preflight/u);
   assert.equal(lines.join('').includes('·3'), false);
   // Relocation phase: the footer count is deleted; the anchor echo remains.
@@ -178,12 +178,10 @@ test('drops the footer count; the strong rule opens the deck', () => {
   };
   const wrapped = renderHeaderDeck(state, 59, ansiTheme as never);
   assert.ok(wrapped.every((line) => visibleWidth(line) <= 59));
-  const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
-  assert.equal(solidRules.length, 1, 'the lone strong rule opens the deck');
-  const dottedSeams = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
-  // simplify-deck-band: the dotted seam exists only as the extra band's
-  // top border — OFF renders none.
-  assert.equal(dottedSeams.length, 0, 'no dotted seam while OFF');
+  const dimSeams = wrapped.filter((line) => /^\u001b\[2m┈+\u001b\[22m$/u.test(line));
+  assert.equal(dimSeams.length, 0, 'no dim toggle seam while OFF');
+  const dottedRules = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
+  assert.equal(dottedRules.length, 1, 'the lone dotted rule opens the deck');
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
@@ -557,8 +555,9 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
 
   renderHeaderDeck(fixture(), 160, theme as never);
 
-  assert.ok(colors.some((entry) => entry.startsWith('thinkingHigh:─')));
+  assert.ok(colors.some((entry) => entry.startsWith('thinkingHigh:┈')));
   assert.ok(colors.includes('thinkingHigh:⟩'));
+  // The toggle seam is constructed eagerly; OFF simply never renders it.
   assert.equal(colors.filter((entry) => entry.startsWith('text:┈')).length, 1);
   assert.equal(colors.filter((entry) => entry === 'customMessageLabel:󰠭').length, 0);
   assert.equal(
@@ -1100,12 +1099,11 @@ test('wraps a long subject onto a continuation line', () => {
 
 test('hides the extra band by default; live or idle, the band stays quiet', () => {
   const idle = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
-  // OFF (default): line 1, strong rule, the wrapped subject — nothing else.
+  // OFF (default): line 1, dotted rule, the wrapped subject — nothing else.
   assert.equal(idle.length, 4);
-  assert.equal(
-    idle.some((line) => /^┈+$/u.test(line)),
-    false,
-  );
+  // Exactly one full-width dotted line while OFF — the primary rule; the
+  // dim toggle seam renders only when the band is on.
+  assert.equal(idle.filter((line) => /^┈+$/u.test(line)).length, 1);
   assert.equal(
     idle.some((line) => line.includes('48.2%')),
     false,
@@ -1354,7 +1352,7 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
   }
 });
 
-test('opens the deck with a strong rule; the dotted seam only tops the extra band', () => {
+test('opens the deck with a dotted rule; the dim seam only tops the extra band', () => {
   // Single-line subject at this width so the OFF band count is fixed at
   // three (simplify-deck-band: no activity, no spans, no machine row).
   const off = renderHeaderDeck(
@@ -1363,11 +1361,11 @@ test('opens the deck with a strong rule; the dotted seam only tops the extra ban
     plainTheme as never,
   ).map(plain);
   assert.equal(off.length, 3);
-  assert.match(off[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
+  assert.match(off[1] ?? '', /^┈+$/u, 'dotted rule beneath line 1, rule color');
   assert.equal(
-    off.some((line) => /^┈+$/u.test(line)),
+    off.some((line) => /^\u001b\[2m/u.test(line)),
     false,
-    'no dotted seam while OFF',
+    'no dim toggle seam while OFF',
   );
 
   const on = titleFixture({ title: IDLE_TITLE });
@@ -1405,16 +1403,21 @@ test('renders the accepted idle mockup at wide widths', () => {
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   // simplify-deck-band: the OFF daily view is three rows — line 1 with the
-  // focus chip right, the strong rule, the subject.
+  // focus chip right, the dotted rule in the rule color, the subject.
   assert.equal(lines.length, 3);
   // Line 1: identity leads the path; the focus chip anchors the right.
   assert.match(
     lines[0] ?? '',
     /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\(unfocus openspec\)$/u,
   );
-  // The strong rule beneath line 1 stands alone — no dotted seam while OFF.
-  assert.match(lines[1] ?? '', /^\u2500+$/u);
-  assert.equal(lines.join('\n').includes('\u2508'), false);
+  // The dotted rule beneath line 1 carries no dim wrapper while OFF — the
+  // dim wrapper belongs to the toggle seam alone.
+  assert.match(lines[1] ?? '', /^\u2508+$/u);
+  assert.equal(
+    lines.some((line) => /^\u001b\[2m/u.test(line)),
+    false,
+    'no dim toggle seam while OFF',
+  );
   // Line 2: Subject left (no clock — 2026-10-23 amendment); the work slot
   // stays silent without facts (truthful band, 2026-11-06).
   assert.equal(lines[2] ?? '', 'Pivot cockpit to pure pi-starship-header chrome');
@@ -1449,7 +1452,7 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   const hundred = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   assert.match(hundred[0] ?? '', /main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u);
   // Strong rule beneath line 1.
-  assert.match(lines[1] ?? '', /^\u2500+$/u);
+  assert.match(lines[1] ?? '', /^\u2508+$/u);
   // Line 2: the verbatim render law on the right tile.
   assert.match(
     lines[2] ?? '',

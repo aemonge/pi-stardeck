@@ -647,7 +647,11 @@ export function renderHeaderDeck(
   if (boundedWidth === 0) return [];
 
   const lineColor = 'thinkingHigh';
-  const solidRule = color(theme, lineColor, '─'.repeat(boundedWidth));
+  // simplify-deck-band amendment: the primary rule renders dotted in the
+  // rule color — the frame reads as one texture, not three hard lines.
+  // The extra band's top border keeps its dim wrapper as the toggle's own
+  // seam.
+  const primaryRule = color(theme, lineColor, '┈'.repeat(boundedWidth));
   const dottedRule = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   // Line 2 (four-line deck): the Subject leads with Work on the right end
   // (Human amendment 2026-10-23 — no clock, no chrome). Narrow frames: the
@@ -683,7 +687,7 @@ export function renderHeaderDeck(
       alert ? `${alert} ${chipRight}`.trimEnd() : chipRight,
       boundedWidth,
     ),
-    solidRule,
+    primaryRule,
     ...titleRows,
   ];
 
