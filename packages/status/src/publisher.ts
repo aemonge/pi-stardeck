@@ -1,7 +1,5 @@
 import type { SessionSubject } from './active-work.ts';
-import type { ActiveRunSpanView, ActiveRuntimeRuns } from './runtime-runs.ts';
 import type { TitleState } from './title-state.ts';
-import type { TurnCostSnapshot } from './turn-cost.ts';
 import type {
   DiagnosticsState,
   FancyFooterMessage,
@@ -416,14 +414,10 @@ export type HeaderStatusEvent = {
   backgroundActivity: boolean;
   approvalRequired: boolean;
   blocked: boolean;
-  activeRunSpans?: ActiveRunSpanView[];
   /** Versioned deck-title-state contract for the deck's upper half. */
   title?: TitleState;
-  /** Per-turn cost meter published beside the title state. */
-  turn?: TurnCostSnapshot;
   counters: {
     agents: { active: number; total: number };
-    activeRuns?: ActiveRuntimeRuns;
     tasks?: { completed: number; total: number };
     steps?: { completed: number; total: number };
     files?: { completed: number; total: number };
@@ -772,11 +766,7 @@ export function buildHeaderStatusEvent(
     activityPath?: HeaderActivitySegment[];
     taskflowPhase?: string;
     fallbackTitles?: string[];
-    activeRuns?: ActiveRuntimeRuns;
-    activeRunSpans?: ActiveRunSpanView[];
-    idleMs?: number;
     title?: TitleState | null;
-    turn?: TurnCostSnapshot | null;
     /** Aggregate diagnostics state; supplies the findings count. */
     diagnostics?: DiagnosticsState | null;
   } = {},
@@ -876,10 +866,7 @@ export function buildHeaderStatusEvent(
 
   return {
     protocol: 1,
-    ...(options.activeRunSpans ? { activeRunSpans: options.activeRunSpans } : {}),
-    ...(options.idleMs ? { idleMs: options.idleMs } : {}),
     ...(options.title ? { title: options.title } : {}),
-    ...(options.turn ? { turn: options.turn } : {}),
     activity: activity ?? null,
     selection,
     suggestion,
@@ -912,7 +899,6 @@ export function buildHeaderStatusEvent(
           ? Math.max(orchestration.activeWorkers, orchestration.totalWorkers ?? 0)
           : 0,
       },
-      ...(options.activeRuns ? { activeRuns: options.activeRuns } : {}),
       ...(options.openSpec?.hierarchy
         ? { tasks: options.openSpec.hierarchy.tasks }
         : {}),

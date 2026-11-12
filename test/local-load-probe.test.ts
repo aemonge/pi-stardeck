@@ -11,6 +11,7 @@ const EXPECTED_COMMANDS = [
   'galactica-status-debug',
   'galactica-status-refresh',
   'pi-status',
+  'stardeck-extra',
   'stardeck-health',
 ];
 const EXPECTED_TOOLS: string[] = [];

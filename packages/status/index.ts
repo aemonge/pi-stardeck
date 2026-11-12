@@ -37,14 +37,11 @@ import {
   taskflowPhaseHeaderLifecycle,
   taskflowUpdateHeaderPhase,
 } from './src/publisher.ts';
-import { RuntimeSpanStore } from './src/runtime-runs.ts';
-import { TitleActivityFeed } from './src/title-activity.ts';
 import {
   buildTitleState,
   titleStateDebugLine,
   type TitleState,
 } from './src/title-state.ts';
-import { TurnCostMeter } from './src/turn-cost.ts';
 import {
   AtomicStatusStore,
   createDebouncer,
@@ -176,11 +173,6 @@ class GalacticaStatusRuntime {
   private liveTaskflowPhase: string | undefined;
   private readonly directToolActivities = new Map<string, HeaderActivity>();
   private directToolFailed = false;
-  private readonly runtimeSpans = new RuntimeSpanStore();
-  private readonly titleActivity = new TitleActivityFeed();
-  private readonly turnCost = new TurnCostMeter();
-  private currentTurnId: string | null = null;
-  private turnCounter = 0;
   private readonly statusHealth = new Map<Domain, StatusHealthCondition>();
   private lastStatusHealthSignature = '';
   private readonly store: AtomicStatusStore;
@@ -227,14 +219,6 @@ class GalacticaStatusRuntime {
   };
 
   start(): void {
-    // Heartbeat: span ages and the idle timer are publish-time facts; without
-    // a tick they freeze. One unref'd interval, no-op when nothing is live.
-    this.resources.addInterval(() => {
-      if (this.stopped) return;
-      const snap = this.runtimeSpans.snapshot();
-      const idle = this.runtimeSpans.idleMs();
-      if ((snap.spans?.length ?? 0) > 0 || idle > 0) this.publish();
-    }, 1_000);
     this.publish();
     this.launch(
       (async () => {
@@ -562,14 +546,7 @@ class GalacticaStatusRuntime {
         lifecycle: this.liveLifecycle,
         activity: this.liveActivity,
         taskflowPhase: this.liveTaskflowPhase,
-        activeRuns: (() => {
-          const runs = this.runtimeSpans.snapshot();
-          return { children: runs.children, subagents: runs.subagents };
-        })(),
-        activeRunSpans: this.runtimeSpans.snapshot().spans ?? [],
-        idleMs: this.runtimeSpans.idleMs(),
         title,
-        turn: this.turnCost.snapshot(),
         diagnostics: snapshot.diagnostics,
       }),
     );
@@ -591,7 +568,6 @@ class GalacticaStatusRuntime {
     return buildTitleState({
       subject: { state: 'set', title: subjectTitle },
       aim,
-      activity: this.titleActivity.current(),
     });
   }
 
@@ -612,12 +588,6 @@ class GalacticaStatusRuntime {
   beginTurn(): void {
     this.directToolActivities.clear();
     this.directToolFailed = false;
-    this.titleActivity.reset();
-    this.turnCost.begin();
-    this.turnCounter += 1;
-    this.currentTurnId = `turn-${this.turnCounter}`;
-    this.runtimeSpans.beginRoot(this.currentTurnId, 'understanding');
-    this.syncSpanEvents();
     this.setLiveProjection('understanding', { kind: 'understanding' });
   }
 
@@ -675,93 +645,6 @@ class GalacticaStatusRuntime {
     this.setLiveActivity(completion);
   }
 
-  beginRuntimeRun(toolCallId: string, toolName: string): void {
-    const kind = toolName === 'bash' ? 'bash' : 'subagent';
-    if (!this.runtimeSpans.begin(toolCallId, kind, this.currentTurnId)) return;
-    this.syncSpanEvents();
-    this.publish();
-  }
-
-  /** Feed the title-state activity slot from a tool-execution start. */
-  beginTitleActivity(toolCallId: string, toolName: string, args: unknown): void {
-    if (!this.titleActivity.begin(toolCallId, toolName, args, this.currentTurnId)) {
-      return;
-    }
-    this.publish();
-  }
-
-  /** Clear the title-state activity when its authoring call ends — a
-   * finished tool never lingers as the live label (quiet-activity-row). */
-  finishTitleActivity(toolCallId: string): void {
-    if (!this.titleActivity.finish(toolCallId)) return;
-    this.publish();
-  }
-
-  /** Accumulate one provider response's usage into the per-turn cost meter. */
-  recordTurnUsage(message: unknown): void {
-    if (!message || typeof message !== 'object' || Array.isArray(message)) return;
-    const candidate = message as { role?: unknown; usage?: unknown };
-    if (candidate.role !== 'assistant') return;
-    if (this.turnCost.addUsage(candidate.usage)) this.publish();
-  }
-
-  /** Feed the title-state activity slot from a tool-execution update. */
-  updateTitleActivity(
-    toolCallId: string,
-    toolName: string,
-    args: unknown,
-    partialResult: unknown,
-  ): void {
-    if (
-      !this.titleActivity.update(
-        toolCallId,
-        toolName,
-        args,
-        partialResult,
-        this.currentTurnId,
-      )
-    ) {
-      return;
-    }
-    this.publish();
-  }
-
-  private syncSpanEvents(): void {
-    const changes = this.runtimeSpans.drainChanges();
-    const at = Date.now();
-    for (const started of changes.started) {
-      this.recordEvent({
-        type: 'run/start',
-        at,
-        span: {
-          id: started.id,
-          kind: started.kind,
-          parent: started.parent,
-          ...(started.agent ? { agent: started.agent } : {}),
-          ...(started.label ? { label: started.label } : {}),
-          stage: started.stage,
-          stageDeclared: false,
-          since: at,
-        },
-      });
-    }
-    for (const ended of changes.ended) {
-      this.recordEvent({ type: 'run/end', at, id: ended });
-    }
-  }
-
-  updateRuntimeRun(toolCallId: string, partialResult: unknown, args?: unknown): void {
-    if (!this.runtimeSpans.update(toolCallId, partialResult, args)) return;
-    this.syncSpanEvents();
-    this.publish();
-  }
-
-  finishRuntimeRun(toolCallId: string): void {
-    if (!this.runtimeSpans.finish(toolCallId)) return;
-    this.syncSpanEvents();
-    this.publish();
-  }
-
   setTaskflowPhase(phase: string | undefined): void {
     if (this.liveTaskflowPhase === phase) return;
     this.liveTaskflowPhase = phase;
@@ -792,13 +675,6 @@ class GalacticaStatusRuntime {
   settle(): void {
     this.directToolActivities.clear();
     this.directToolFailed = false;
-    this.titleActivity.reset();
-    this.turnCost.settle();
-    if (this.currentTurnId) {
-      this.runtimeSpans.endRoot(this.currentTurnId);
-      this.currentTurnId = null;
-      this.syncSpanEvents();
-    }
     if (this.liveLifecycle === 'aborted') {
       this.publish();
       return;
@@ -925,11 +801,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
     runtime?.beginTurn();
   });
 
-  pi.on('tool_execution_start', (event) => {
-    runtime?.beginRuntimeRun(event.toolCallId, event.toolName);
-    runtime?.beginTitleActivity(event.toolCallId, event.toolName, event.args);
-  });
-
   pi.on('tool_call', (event) => {
     if (event.toolName !== 'taskflow') {
       runtime?.beginDirectTool(
@@ -953,21 +824,12 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
   });
 
   pi.on('tool_execution_update', (event) => {
-    runtime?.updateRuntimeRun(event.toolCallId, event.partialResult, event.args);
-    runtime?.updateTitleActivity(
-      event.toolCallId,
-      event.toolName,
-      event.args,
-      event.partialResult,
-    );
     if (event.toolName !== 'taskflow') return;
     const phase = taskflowUpdateHeaderPhase(event.partialResult);
     if (phase) runtime?.setTaskflowPhase(phase);
   });
 
   pi.on('tool_execution_end', (event) => {
-    runtime?.finishTitleActivity(event.toolCallId);
-    runtime?.finishRuntimeRun(event.toolCallId);
     if (event.toolName !== 'taskflow') {
       runtime?.finishDirectTool(event.toolCallId, event.isError);
       return;
@@ -978,10 +840,6 @@ export default function galacticaStatus(pi: ExtensionAPI): void {
 
   pi.on('message_update', (event) => {
     if (assistantHasVisibleText(event.message)) runtime?.markAnswering();
-  });
-
-  pi.on('message_end', (event) => {
-    runtime?.recordTurnUsage(event.message);
   });
 
   pi.on('turn_end', (event) => {

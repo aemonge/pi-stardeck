@@ -273,18 +273,6 @@ test('subject selection fills the focus row beneath every higher source', () => 
   assert.doesNotMatch(JSON.stringify([idle, beneathOpenSpec]), /prompt|command/u);
 });
 
-test('publishes bounded active-run counters without runtime identities', () => {
-  const event = publisherModule.buildHeaderStatusEvent([], {
-    activeRuns: { children: 3, subagents: 2 },
-  });
-
-  assert.deepEqual(event.counters, {
-    agents: { active: 0, total: 0 },
-    activeRuns: { children: 3, subagents: 2 },
-  });
-  assert.doesNotMatch(JSON.stringify(event.counters), /prompt|pid|argument|output/u);
-});
-
 test('publishes bounded activity with an honest empty focus', () => {
   const event = publisherModule.buildHeaderStatusEvent([], {
     activity: { kind: 'planning' },
@@ -729,18 +717,6 @@ test('header events carry the title state only when provided', () => {
     parent: null,
   });
   assert.equal(publisherModule.buildHeaderStatusEvent([]).title, undefined);
-});
-
-test('header events carry the per-turn cost meter beside the title state', () => {
-  const withTurn = publisherModule.buildHeaderStatusEvent([], {
-    turn: { tokens: 4_200, elapsedMs: 38_000 },
-  });
-  assert.deepEqual(withTurn.turn, { tokens: 4_200, elapsedMs: 38_000 });
-  assert.equal(publisherModule.buildHeaderStatusEvent([]).turn, undefined);
-  const idleTurn = publisherModule.buildHeaderStatusEvent([], {
-    turn: { tokens: 0, elapsedMs: 0 },
-  });
-  assert.deepEqual(idleTurn.turn, { tokens: 0, elapsedMs: 0 });
 });
 
 test('absent counts render no progress prefix and no header counter', () => {
