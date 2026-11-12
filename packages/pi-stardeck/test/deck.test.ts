@@ -91,8 +91,9 @@ test('renders the approved rich wide header without side borders or spacer rows'
   assert.equal(lines.length, 5);
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
   assert.match(plain(lines[1] ?? ''), /^┈+$/u);
-  const titleRow = plain(lines[2] ?? '');
-  assert.ok(titleRow.startsWith('Read-only preflight'));
+  const titleRow = plain(lines[0] ?? '');
+  assert.ok(titleRow.includes('Read-only preflight'));
+  assert.match(titleRow, /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} /u);
   assert.equal(titleRow.includes("000:07'00"), false);
   // quiet-activity-row: idle renders no line-3 band at all; the
   // lifecycle/suggestion/runs tiles stay gone with the status row.
@@ -106,11 +107,8 @@ test('renders the approved rich wide header without side borders or spacer rows'
   assert.equal(titleRow.includes('stps 6/16'), false);
   assert.equal(plain(lines[3] ?? ''), '┈'.repeat(160));
   assert.match(lines[3] ?? '', /^\u001b\[2m/u);
-  assert.match(
-    plain(lines[0] ?? ''),
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/galactica \u{27E9}/u,
-  );
-  assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
+  assert.match(plain(lines[2] ?? ''), /^\u{F07B} ~\/galactica \u{27E9}/u);
+  assert.match(plain(lines[2] ?? ''), /feature\/review-led/u);
   // simplify-deck-band: the engine cluster closes the extra band's right
   // end — model › thinking ⟩ context › summaries ⟩ quota.
   assert.match(
@@ -134,16 +132,16 @@ test('turns the top ladybug into distinct error and warning counts', () => {
 
   const lines = renderHeaderDeck(state, 160, plainTheme as never);
   // 2.4 amendment: the severity counts ride line 1 beside the chips.
-  const line1 = plain(lines[0] ?? '');
-  assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
+  const pathRow = plain(lines[2] ?? '');
+  assert.match(pathRow, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
   assert.match(
-    line1,
+    pathRow,
     /\/pi-status \(unfocus openspec\)$/u,
     'the chip keeps the right end beside the alert',
   );
-  assert.equal(line1.split('⟩').length - 1, 3, 'identity sep + path sep + alert sep');
-  assert.doesNotMatch(line1, /\u{F082D}/u);
-  assert.ok((lines[0] ?? '').includes('\u001b[7m'), 'counts stay reverse-video');
+  assert.equal(pathRow.split('⟩').length - 1, 2, 'path sep + alert sep');
+  assert.doesNotMatch(pathRow, /\u{F082D}/u);
+  assert.ok((lines[2] ?? '').includes('\u001b[7m'), 'counts stay reverse-video');
 
   const colors: string[] = [];
   renderHeaderDeck(state, 160, {
@@ -167,7 +165,7 @@ test('drops the footer count; the dotted rule opens the deck', () => {
   // clean or alerting, the rule is constant (third amendment: it is the
   // only one; the deck ends at the telemetry row).
   assert.match(plain(lines[1] ?? ''), /^\u2508+$/u);
-  assert.match(plain(lines[2] ?? ''), /^Read-only preflight/u);
+  assert.match(plain(lines[0] ?? ''), /Read-only preflight/u);
   assert.equal(lines.join('').includes('·3'), false);
   // Relocation phase: the footer count is deleted; the anchor echo remains.
   assert.doesNotMatch(lines.at(-1) ?? '', /[0-9] ‹/u);
@@ -185,7 +183,7 @@ test('drops the footer count; the dotted rule opens the deck', () => {
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
-  assert.doesNotMatch(empty[2] ?? '', /·0/u);
+  assert.doesNotMatch(empty[0] ?? '', /·0/u);
 });
 
 test('extension statuses ride the telemetry tail as icons', () => {
@@ -201,21 +199,19 @@ test('extension statuses ride the telemetry tail as icons', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const telemetry = lines[0] ?? '';
-  // deck-reshape: the chips LEAD line 1 ahead of the path; the engine
-  // group anchors the right end ahead of the machine corner.
-  assert.match(
-    telemetry,
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\//u,
-  );
+  const telemetry = lines.at(-1) ?? '';
+  // Post-verdict reshape: the chips lead the subject; the identity row
+  // carries the path and the focus chip.
+  assert.match(lines[0] ?? '', /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} /u);
+  assert.match(telemetry, /^\u{F07B} ~\//u);
   assert.match(
     telemetry,
     /\(unfocus openspec\)$/u,
     'the chip anchors the right end ahead of nothing else',
   );
   assert.ok(
-    telemetry.indexOf('~/') > telemetry.indexOf('\u{F1049}'),
-    'the identity cluster precedes the path',
+    lines[0].indexOf('\u{F1049}') >= 0 && telemetry.indexOf('~/') >= 0,
+    'chips on the subject, path on the identity row',
   );
   assert.equal(telemetry.includes('engram'), false);
   assert.equal(telemetry.includes('graphify'), false);
@@ -305,9 +301,17 @@ test('known companion icons are always present', () => {
   const state = fixture();
   state.extraInfo = true;
   const bare = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  assert.match(bare[0] ?? '', /\u{F04E6}/u, 'companion icons ride line 1 left');
-  assert.match(bare[0] ?? '', /\(unfocus openspec\)$/u, 'the chip rides line 1 right');
-  assert.match(bare.at(-1) ?? '', /\u{F035B}/u, 'cpu anchors the extra band left');
+  assert.match(bare[0] ?? '', /\u{F04E6}/u, 'companion icons lead the subject');
+  assert.match(
+    bare.find((line) => line.includes('(unfocus openspec)')) ?? '',
+    /\(unfocus openspec\)$/u,
+    'the chip rides the identity row',
+  );
+  assert.match(
+    bare.find((line) => line.includes('48.2%')) ?? '',
+    /\u{F035B}/u,
+    'cpu anchors the extra band left',
+  );
 });
 
 test('extension status icons drop on narrow frames', () => {
@@ -335,17 +339,25 @@ test('drops the status command before severity counts at narrow widths', () => {
 
   // deck-reshape: the identity cluster owns line 1's left; the alert
   // compacts beside it — command first, then counts, then everything.
-  const compact = plain(renderHeaderDeck(state, 20, plainTheme as never)[0] ?? '');
+  const compact = plain(renderHeaderDeck(state, 20, plainTheme as never).at(-1) ?? '');
   assert.match(compact, /\u{F0159} 2/u);
   assert.doesNotMatch(compact, /pi-status/u);
-  assert.match(compact, /\u{F1049}/u, 'chips stay visible beside the alert');
+  assert.match(
+    plain(renderHeaderDeck(state, 20, plainTheme as never)[0] ?? ''),
+    /\u{F1049}/u,
+    'chips stay visible leading the subject',
+  );
 
   // Extreme narrow: the alert compacts to a single count; the identity
   // cluster never yields (always-visible contract).
   const narrow = renderHeaderDeck(state, 9, plainTheme as never);
-  const narrow1 = plain(narrow[0] ?? '');
+  const narrow1 = plain(narrow.at(-1) ?? '');
   assert.match(narrow1, /\u{F0159} 5/u, 'the worst count survives at 9');
-  assert.match(narrow1, /\u{F01A7}/u, 'the devbox chip leads whatever fits');
+  assert.match(
+    plain(narrow[0] ?? ''),
+    /\u{F01A7}/u,
+    'the devbox chip leads the subject',
+  );
   assert.ok(narrow.every((line) => visibleWidth(line) <= 9));
 });
 test('keeps activity and focus distinct on the title row', () => {
@@ -370,8 +382,8 @@ test('keeps activity and focus distinct on the title row', () => {
     lines.some((line) => plain(line).includes('verify')),
     false,
   );
-  const titleRow = plain(lines[2] ?? '');
-  assert.ok(titleRow.startsWith('Plan title › Current task'));
+  const titleRow = plain(lines[0] ?? '');
+  assert.ok(titleRow.includes('Plan title › Current task'));
   assert.equal(titleRow.includes("000:07'00"), false);
 });
 
@@ -388,8 +400,8 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
   assert.doesNotMatch(wide[5] ?? '', /Parent Plan title/u);
-  const titleRow = plain(wide[2] ?? '');
-  assert.ok(titleRow.startsWith(`Parent Plan title › ${expected}`.slice(0, 40)));
+  const titleRow = plain(wide[0] ?? '');
+  assert.ok(titleRow.includes('Parent Plan title › '));
   assert.equal(titleRow.includes("000:07'00"), false);
 
   const narrow = renderHeaderDeck(state, 79, plainTheme as never);
@@ -409,7 +421,7 @@ test('gives the complete selected scope a bounded full-width focus canvas', () =
   );
   const focus = narrow.slice(focusIdx, focusIdx + 2);
   assert.equal(focus.length, 2);
-  assert.ok(plain(focus[0] ?? '').startsWith('Parent Plan title'));
+  assert.ok(plain(focus[0] ?? '').includes('Parent Plan title'));
   assert.ok(plain(focus[1] ?? '').includes('without repeating'));
 });
 
@@ -424,8 +436,8 @@ test('keeps a single selected title on the focus row only', () => {
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
   assert.doesNotMatch(wide[5] ?? '', /One focused work title/u);
-  const titleRow = plain(wide[2] ?? '');
-  assert.ok(titleRow.startsWith('One focused work title'));
+  const titleRow = plain(wide[0] ?? '');
+  assert.ok(titleRow.includes('One focused work title'));
   assert.equal(titleRow.includes("000:07'00"), false);
   assert.equal(wide.join('\n').split('One focused work title').length - 1, 1);
 
@@ -433,7 +445,7 @@ test('keeps a single selected title on the focus row only', () => {
   assert.ok(
     plain(
       narrow.find((line) => plain(line).includes('One focused work title')) ?? '',
-    ).startsWith('One focused work title'),
+    ).includes('One focused work title'),
   );
 });
 
@@ -447,8 +459,8 @@ test('renders the subject selection on the focus row instead of an em dash', () 
   };
 
   const wide = renderHeaderDeck(state, 160, plainTheme as never);
-  const subjectRow = plain(wide[2] ?? '');
-  assert.ok(subjectRow.startsWith('Session subject'));
+  const subjectRow = plain(wide[0] ?? '');
+  assert.ok(subjectRow.includes('Session subject'));
   assert.equal(subjectRow.includes("000:07'00"), false);
   assert.doesNotMatch(wide.join('\n'), /󰠭 ⟩ —/u);
 
@@ -555,9 +567,9 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
 
   renderHeaderDeck(fixture(), 160, theme as never);
 
-  assert.ok(colors.some((entry) => entry.startsWith('thinkingHigh:┈')));
   assert.ok(colors.includes('thinkingHigh:⟩'));
-  // The toggle seam is constructed eagerly; OFF simply never renders it.
+  // The dim seam is constructed eagerly and rendered once while OFF —
+  // the subject/identity separation is the frame's only dotted rule.
   assert.equal(colors.filter((entry) => entry.startsWith('text:┈')).length, 1);
   assert.equal(colors.filter((entry) => entry === 'customMessageLabel:󰠭').length, 0);
   assert.equal(
@@ -584,7 +596,7 @@ test('the engine cluster leaves line 1 and closes the extra band right', () => {
   const state = fixture();
   state.extraInfo = true;
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const extra = lines.at(-1) ?? '';
+  const extra = lines.find((line) => line.includes('48.2%')) ?? '';
   assert.match(
     extra,
     /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0726} \$5\.16\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F241} 63%$/u,
@@ -665,7 +677,7 @@ test('preserves width and essential deck structure through responsive collapse',
       String(width),
     );
     assert.ok(
-      lines.some((line) => plain(line).includes('Read-only preflight')),
+      lines.some((line) => plain(line).includes('Read-only')),
       String(width),
     );
     // The sentinel retired with the session id — the census is zero.
@@ -690,7 +702,7 @@ test('a live session without a subject renders the dim no-subject placeholder', 
     selection: undefined,
   };
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  assert.match(lines[2] ?? '', /^— no subject/u);
+  assert.match(lines[0] ?? '', /— no subject/u);
 
   // Header present but title absent entirely (selection-less): same hint.
   const untitled = fixture();
@@ -700,7 +712,7 @@ test('a live session without a subject renders the dim no-subject placeholder', 
     selection: undefined,
   };
   const untitledLines = renderHeaderDeck(untitled, 120, plainTheme as never).map(plain);
-  assert.match(untitledLines[2] ?? '', /^— no subject/u);
+  assert.match(untitledLines[0] ?? '', /— no subject/u);
 });
 
 test('renders unavailable optional telemetry honestly', () => {
@@ -728,9 +740,8 @@ test('renders unavailable optional telemetry honestly', () => {
   );
   // Counter removal lockstep: without counters the title's right end is
   // silent — Work renders nothing for pre-title publishers (no placeholder).
-  assert.equal(plain(lines[2] ?? '').includes('task 00/00'), false);
-  assert.equal(plain(lines[2] ?? '').includes('stps 00/00'), false);
-  assert.equal(plain(lines[2] ?? '').trim(), '');
+  assert.equal(plain(lines[0] ?? '').includes('task 00/00'), false);
+  assert.equal(plain(lines[0] ?? '').includes('stps 00/00'), false);
   assert.doesNotMatch(all, /next direction/u);
   assert.doesNotMatch(all, /clean/u);
   assert.equal(all.includes('task'), false);
@@ -743,14 +754,13 @@ test('renders unavailable optional telemetry honestly', () => {
   // simplify-deck-band: absent facts remove their slots — the bare extra
   // band keeps only the compaction counter on the engine cluster, and the
   // gray placeholder rides line 1's right end.
-  const bareTail = plain(lines.at(-1) ?? '');
+  const bareTail = plain(lines.find((line) => line.includes('GPT-5.6 Sol')) ?? '');
   assert.ok(bareTail.includes('󰎞 2'), 'the counter survives');
-  assert.ok(bareTail.includes('GPT-5.6 Sol'), 'the engine cluster still speaks');
   assert.ok(
-    plain(lines[0] ?? '')
+    plain(lines.find((line) => line.includes('(unfocus openspec)')) ?? '')
       .trimEnd()
       .endsWith('(unfocus openspec)'),
-    'the placeholder rides line 1 right',
+    'the placeholder rides the identity row',
   );
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
@@ -873,9 +883,19 @@ test('stardeck-extra reveals the extra band: dotted seam, machine tail left, eng
   const state = fixture();
   state.extraInfo = true;
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  assert.equal(lines.length, 6, 'L1, rule, subject ×2 wrap, dotted seam, extra row');
-  assert.match(lines[4] ?? '', /^┈+$/u, 'the dotted seam tops the toggle area');
+  assert.equal(
+    lines.length,
+    6,
+    'subject ×2 wrap, dim seam, identity row, dim seam, extra row',
+  );
+  assert.equal(lines[2] ?? '', '┈'.repeat(120), 'the dim seam under the subject');
   const extra = lines[5] ?? '';
+  const rawOn = renderHeaderDeck(state, 120, plainTheme as never);
+  assert.equal(
+    rawOn.filter((line) => /^\u001b\[2m/u.test(line)).length,
+    2,
+    'two dim seams while ON — subject and extra-band separators',
+  );
   assert.ok(extra.includes('48.2%'), 'the machine tail rides left');
   assert.ok(extra.includes('$5.16'), 'cost stays in the machine tail');
   assert.match(
@@ -890,8 +910,8 @@ test('stardeck-extra reveals the extra band: dotted seam, machine tail left, eng
 
 test('the focused-change chip relocates to line 1 right in both states', () => {
   const off = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
-  assert.match(off[0] ?? '', /\(unfocus openspec\)$/u);
-  assert.doesNotMatch(off[0] ?? '', /GPT-5\.6 Sol/u);
+  assert.match(off.at(-1) ?? '', /\(unfocus openspec\)$/u);
+  assert.doesNotMatch(off.at(-1) ?? '', /GPT-5\.6 Sol/u);
 
   const on = fixture();
   on.extraInfo = true;
@@ -905,8 +925,8 @@ test('the focused-change chip relocates to line 1 right in both states', () => {
     }),
   };
   const lines = renderHeaderDeck(on, 120, plainTheme as never).map(plain);
-  assert.match(lines[0] ?? '', /󰈙 eight-section-deck$/u);
-  assert.equal(lines[2] ?? '', 'Subject', 'no echo of the chip on line 2');
+  assert.match(lines[2] ?? '', /󰈙 eight-section-deck$/u);
+  assert.equal(lines[0] ?? '', '󰆧 󰓦 󱁉 󰒘 ⟩ Subject', 'the chips lead the subject');
 });
 
 // --- Step 2.1: line 2 on the title-state contract ---------------------------
@@ -948,13 +968,15 @@ test('renders line 2 as Subject with the Work label on the right', () => {
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
   const titleRow = lines.find((line) => line.includes('Pivot cockpit')) ?? '';
-  assert.ok(titleRow.startsWith('Pivot cockpit to pure pi-starship-header chrome'));
+  assert.ok(titleRow.includes('Pivot cockpit to pure pi-starship-header chrome'));
   // Layout law 2026-11-10 amended (reorder-deck-frame): line 2 carries
   // the progress fields; the slug lives on the engine row's right end.
   assert.ok(titleRow.includes('plan 0/1 › 1/4'));
   const state2 = { ...state, extraInfo: true };
   const engineLine = plain(
-    renderHeaderDeck(state2, 120, plainTheme as never).at(-1) ?? '',
+    renderHeaderDeck(state2, 120, plainTheme as never).find((line) =>
+      line.includes('48.2%'),
+    ) ?? '',
   );
   assert.doesNotMatch(
     engineLine,
@@ -989,8 +1011,8 @@ test('renders the dim no-subject placeholder when the subject is null', () => {
   const state = titleFixture({ title: { ...IDLE_TITLE, subject: null } });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  const titleRow = lines[2] ?? '';
-  assert.ok(titleRow.startsWith('— no subject'));
+  const titleRow = lines[0] ?? '';
+  assert.ok(titleRow.includes('— no subject'));
   assert.doesNotMatch(titleRow, /⟩\s*$/u);
   assert.doesNotMatch(titleRow, /󰠭\s+⟩/u);
   // The work slot stays silent — absent facts remove their slots.
@@ -1018,15 +1040,15 @@ test('colors the Work tile by state and narrows in stages', () => {
 
   // 39 columns: the whole slot yields to the band fit.
   const narrow = renderHeaderDeck(state, 39, plainTheme as never).map(plain);
-  assert.ok((narrow[2] ?? '').includes('Pivot cockpit'));
+  assert.ok((narrow[0] ?? '').includes('Pivot cockpit'));
   assert.equal((narrow[2] ?? '').includes('plan 0/1'), false);
 
   // 45 columns: compact yields the dim next-step only — identity and
   // progress survive; the item glyph retired with the collector path.
   const mid = renderHeaderDeck(state, 45, plainTheme as never).map(plain);
-  assert.ok((mid[2] ?? '').includes('plan 0/1'));
-  assert.ok((mid[2] ?? '').includes('1/4'));
-  assert.equal((mid[2] ?? '').includes('󰄱'), false);
+  assert.ok((mid[0] ?? '').includes('plan 0/1'));
+  assert.ok((mid[0] ?? '').includes('1/4'));
+  assert.equal((mid[0] ?? '').includes('󰄱'), false);
 });
 
 test('the left band renders accent unconditionally — it can never mirror openspec', () => {
@@ -1091,7 +1113,7 @@ test('wraps a long subject onto a continuation line', () => {
   const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
   const first = lines.findIndex((line) => line.includes('Deliver one deliberately'));
   assert.ok(first >= 0);
-  assert.ok((lines[first] ?? '').startsWith('Deliver one deliberately'));
+  assert.ok((lines[first] ?? '').includes('Deliver one deliberately'));
   assert.ok((lines[first + 1] ?? '').includes('machinery'));
 });
 
@@ -1158,10 +1180,11 @@ test('relocates companion chips to line 1 right and bolds them', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, theme as never).map(plain);
-  const line1 = lines[0] ?? '';
-  assert.ok(line1.includes('~/galactica'));
-  assert.match(line1, /\(unfocus openspec\)$/u);
-  assert.doesNotMatch(line1, /GPT-5\.6 Sol/u, 'the engine left line 1');
+  const identityRow = lines.at(-1) ?? '';
+  assert.ok(identityRow.includes('~/galactica'));
+  assert.match(identityRow, /\(unfocus openspec\)$/u);
+  assert.doesNotMatch(identityRow, /GPT-5\.6 Sol/u, 'the engine left the identity row');
+  assert.match(lines[0] ?? '', /\u{F04E6}/u, 'the chips lead the subject');
   assert.ok(bolded.includes('\u{F04E6}'), 'chips stay bold');
 });
 
@@ -1169,36 +1192,40 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
   const state = fixture();
   for (const width of [79, 60, 39, 24, 14]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
-    const line1 = lines[0] ?? '';
-    assert.match(line1, /\u{F01A7} \u{F04E6} \u{F1049} \u{F0498}/u, String(width));
-    if (width >= 39) assert.ok(line1.includes('~/'), String(width));
+    const subjectLine = lines[0] ?? '';
+    assert.match(
+      subjectLine,
+      /\u{F01A7} \u{F04E6} \u{F1049} \u{F0498}/u,
+      String(width),
+    );
+    if (width >= 39) assert.ok((lines.at(-1) ?? '').includes('~/'), String(width));
   }
-  // simplify-deck-band: the focus chip rides line 1 right at every width;
-  // the engine cluster only lives on the extra band.
+  // simplify-deck-band: the focus chip rides the identity row at every
+  // width; the engine cluster only lives on the extra band.
   assert.match(
-    plain(renderHeaderDeck(state, 79, plainTheme as never)[0] ?? ''),
+    plain(renderHeaderDeck(state, 79, plainTheme as never).at(-1) ?? ''),
     /\(unfocus openspec\)$/u,
-    'the chip still rides line 1 at 79',
+    'the chip still rides the identity row at 79',
   );
   assert.doesNotMatch(
-    plain(renderHeaderDeck(state, 79, plainTheme as never)[0] ?? ''),
+    plain(renderHeaderDeck(state, 79, plainTheme as never).at(-1) ?? ''),
     /GPT-5\.6 Sol/u,
-    'the engine never rides line 1',
+    'the engine never rides the identity row',
   );
 });
 
 test('keeps the devbox chip leading the corner off the path', () => {
   const lines = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
-  const line1 = lines[0] ?? '';
+  const subjectLine = lines[0] ?? '';
   assert.match(
-    line1,
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/galactica/u,
-    'the path carries no devbox prefix',
+    subjectLine,
+    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} /u,
+    'the chips lead the subject',
   );
   assert.match(
-    line1,
-    /\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9}/u,
-    'devbox leads the identity cluster into the corner',
+    lines.at(-1) ?? '',
+    /^\u{F07B} ~\/galactica/u,
+    'the path leads the identity row, chip-free',
   );
   // Amendment 2026-10-19: the chip never disappears — outside devbox it
   // renders error-red brackets (KO), inside it is the bare blue OK chip.
@@ -1294,9 +1321,9 @@ test('the warning left the deck; renderWarningLine speaks below the prompt', () 
     'no warning rides the deck anymore',
   );
   assert.match(
-    lines[0] ?? '',
+    lines.at(-1) ?? '',
     /\/pi-status \(unfocus openspec\)$/u,
-    'the chip rides line 1 beside the alert',
+    'the chip rides the identity row beside the alert',
   );
   assert.deepEqual(
     renderWarningLine(state, 160, plainTheme as never).map(plain),
@@ -1313,7 +1340,7 @@ test('the warning left the deck; renderWarningLine speaks below the prompt', () 
   assert.equal(clean.join('\n').includes('🔔'), false);
   assert.doesNotMatch(clean.join('\n'), /63%/u, 'no quota speaks while OFF');
   // Severity counts (line 1) and notices stay distinct surfaces.
-  assert.match(plain(clean[0] ?? ''), /⟩ \/pi-status/u);
+  assert.match(plain(clean.at(-1) ?? ''), /⟩ \/pi-status/u);
   assert.deepEqual(
     renderWarningLine(state, 160, plainTheme as never),
     [],
@@ -1326,9 +1353,9 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
   const machine = ['48.2%', '268M', '3/3', '38%', '\u{F039E} 2', '$5.16'];
   for (let width = 20; width <= 130; width += 1) {
     const rendered = renderHeaderDeck(state, width, plainTheme as never);
-    const line1 = plain(rendered[0] ?? '');
+    const subjectLine = plain(rendered[0] ?? '');
     assert.match(
-      line1,
+      subjectLine,
       /\u{F01A7} \u{F04E6} \u{F1049} \u{F0498}/u,
       `identity cluster survives at ${width}`,
     );
@@ -1361,19 +1388,20 @@ test('opens the deck with a dotted rule; the dim seam only tops the extra band',
     plainTheme as never,
   ).map(plain);
   assert.equal(off.length, 3);
-  assert.match(off[1] ?? '', /^┈+$/u, 'dotted rule beneath line 1, rule color');
   assert.equal(
-    off.some((line) => /^\u001b\[2m/u.test(line)),
-    false,
-    'no dim toggle seam while OFF',
+    off[1] ?? '',
+    '┈'.repeat(100),
+    'dim dotted rule between subject and identity',
   );
+  assert.match(off[2] ?? '', /^\u{F07B} ~\/galactica/u);
 
   const on = titleFixture({ title: IDLE_TITLE });
   on.extraInfo = true;
   const lines = renderHeaderDeck(on, 100, plainTheme as never).map(plain);
-  assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam tops the extra band');
+  assert.equal(lines.length, 5, 'subject, seam, identity, seam, extra');
+  assert.equal(lines[1] ?? '', '┈'.repeat(100), 'the dim seam tops the identity row');
   assert.ok((lines[4] ?? '').includes('48.2%'));
-  assert.equal(lines[4], lines.at(-1));
+  assert.match(lines[4] ?? '', /\u{F06A9}/u, 'the engine cluster closes the deck');
 });
 
 // --- Step 2.4: the two accepted mockups as lockstep fixtures ----------------
@@ -1405,22 +1433,18 @@ test('renders the accepted idle mockup at wide widths', () => {
   // simplify-deck-band: the OFF daily view is three rows — line 1 with the
   // focus chip right, the dotted rule in the rule color, the subject.
   assert.equal(lines.length, 3);
-  // Line 1: identity leads the path; the focus chip anchors the right.
+  // The subject leads, chips first.
   assert.match(
     lines[0] ?? '',
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\(unfocus openspec\)$/u,
+    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} Pivot cockpit to pure pi-starship-header chrome$/u,
   );
-  // The dotted rule beneath line 1 carries no dim wrapper while OFF — the
-  // dim wrapper belongs to the toggle seam alone.
-  assert.match(lines[1] ?? '', /^\u2508+$/u);
-  assert.equal(
-    lines.some((line) => /^\u001b\[2m/u.test(line)),
-    false,
-    'no dim toggle seam while OFF',
+  // The dim dotted seam separates subject from the identity row.
+  assert.equal(lines[1] ?? '', '┈'.repeat(120), 'the dim seam under the subject');
+  // The identity row: path › git, the focus chip anchoring the right.
+  assert.match(
+    lines[2] ?? '',
+    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\(unfocus openspec\)$/u,
   );
-  // Line 2: Subject left (no clock — 2026-10-23 amendment); the work slot
-  // stays silent without facts (truthful band, 2026-11-06).
-  assert.equal(lines[2] ?? '', 'Pivot cockpit to pure pi-starship-header chrome');
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
 
@@ -1445,25 +1469,25 @@ test('renders the accepted mid-work mockup at wide widths', () => {
   // simplify-deck-band ON: five rows — the chip rides line 1 right, the
   // git segment yields its width (`ma…`), the extra band closes the deck.
   assert.match(
-    lines[0] ?? '',
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u,
+    lines[2] ?? '',
+    /^\u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u,
   );
   // At 100 the path truncates (`~/project…`) while the chip rides.
   const hundred = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.match(hundred[0] ?? '', /main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u);
-  // Strong rule beneath line 1.
-  assert.match(lines[1] ?? '', /^\u2508+$/u);
-  // Line 2: the verbatim render law on the right tile.
+  assert.match(hundred[2] ?? '', /main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u);
+  // The subject leads with its work tile; the dim seam tops the extra
+  // band; the dotted rule in the rule color separates it from the
+  // identity row.
   assert.match(
-    lines[2] ?? '',
-    /^Pivot cockpit to pure pi-starship-header chrome\s+󰈙 plan 0\/1 › 1\/4$/u,
+    lines[0] ?? '',
+    /^\u{F01A7} [^\u{F07B}]*Pivot cockpit to pure pi-starship-header chrome\s+󰈙 plan 0\/1 › 1\/4$/u,
   );
-  // The dotted seam tops the extra band; machine tail left, engine right.
-  assert.match(lines[3] ?? '', /^\u2508+$/u);
+  assert.equal(lines[1] ?? '', '┈'.repeat(120), 'the dim seam under the subject');
   assert.match(
     lines[4] ?? '',
     /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0726} \$5\.16\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F241} 63%$/u,
   );
+  assert.equal(lines[3] ?? '', '┈'.repeat(120), 'the dim seam over the extra band');
   assert.equal(lines.length, 5);
 });
 
@@ -1475,8 +1499,8 @@ test('renders both mockups identically at 100 and 120 columns', () => {
   };
   for (const width of [100, 120]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
-    assert.ok((lines[0] ?? '').includes('~/project'), String(width));
-    assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
+    assert.ok((lines[0] ?? '').includes('Pivot cockpit'), String(width));
+    assert.ok((lines.at(-1) ?? '').includes('~/project'), String(width));
     // OFF stays three rows at every width — the extra band never leaks.
     assert.equal(lines.length, 3, String(width));
     assert.equal(
@@ -1521,8 +1545,8 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
     'no warning rides the deck',
   );
   assert.ok(
-    (warnedLines[0] ?? '').includes('(unfocus openspec)'),
-    'the chip still rides line 1 right',
+    (warnedLines.at(-1) ?? '').includes('(unfocus openspec)'),
+    'the chip still rides the identity row right',
   );
   assert.deepEqual(
     renderWarningLine(warned, 120, plainTheme as never).map(plain),
@@ -1548,9 +1572,10 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
     lsp: null,
   };
   const bareLines = renderHeaderDeck(bare, 120, plainTheme as never).map(plain);
+  const bareEngine = bareLines.find((line) => line.includes('GPT-5.6 Sol')) ?? '';
   assert.ok(
-    (bareLines.at(-1) ?? '').trimEnd().endsWith('GPT-5.6 Sol › high'),
-    'a bare ON deck closes with the engine cluster alone — the model always speaks',
+    bareEngine.trimEnd().endsWith('GPT-5.6 Sol › high'),
+    'a bare ON deck keeps the engine cluster alone — the model always speaks',
   );
 });
 

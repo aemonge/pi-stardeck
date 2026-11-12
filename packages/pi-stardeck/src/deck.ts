@@ -158,7 +158,13 @@ function bandWrap(
   );
 }
 
-function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): string[] {
+function titleBandLines(
+  state: HeaderDeckState,
+  width: number,
+  theme: Theme,
+  lead?: { text: string; width: number },
+): string[] {
+  const wrapWidth = lead ? Math.max(1, width - lead.width) : width;
   // Human amendment 2026-10-23: line 2 is sacred — Subject and the Work
   // tile only; no timers, no icons, no chrome. The session clock is
   // discarded; liveness lives in the turn cluster on the activity lane.
@@ -169,12 +175,12 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
       // Human amendment 2026-10-19: the empty slot renders its dim
       // placeholder — mirroring the Work side's `— no change owns the
       // moment` — never an empty band while the session talks.
-      return bandWrap('— no subject', width, theme, 'dim');
+      return bandWrap('— no subject', wrapWidth, theme, 'dim');
     }
     // Human layout law 2026-11-10: the left band is Human-owned title —
     // it can never mirror openspec, so the mirror coloring is gone and
     // the band renders accent unconditionally.
-    return bandWrap(subject, width, theme, 'accent');
+    return bandWrap(subject, wrapWidth, theme, 'accent');
   }
   // Pre-title publishers: the legacy selection keeps the band alive.
   const selection = state.header?.selection;
@@ -192,7 +198,7 @@ function titleBandLines(state: HeaderDeckState, width: number, theme: Theme): st
   const selectionColor = ['accent', 'success'].includes(selection.color)
     ? 'accent'
     : selection.color;
-  return bandWrap(titles.join(' › '), width, theme, selectionColor);
+  return bandWrap(titles.join(' › '), wrapWidth, theme, selectionColor);
 }
 
 function semanticSeparator(theme: Theme): string {
@@ -269,20 +275,14 @@ function globalLeft(state: HeaderDeckState, theme: Theme): string {
   return `${color(theme, 'accent', `󰚩 ${safeText(state.model, 80)}`)} ${minorSeparator(theme)} ${color(theme, state.thinking ? 'thinkingHigh' : 'dim', safeText(state.thinking || 'off', 16))}`;
 }
 
-function projectDeckLeft(
-  state: HeaderDeckState,
-  theme: Theme,
-  width: number,
-  identity: { text: string; trailingBare: boolean },
-): string {
-  // Line 1 left (deck-reshape): the identity cluster LEADS —
-  // `identity ⟩ path › git` — never the reverse; the cluster never
-  // drops, so truncation eats the git segment first, then the path.
+function projectDeckLeft(state: HeaderDeckState, theme: Theme, width: number): string {
+  // Identity row (post-verdict reshape): path › git — the chips moved up
+  // to lead the subject; truncation eats the git segment first, then the
+  // path.
   const path = color(theme, 'success', `\u{F07B} ${safeText(state.cwd)}`);
   const gitSegment =
     width >= 79 ? truncateToWidth(gitRight(state, theme), 52, '…') : '';
-  const left = gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
-  return `${identity.text} ${semanticSeparator(theme)} ${left}`;
+  return gitSegment ? `${path} ${semanticSeparator(theme)} ${gitSegment}` : path;
 }
 
 type CompanionSpec = {
@@ -651,13 +651,20 @@ export function renderHeaderDeck(
   // rule color — the frame reads as one texture, not three hard lines.
   // The extra band's top border keeps its dim wrapper as the toggle's own
   // seam.
-  const primaryRule = color(theme, lineColor, '┈'.repeat(boundedWidth));
   const dottedRule = `\u001b[2m${color(theme, 'text', '┈'.repeat(boundedWidth))}\u001b[22m`;
   // Line 2 (four-line deck): the Subject leads with Work on the right end
   // (Human amendment 2026-10-23 — no clock, no chrome). Narrow frames: the
   // Work slot yields before the Subject does.
   const titleRight = workTile(state, theme, boundedWidth);
-  const focusLines = titleBandLines(state, boundedWidth, theme);
+  // Post-verdict reshape: the identity chips LEAD the subject —
+  // `chips ⟩ subject` — and the path/git row moves below the subject seam.
+  const identity = identityCluster(state, theme);
+  const lead = {
+    text: `${identity.text} ${semanticSeparator(theme)} `,
+    width: visibleWidth(identity.text) + 3,
+  };
+  const focusLines = titleBandLines(state, boundedWidth, theme, lead);
+  focusLines[0] = `${lead.text}${focusLines[0] ?? ''}`;
   const titleRows = [
     alignedSingleRow(focusLines[0] ?? '', titleRight, boundedWidth),
     ...focusLines.slice(1),
@@ -680,21 +687,15 @@ export function renderHeaderDeck(
     theme,
     lineColor,
   );
-  const identity = identityCluster(state, theme);
-  const rows = [
-    alignedSingleRow(
-      projectDeckLeft(state, theme, boundedWidth, identity),
-      alert ? `${alert} ${chipRight}`.trimEnd() : chipRight,
-      boundedWidth,
-    ),
-    primaryRule,
-    ...titleRows,
-  ];
-
-  // Extra-info row (simplify-deck-band): machine tail left, engine cluster
-  // right, revealed by `/stardeck-extra` and hidden by default. The dotted
-  // rule above it is the toggle area's top border — its only surviving
-  // use. A healthy ON with nothing to say still renders nothing here.
+  const identityLine = alignedSingleRow(
+    projectDeckLeft(state, theme, boundedWidth),
+    alert ? `${alert} ${chipRight}`.trimEnd() : chipRight,
+    boundedWidth,
+  );
+  // Post-verdict reshape: subject (chips leading) / dim seam / identity
+  // row / and — when the extra band is on — a second dim seam over the
+  // machine tail and engine cluster.
+  const rows: string[] = [...titleRows, dottedRule, identityLine];
   if (state.extraInfo) {
     const engineRight = modelGroupLeft(state, theme);
     const machineTail = machineCornerNotices(
