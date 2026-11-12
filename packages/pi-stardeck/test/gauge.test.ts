@@ -288,35 +288,35 @@ test('extension never converts Human prompt text into title focus', () => {
   );
 });
 
-test('leaves Pi working row as-is and wires foreground activity-age lifecycle', () => {
+test('leaves Pi working row as-is; the deck wires no clock lifecycle at all', () => {
   const extensionSource = readFileSync(new URL('../index.ts', import.meta.url), 'utf8');
   // simplify-deck-defaults: Pi's native Working… row stays exactly as the
   // core renders it — the deck never suppresses native indicators.
   assert.doesNotMatch(extensionSource, /setWorkingVisible/u);
+  // simplify-deck-band: the clock lifecycle is retired wholesale — no
+  // activity ticker, no observed-activity tracking, no elapsed state.
+  assert.doesNotMatch(extensionSource, /markObservedActivity/u);
+  assert.doesNotMatch(extensionSource, /activityAgeTimer/u);
+  assert.doesNotMatch(extensionSource, /setInterval\(refreshActivityAge/u);
+  assert.doesNotMatch(extensionSource, /agentBusy/u);
+  assert.doesNotMatch(extensionSource, /elapsedMs/u);
+  // The events that remain are the ones with non-clock duties: git
+  // refresh, telemetry channels, and render requests.
   for (const event of [
-    'turn_start',
-    'before_provider_request',
-    'after_provider_response',
-    'message_start',
-    'message_update',
-    'message_end',
-    'tool_execution_start',
-    'tool_execution_update',
     'tool_execution_end',
     'agent_settled',
+    'session_compact',
+    'model_select',
+    'thinking_level_select',
+    'session_start',
     'session_shutdown',
   ]) {
     assert.match(extensionSource, new RegExp(`pi\\.on\\('${event}'`, 'u'));
   }
-  assert.match(extensionSource, /markObservedActivity/u);
-  // The chronometer ticker is duty-cycled: it starts when an activity is
-  // observed and stops when it clears — idle sessions cost zero wakeups.
-  assert.match(extensionSource, /setInterval\(refreshActivityAge, 50\)/u);
-  assert.match(extensionSource, /startActivityTicker/u);
-  assert.match(extensionSource, /stopActivityTicker/u);
-  assert.doesNotMatch(extensionSource, /activityAge !== null/u);
-  assert.doesNotMatch(extensionSource, /ageLayout|rightAlignActivityAge/u);
-  assert.doesNotMatch(extensionSource, /assistantMessageEvent|text_delta/u);
+  // The extra-info band ships exactly one command and one settings key.
+  assert.match(extensionSource, /registerCommand\('stardeck-extra'/u);
+  assert.match(extensionSource, /stardeckExtraInfo/u);
+  assert.doesNotMatch(extensionSource, /registerCommand\('(?!stardeck-extra)/u);
 });
 
 test('accepts only bounded Footer telemetry, Pi status, and Vim mode events', () => {

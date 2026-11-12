@@ -74,6 +74,7 @@ test('editor-deck publishes a renderer without registering an above-editor widge
   const sharedHandlers = new Map<string, Array<(message: unknown) => void>>();
   const emitted: Array<{ channel: string; message: unknown }> = [];
   const renderers: Array<((width: number, theme: unknown) => string[]) | null> = [];
+  const commands: Array<{ name: string }> = [];
   const deckSurface = {
     setRenderer(renderer: ((width: number, theme: unknown) => string[]) | null) {
       renderers.push(renderer);
@@ -97,6 +98,9 @@ test('editor-deck publishes a renderer without registering an above-editor widge
       const current = handlers.get(name) ?? [];
       current.push(handler);
       handlers.set(name, current);
+    },
+    registerCommand(name: string) {
+      commands.push({ name });
     },
     exec: async () => ({ code: 1, stdout: '', stderr: '' }),
     getThinkingLevel: () => 'high',
@@ -127,6 +131,11 @@ test('editor-deck publishes a renderer without registering an above-editor widge
     surface: 'editor-deck',
     deckSurface: deckSurface as never,
   });
+  assert.deepEqual(
+    commands.map(({ name }) => name),
+    ['stardeck-extra'],
+    'the extra-info toggle is the only deck command',
+  );
   handlers.get('session_start')?.[0]?.({}, ctx);
 
   try {
@@ -243,6 +252,7 @@ test('deck mode registers the deck above and the warning below the editor', asyn
       current.push(handler);
       handlers.set(name, current);
     },
+    registerCommand() {},
     exec: async () => ({ code: 1, stdout: '', stderr: '' }),
     getThinkingLevel: () => 'high',
   };

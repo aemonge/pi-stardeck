@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -143,9 +147,6 @@ export default function galacticaContextHeader(
   let gitAvailable = false;
   let gitStatus: GitStatusSummary = { ...EMPTY_GIT };
   let header: HeaderSnapshot | null = null;
-  let agentBusy = false;
-  let lastObservedActivityAt: number | null = null;
-  let activityAgeTimer: ReturnType<typeof setInterval> | undefined;
   let sessionGeneration = 0;
   let activeCwd = '';
   let activeCtx: ExtensionContext | undefined;
@@ -163,6 +164,40 @@ export default function galacticaContextHeader(
   let piStatus: PiStatusSnapshot | undefined;
   let nativeStatusBridgeAvailable = true;
   let vimMode: VimMode = 'insert';
+  // Extra-info band (simplify-deck-band): settings-defined default,
+  // session toggle via /stardeck-extra. OFF is the daily view.
+  let extraInfoVisible = false;
+
+  // Durable default for the extra-info band: `stardeckExtraInfo` boolean
+  // in pi-stardeck.json (project .pi/ wins over the agent directory).
+  // Missing, malformed, or wrong-typed files fail soft to OFF.
+  const readExtraInfoDefault = (cwd: string): boolean => {
+    const candidates = [
+      ...(cwd ? [join(cwd, '.pi', 'pi-stardeck.json')] : []),
+      join(homedir(), '.pi', 'agent', 'pi-stardeck.json'),
+    ];
+    for (const candidate of candidates) {
+      try {
+        const parsed: unknown = JSON.parse(readFileSync(candidate, 'utf8'));
+        if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          continue;
+        }
+        const value = (parsed as Record<string, unknown>).stardeckExtraInfo;
+        if (typeof value === 'boolean') return value;
+      } catch {
+        // Unreadable or invalid settings fall through to the next candidate.
+      }
+    }
+    return false;
+  };
+
+  pi.registerCommand('stardeck-extra', {
+    description: 'Toggle the deck extra-info band (telemetry row)',
+    handler: async () => {
+      extraInfoVisible = !extraInfoVisible;
+      requestRender?.();
+    },
+  });
 
   const currentHeader = () => header;
 
@@ -190,24 +225,6 @@ export default function galacticaContextHeader(
     } finally {
       resourceRefreshInFlight = false;
     }
-  };
-
-  const currentActivityAge = (): number | null =>
-    agentBusy && lastObservedActivityAt !== null
-      ? Math.max(0, Date.now() - lastObservedActivityAt)
-      : null;
-
-  const startActivityTicker = (): void => {
-    // Duty-cycled: the 50 ms chronometer ticks only while an activity can
-    // render — idle sessions cost zero wakeups (simplify-deck-defaults).
-    if (activityAgeTimer) return;
-    activityAgeTimer = setInterval(refreshActivityAge, 50);
-  };
-
-  const stopActivityTicker = (): void => {
-    if (activityAgeTimer === undefined) return;
-    clearInterval(activityAgeTimer);
-    activityAgeTimer = undefined;
   };
 
   const publishCapabilityHealth = () => {
@@ -278,43 +295,6 @@ export default function galacticaContextHeader(
     requestRender?.();
   });
 
-  const markObservedActivity = () => {
-    lastObservedActivityAt = Date.now();
-    startActivityTicker();
-    requestRender?.();
-  };
-
-  const clearObservedActivity = () => {
-    lastObservedActivityAt = null;
-    stopActivityTicker();
-  };
-
-  const refreshActivityAge = () => {
-    if (currentActivityAge() === null) return;
-    requestRender?.();
-  };
-
-  pi.on('before_agent_start', (_event, ctx) => {
-    if (ctx.mode !== 'tui') return;
-    agentBusy = true;
-    markObservedActivity();
-  });
-
-  pi.on('turn_start', markObservedActivity);
-  pi.on('before_provider_request', markObservedActivity);
-  pi.on('after_provider_response', markObservedActivity);
-
-  pi.on('message_start', (event) => {
-    if (event.message.role === 'assistant') markObservedActivity();
-  });
-
-  pi.on('message_update', (event) => {
-    if (event.message.role === 'assistant') markObservedActivity();
-  });
-
-  pi.on('tool_execution_start', markObservedActivity);
-  pi.on('tool_execution_update', markObservedActivity);
-
   const runGit = async (args: string[], cwd: string) => {
     try {
       return await pi.exec('git', args, { cwd, timeout: 2_000 });
@@ -361,7 +341,6 @@ export default function galacticaContextHeader(
     clearWidget?.();
     clearFooter?.();
     clearFooter = undefined;
-    stopActivityTicker();
     if (resourceTimer) clearInterval(resourceTimer);
     resourceTimer = undefined;
     ++sessionGeneration;
@@ -371,19 +350,18 @@ export default function galacticaContextHeader(
     gitAvailable = false;
     gitStatus = { ...EMPTY_GIT };
     header = null;
-    agentBusy = false;
     lspCapability = null;
     mcpCapability = null;
     footerTelemetry = undefined;
     piStatus = undefined;
     nativeStatusBridgeAvailable = true;
     vimMode = 'insert';
+    extraInfoVisible = readExtraInfoDefault(ctx.cwd);
     resourceRefreshInFlight = false;
     previousResourceSample = undefined;
     cpuSmoothing = undefined;
     latestResourceTelemetry = undefined;
     lastResourceSignature = '';
-    clearObservedActivity();
     publishCapabilityHealth();
     if (!ctx.hasUI) return;
     clearFooter = installEmptyDeckFooter(
@@ -414,7 +392,6 @@ export default function galacticaContextHeader(
       const hasContext =
         typeof usage?.percent === 'number' || typeof usage?.tokens === 'number';
       return {
-        elapsedMs: currentActivityAge(),
         header: currentHeader(),
         cwd: formatFooterPath(activeCwd || ctx.cwd, process.env.HOME),
         devbox: process.env.DEVBOX_PROJECT_ROOT !== undefined,
@@ -441,6 +418,7 @@ export default function galacticaContextHeader(
         lsp: lspCapability,
         mcp: mcpCapability,
         mode: vimMode,
+        extraInfo: extraInfoVisible,
       };
     };
 
@@ -500,24 +478,17 @@ export default function galacticaContextHeader(
   pi.on('thinking_level_select', () => {
     requestRender?.();
   });
-  pi.on('message_end', (event) => {
-    if (event.message.role === 'assistant') markObservedActivity();
-  });
   pi.on('session_compact', () => {
     requestRender?.();
   });
 
   pi.on('tool_execution_end', (event) => {
-    markObservedActivity();
     if (shouldRefreshGitAfterTool(event.toolName, event.isError)) {
       void refreshGit();
     }
   });
 
   pi.on('agent_settled', () => {
-    agentBusy = false;
-    clearObservedActivity();
-    requestRender?.();
     void refreshGit();
   });
 
@@ -526,8 +497,6 @@ export default function galacticaContextHeader(
     activeCwd = '';
     activeCtx = undefined;
     gitAvailable = false;
-    agentBusy = false;
-    clearObservedActivity();
     if (resourceTimer) clearInterval(resourceTimer);
     resourceTimer = undefined;
     resourceRefreshInFlight = false;

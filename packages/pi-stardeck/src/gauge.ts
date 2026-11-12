@@ -1,11 +1,6 @@
 import { truncateToWidth } from '@earendil-works/pi-tui';
 
-import {
-  type DeckTitleState,
-  type DeckTurnCost,
-  parseDeckTitleState,
-  parseDeckTurnCost,
-} from './title-state.ts';
+import { type DeckTitleState, parseDeckTitleState } from './title-state.ts';
 
 export const CONTEXT_GAUGE_WIDTH = 7;
 export const FANCY_FOOTER_WIDGET_CHANNEL = 'pi-fancy-footer:widget';
@@ -121,21 +116,10 @@ export type HeaderSnapshot = {
   work: HeaderWork | null;
   /** Versioned deck-title-state contract; null when published malformed. */
   title?: DeckTitleState | null;
-  /** Per-turn cost meter published beside the title state. */
-  turn?: DeckTurnCost | null;
   diagnostics: HeaderDiagnostics | null;
   backgroundActivity: boolean;
   approvalRequired: boolean;
   blocked: boolean;
-  activeRunSpans?: Array<{
-    id: string;
-    kind: 'agent' | 'subagent' | 'bash';
-    parent: string | null;
-    agent?: string;
-    label?: string;
-    stage: string;
-    elapsedMs: number;
-  }>;
   counters: {
     agents: { active: number; total: number };
     activeRuns?: { children: number; subagents: number };
@@ -942,39 +926,6 @@ function legacyHeaderSelection(work: HeaderWork | null): HeaderSelection | null 
   return { source: 'legacy', titles, color: work.color };
 }
 
-function parseActiveRunSpans(value: unknown): HeaderSnapshot['activeRunSpans'] | null {
-  if (!Array.isArray(value)) return null;
-  const spans = value
-    .map((rawSpan) => {
-      if (!rawSpan || typeof rawSpan !== 'object' || Array.isArray(rawSpan))
-        return null;
-      const span = rawSpan as Record<string, unknown>;
-      if (typeof span.id !== 'string') return null;
-      if (
-        typeof span.kind !== 'string' ||
-        !['agent', 'subagent', 'bash'].includes(span.kind)
-      ) {
-        return null;
-      }
-      if (typeof span.stage !== 'string') return null;
-      const elapsedMs = typeof span.elapsedMs === 'number' ? span.elapsedMs : 0;
-      return {
-        id: span.id,
-        kind: span.kind as 'agent' | 'subagent' | 'bash',
-        parent: typeof span.parent === 'string' ? span.parent : null,
-        ...(typeof span.agent === 'string' ? { agent: span.agent } : {}),
-        ...(typeof span.label === 'string' ? { label: span.label } : {}),
-        stage: span.stage,
-        elapsedMs,
-      };
-    })
-    .filter(
-      (span): span is NonNullable<HeaderSnapshot['activeRunSpans']>[number] =>
-        span !== null,
-    );
-  return spans.length > 0 ? spans : null;
-}
-
 export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const message = raw as Record<string, unknown>;
@@ -1092,7 +1043,6 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
     'selection',
   );
   const hasExplicitTitle = Object.prototype.hasOwnProperty.call(message, 'title');
-  const hasExplicitTurn = Object.prototype.hasOwnProperty.call(message, 'turn');
 
   return {
     activity: standaloneActivity,
@@ -1102,17 +1052,8 @@ export function parseHeaderSnapshot(raw: unknown): HeaderSnapshot | null {
     suggestion: parseHeaderSuggestion(message.suggestion),
     work,
     ...(hasExplicitTitle ? { title: parseDeckTitleState(message.title) } : {}),
-    ...(hasExplicitTurn ? { turn: parseDeckTurnCost(message.turn) } : {}),
     diagnostics,
     backgroundActivity: message.backgroundActivity === true,
-    ...(parseActiveRunSpans(message.activeRunSpans)
-      ? {
-          activeRunSpans: parseActiveRunSpans(
-            message.activeRunSpans,
-          ) as HeaderSnapshot['activeRunSpans'],
-        }
-      : {}),
-    ...(typeof message.idleMs === 'number' ? { idleMs: message.idleMs } : {}),
     approvalRequired: message.approvalRequired === true,
     blocked: message.blocked === true,
     counters: {

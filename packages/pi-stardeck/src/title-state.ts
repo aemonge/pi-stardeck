@@ -1,42 +1,35 @@
 /**
  * Deck-side defensive parser for the title-state contract v2
  * (`deck-title-state`, published as the `title` field on
- * `galactica-status:header` with the per-turn `turn` meter beside it).
+ * `galactica-status:header`).
  *
  * The contract lives in `packages/status/src/title-state.ts`; pi-stardeck
  * keeps this local copy because the deck package carries no npm dependency
  * on the status workspace and consumes it only through the event channel.
  * Bounds mirror the publisher parser exactly: unknown versions and
  * malformed shapes reject the whole object with `null`; parsing never
- * throws, so older publisher events (missing `title`/`turn`) degrade to
- * the legacy selection/activity rendering.
+ * throws, so older publisher events (missing `title`) degrade to the
+ * legacy selection rendering. The per-turn `turn` meter and the observed
+ * `activity` field are retired here (simplify-deck-band): the deck ignores
+ * both — the workspace loader owns the time story and nothing renders the
+ * activity line — while malformed activity payloads no longer reject the
+ * title.
  */
 
 export const DECK_TITLE_STATE_VERSION = 2 as const;
 
-export const DECK_TITLE_ACTIVITY_CLASSES = [
-  'editing',
-  'reading',
-  'grepping',
-  'bash',
-  'subagent',
-] as const;
-
-export type DeckTitleActivityClass = (typeof DECK_TITLE_ACTIVITY_CLASSES)[number];
-
 /** Short target label bound from the accepted schema (Human amendment
  * 2026-10-24: 48 → 120, mirroring the status producer — the deck's
- * render-time width crop owns the real limit now). */
+ * render-time width crop owns the real limit now). Kept exported for
+ * contract parity even though the activity target it bounded is no
+ * longer rendered. */
 export const DECK_TITLE_TARGET_MAX = 120;
 
 const SUBJECT_MAX = 180;
 const IDENTIFIER_MAX = 120;
 const TASK_ID_MAX = 32;
-const SPAN_ID_MAX = 64;
 const WAIVER_ID_MAX = 64;
 const NOTICE_MAX = 180;
-const TURN_TOKENS_MAX = 999_999_999;
-const TURN_ELAPSED_MAX = (99 * 60 + 59) * 1_000 + 999;
 
 export type DeckTitleWorkState = {
   change: string;
@@ -48,25 +41,14 @@ export type DeckTitleWorkState = {
   nextStep?: string;
 };
 
-export type DeckTitleActivityState = {
-  class: DeckTitleActivityClass;
-  target: string;
-  span: string;
-  parent: string | null;
-};
-
 export type DeckTitleWaiverState = { id: string; notice: string };
 
 export type DeckTitleState = {
   v: typeof DECK_TITLE_STATE_VERSION;
   subject: string | null;
   work: DeckTitleWorkState | null;
-  activity: DeckTitleActivityState | null;
   waiver: DeckTitleWaiverState | null;
 };
-
-/** Per-turn cost meter published beside the title state. */
-export type DeckTurnCost = { tokens: number; elapsedMs: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -83,26 +65,6 @@ function boundedText(
   if (points.length === 0) return null;
   if (points.length > maximum) return null;
   return points.join('');
-}
-
-function parseTitleActivity(value: unknown): DeckTitleActivityState | null | undefined {
-  if (value === null) return null;
-  if (!isRecord(value)) return undefined;
-  const activityClass = DECK_TITLE_ACTIVITY_CLASSES.includes(
-    value.class as DeckTitleActivityClass,
-  )
-    ? (value.class as DeckTitleActivityClass)
-    : undefined;
-  const target = boundedText(value.target, DECK_TITLE_TARGET_MAX);
-  const span = boundedText(value.span, SPAN_ID_MAX);
-  let parent: string | null | undefined;
-  if (value.parent === null) parent = null;
-  else if (typeof value.parent === 'string') {
-    const normalized = boundedText(value.parent, SPAN_ID_MAX);
-    parent = normalized === null ? undefined : normalized;
-  } else parent = undefined;
-  if (!activityClass || !target || !span || parent === undefined) return undefined;
-  return { class: activityClass, target, span, parent };
 }
 
 function parseTitleWork(value: unknown): DeckTitleWorkState | null | undefined {
@@ -153,44 +115,14 @@ export function parseDeckTitleState(value: unknown): DeckTitleState | null {
     if (subject === null) return null;
     const work = parseTitleWork(value.work);
     if (work === undefined) return null;
-    const activity = parseTitleActivity(value.activity);
-    if (activity === undefined) return null;
     const waiver = parseTitleWaiver(value.waiver);
     if (waiver === undefined) return null;
     return {
       v: DECK_TITLE_STATE_VERSION,
       subject: subject ?? null,
       work,
-      activity,
       waiver,
     };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Defensive parser for the per-turn cost meter. Non-finite or negative
- * values reject with `null`; it never throws.
- */
-export function parseDeckTurnCost(value: unknown): DeckTurnCost | null {
-  try {
-    if (!isRecord(value)) return null;
-    const tokens = value.tokens;
-    const elapsedMs = value.elapsedMs;
-    if (
-      typeof tokens !== 'number' ||
-      !Number.isFinite(tokens) ||
-      tokens < 0 ||
-      tokens > TURN_TOKENS_MAX ||
-      typeof elapsedMs !== 'number' ||
-      !Number.isFinite(elapsedMs) ||
-      elapsedMs < 0 ||
-      elapsedMs > TURN_ELAPSED_MAX
-    ) {
-      return null;
-    }
-    return { tokens: Math.round(tokens), elapsedMs: Math.floor(elapsedMs) };
   } catch {
     return null;
   }

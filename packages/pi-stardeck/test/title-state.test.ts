@@ -2,13 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  DECK_TITLE_ACTIVITY_CLASSES,
   type DeckTitleState,
   type DeckTitleWorkState,
   deckWorkSegments,
   formatDeckWorkLabel,
   parseDeckTitleState,
-  parseDeckTurnCost,
 } from '../src/title-state.ts';
 
 function titleState(overrides: Partial<DeckTitleState> = {}): DeckTitleState {
@@ -16,7 +14,6 @@ function titleState(overrides: Partial<DeckTitleState> = {}): DeckTitleState {
     v: 2,
     subject: 'Pivot cockpit to pure pi-starship-header chrome',
     work: null,
-    activity: null,
     waiver: null,
     ...overrides,
   };
@@ -28,7 +25,6 @@ test('parses the idle title state verbatim', () => {
       v: 2,
       subject: 'Pivot cockpit to pure pi-starship-header chrome',
       work: null,
-      activity: null,
       waiver: null,
     }),
     titleState(),
@@ -48,22 +44,10 @@ test('parses the aimed work state with the room aim verbatim fields', () => {
       v: 2,
       subject: 'Pivot cockpit to pure pi-starship-header chrome',
       work,
-      activity: {
-        class: 'editing',
-        target: 'packages/pi-stardeck/src/deck.ts',
-        span: 't87',
-        parent: null,
-      },
       waiver: null,
     }),
     titleState({
       work,
-      activity: {
-        class: 'editing',
-        target: 'packages/pi-stardeck/src/deck.ts',
-        span: 't87',
-        parent: null,
-      },
     }),
   );
   assert.deepEqual(
@@ -71,17 +55,10 @@ test('parses the aimed work state with the room aim verbatim fields', () => {
       v: 2,
       subject: null,
       work: null,
-      activity: {
-        class: 'subagent',
-        target: 'scout',
-        span: 'sub-1',
-        parent: 't87',
-      },
       waiver: null,
     }),
     titleState({
       subject: null,
-      activity: { class: 'subagent', target: 'scout', span: 'sub-1', parent: 't87' },
     }),
   );
 });
@@ -97,9 +74,8 @@ test('rejects unknown versions and malformed shapes with null, never throws', ()
     { v: 3, subject: null, work: null, activity: null, waiver: null },
     { v: '2', subject: null, work: null, activity: null, waiver: null },
     { v: 2, subject: 7, work: null, activity: null, waiver: null },
-    { v: 2, subject: null, work: 'nope', activity: null, waiver: null },
-    { v: 2, subject: null, work: null, activity: { class: 'dancing' }, waiver: null },
-    { v: 2, subject: null, work: null, activity: null, waiver: { id: 'only-id' } },
+    { v: 2, subject: null, work: 'nope', waiver: null },
+    { v: 2, subject: null, work: null, waiver: { id: 'only-id' } },
   ]) {
     assert.equal(parseDeckTitleState(malformed), null, JSON.stringify(malformed));
   }
@@ -113,9 +89,11 @@ test('rejects unknown versions and malformed shapes with null, never throws', ()
   });
 });
 
-test('retired work fields normalize away instead of rejecting', () => {
+test('retired activity and work fields normalize away instead of rejecting', () => {
   // A producer carrying retired work fields still parses — the retired
-  // keys drop out and the change name survives.
+  // keys drop out and the change name survives. The retired activity
+  // payload is ignored wholesale (simplify-deck-band): malformed or not,
+  // it no longer rejects the title.
   assert.deepEqual(
     parseDeckTitleState({
       v: 2,
@@ -126,7 +104,6 @@ test('retired work fields normalize away instead of rejecting', () => {
         currentArtifact: 'a',
         artifacts: [{ id: 'a', done: true }],
       },
-      activity: null,
       waiver: null,
     })?.work,
     { change: 'x' },
@@ -136,15 +113,20 @@ test('retired work fields normalize away instead of rejecting', () => {
       v: 2,
       subject: null,
       work: { change: 'x', awaitingValidation: true, focusAt: 1, focusStale: true },
-      activity: null,
       waiver: null,
     })?.work,
     { change: 'x' },
   );
+  const retiredActivity = parseDeckTitleState({
+    ...titleState({ subject: null }),
+    activity: { class: 'dancing', target: 'x', span: 't1', parent: null },
+  });
+  assert.equal(retiredActivity?.subject, null);
+  assert.equal('activity' in (retiredActivity ?? {}), false);
 });
 
 test('rejects malformed aim-field shapes', () => {
-  const base = { v: 2, subject: null, activity: null, waiver: null };
+  const base = { v: 2, subject: null, waiver: null };
   const cases = [
     { change: 'deck', artifactName: 7 },
     { change: 'deck', artifactIdx: 4 },
@@ -179,14 +161,6 @@ test('enforces the schema bounds: targets and label lengths', () => {
   assert.equal(
     parseDeckTitleState({
       ...titleState(),
-      activity: { class: 'bash', target: long(121), span: 't1', parent: null },
-    }),
-    null,
-    'target beyond 120 characters rejects',
-  );
-  assert.equal(
-    parseDeckTitleState({
-      ...titleState(),
       work: { change: 'observe-room-aim', artifactName: long(121) },
     }),
     null,
@@ -204,69 +178,11 @@ test('enforces the schema bounds: targets and label lengths', () => {
   assert.equal(
     parseDeckTitleState({
       ...titleState(),
-      activity: { class: 'reading', target: long(48), span: 't1', parent: null },
-    })?.activity?.target,
-    long(48),
-    'target at the bound parses',
-  );
-  assert.equal(
-    parseDeckTitleState({
-      ...titleState(),
       work: { change: 'observe-room-aim', nextStep: long(180) },
     })?.work?.nextStep,
     long(180),
     'next-step at the bound parses',
   );
-});
-
-test('accepts exactly the five observed activity classes', () => {
-  for (const class_ of DECK_TITLE_ACTIVITY_CLASSES) {
-    const parsed = parseDeckTitleState({
-      ...titleState(),
-      activity: { class: class_, target: 'schema.yaml', span: 't1', parent: null },
-    });
-    assert.equal(parsed?.activity?.class, class_);
-  }
-  assert.equal(
-    parseDeckTitleState({
-      ...titleState(),
-      activity: { class: 'compiling', target: 'x', span: 't1', parent: null },
-    }),
-    null,
-  );
-});
-
-test('parses turn cost snapshots and rejects malformed meters', () => {
-  assert.deepEqual(parseDeckTurnCost({ tokens: 4_200, elapsedMs: 38_000 }), {
-    tokens: 4_200,
-    elapsedMs: 38_000,
-  });
-  assert.deepEqual(parseDeckTurnCost({ tokens: 0, elapsedMs: 0 }), {
-    tokens: 0,
-    elapsedMs: 0,
-  });
-  for (const malformed of [
-    null,
-    undefined,
-    'x',
-    {},
-    { tokens: -1, elapsedMs: 0 },
-    { tokens: 0, elapsedMs: -5 },
-    { tokens: Number.NaN, elapsedMs: 0 },
-    { tokens: 0, elapsedMs: Number.POSITIVE_INFINITY },
-    { tokens: '4200', elapsedMs: 0 },
-    { tokens: 1, elapsedMs: 100 * 60_000 },
-  ]) {
-    assert.equal(parseDeckTurnCost(malformed), null, JSON.stringify(malformed));
-  }
-  const hostile = {
-    get tokens() {
-      throw new Error('hostile payload');
-    },
-  };
-  assert.doesNotThrow(() => {
-    assert.equal(parseDeckTurnCost(hostile), null);
-  });
 });
 
 test('the room aim prints verbatim — the render law, one row per case', () => {

@@ -3,7 +3,6 @@ import test from 'node:test';
 import { visibleWidth } from '@earendil-works/pi-tui';
 
 import {
-  formatDeckElapsed,
   renderHeaderDeck,
   renderWarningLine,
   type HeaderDeckState,
@@ -21,7 +20,7 @@ function plain(text: string): string {
 
 function fixture(): HeaderDeckState {
   return {
-    elapsedMs: 7_000,
+    extraInfo: false,
     header: {
       activity: null,
       work: {
@@ -81,24 +80,14 @@ function fixture(): HeaderDeckState {
   };
 }
 
-test('formats fixed-width minute activity age with visible hundredths', () => {
-  assert.equal(formatDeckElapsed(null), "000:00'00");
-  assert.equal(formatDeckElapsed(54), "000:00'05");
-  assert.equal(formatDeckElapsed(999), "000:00'99");
-  assert.equal(formatDeckElapsed(1_000), "000:01'00");
-  assert.equal(formatDeckElapsed(62_345), "001:02'34");
-  assert.equal(formatDeckElapsed(3_600_000), "060:00'00");
-  assert.equal(formatDeckElapsed(Number.POSITIVE_INFINITY), "999:59'99");
-  assert.equal(formatDeckElapsed(Number.NaN), "000:00'00");
-  assert.equal(formatDeckElapsed(Number.NEGATIVE_INFINITY), "000:00'00");
-});
-
 test('renders the approved rich wide header without side borders or spacer rows', () => {
-  const lines = renderHeaderDeck(fixture(), 160, plainTheme as never);
+  const state = fixture();
+  state.extraInfo = true;
+  const lines = renderHeaderDeck(state, 160, plainTheme as never);
 
-  // deck-reshape (amended), quiet-activity-row: five rows — L1, ─, L2,
-  // ┈, L4 (engine left, status right when it speaks); the idle line-3
-  // band and its seam retire (zero activity never narrates itself).
+  // simplify-deck-band ON at 160: five rows — L1, ─, L2, ┈, extra row
+  // (machine tail left, engine cluster right); the OFF daily view is
+  // the same frame minus the last two rows.
   assert.equal(lines.length, 5);
   // Second 2.4 amendment: the full solid rule returns beneath line 1.
   assert.match(plain(lines[1] ?? ''), /^─+$/u);
@@ -122,11 +111,11 @@ test('renders the approved rich wide header without side borders or spacer rows'
     /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/galactica \u{27E9}/u,
   );
   assert.match(plain(lines[0] ?? ''), /feature\/review-led/u);
-  // deck-machine-corner: the corner owns line 1's right end — devbox lead
-  // chip, companion chips, one major separator, icon-led machine group.
+  // simplify-deck-band: the engine cluster closes the extra band's right
+  // end — model › thinking ⟩ context › summaries ⟩ quota.
   assert.match(
-    plain(lines[0] ?? ''),
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
+    plain(lines.at(-1) ?? ''),
+    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F241} 63%$/u,
   );
   // deck-reshape: the machine tail anchors the bottom row's left; the
   // right end stays empty unless the room aim speaks (reorder-deck-frame).
@@ -149,14 +138,10 @@ test('turns the top ladybug into distinct error and warning counts', () => {
   assert.match(line1, /\u{F0159} 2 › \u{F071} 3 ⟩ \/pi-status/u);
   assert.match(
     line1,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
-    'the corner keeps the right end',
+    /\/pi-status \(unfocus openspec\)$/u,
+    'the chip keeps the right end beside the alert',
   );
-  assert.equal(
-    line1.split('⟩').length - 1,
-    4,
-    'identity sep + path sep + engine quota sep + alert',
-  );
+  assert.equal(line1.split('⟩').length - 1, 3, 'identity sep + path sep + alert sep');
   assert.doesNotMatch(line1, /\u{F082D}/u);
   assert.ok((lines[0] ?? '').includes('\u001b[7m'), 'counts stay reverse-video');
 
@@ -196,9 +181,9 @@ test('drops the footer count; the strong rule opens the deck', () => {
   const solidRules = wrapped.filter((line) => /^─+$/u.test(plain(line)));
   assert.equal(solidRules.length, 1, 'the lone strong rule opens the deck');
   const dottedSeams = wrapped.filter((line) => /^┈+$/u.test(plain(line)));
-  // quiet-activity-row: the status seam remains; the idle band's seam
-  // retires with the band itself.
-  assert.equal(dottedSeams.length, 1, 'one dotted seam inside the deck');
+  // simplify-deck-band: the dotted seam exists only as the extra band's
+  // top border — OFF renders none.
+  assert.equal(dottedSeams.length, 0, 'no dotted seam while OFF');
 
   state.piStatus.nativeStatusCount = 0;
   const empty = renderHeaderDeck(state, 160, plainTheme as never);
@@ -227,7 +212,8 @@ test('extension statuses ride the telemetry tail as icons', () => {
   );
   assert.match(
     telemetry,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
+    /\(unfocus openspec\)$/u,
+    'the chip anchors the right end ahead of nothing else',
   );
   assert.ok(
     telemetry.indexOf('~/') > telemetry.indexOf('\u{F1049}'),
@@ -318,9 +304,12 @@ test('chip color encodes severity: blue healthy, yellow degraded, red error and 
 });
 
 test('known companion icons are always present', () => {
-  const bare = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
-  assert.match(bare[0] ?? '', /\u{F06A9}/u, 'engine rides line 1 right');
-  assert.match(bare.at(-1) ?? '', /\u{F035B}/u, 'cpu anchors the bottom row');
+  const state = fixture();
+  state.extraInfo = true;
+  const bare = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  assert.match(bare[0] ?? '', /\u{F04E6}/u, 'companion icons ride line 1 left');
+  assert.match(bare[0] ?? '', /\(unfocus openspec\)$/u, 'the chip rides line 1 right');
+  assert.match(bare.at(-1) ?? '', /\u{F035B}/u, 'cpu anchors the extra band left');
 });
 
 test('extension status icons drop on narrow frames', () => {
@@ -499,98 +488,6 @@ test('bolds only current control and status anchors', () => {
   }
 });
 
-test('colors the observed activity label on line 3 and keeps nothing bold', () => {
-  const state = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      activity: { class: 'grepping', target: 'verify', span: 'g1', parent: null },
-    },
-  });
-  const colors: string[] = [];
-  const bolded: string[] = [];
-  const theme = {
-    fg: (semanticColor: string, text: string) => {
-      colors.push(`${semanticColor}:${plain(text)}`);
-      return text;
-    },
-    bold: (text: string) => {
-      bolded.push(text);
-      return text;
-    },
-  };
-
-  renderHeaderDeck(state, 160, theme as never);
-
-  assert.ok(colors.includes('text:grepping verify'));
-  assert.ok(colors.some((entry) => entry.startsWith('accent:Pivot cockpit')));
-  assert.equal(bolded.includes('grepping verify'), false);
-});
-
-test('renders every observed activity class on line 3 without narration', () => {
-  for (const [class_, target, expected] of [
-    ['editing', 'deck.ts', 'editing deck.ts'],
-    ['reading', 'schema.yaml', 'reading schema.yaml'],
-    ['grepping', 'title-state', 'grepping title-state'],
-    ['bash', 'npm test', 'bash npm test'],
-    ['subagent', 'scout', 'subagent: scout'],
-  ] as const) {
-    const state = titleFixture({
-      title: {
-        ...IDLE_TITLE,
-        activity: { class: class_, target, span: 't1', parent: null },
-      },
-    });
-    const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-    assert.ok(
-      lines.some((line) => line.includes(expected)),
-      expected,
-    );
-    assert.equal(
-      lines.some((line) => line.includes('working')),
-      false,
-    );
-  }
-
-  // The legacy work-activity projection never narrates: a kind word is
-  // not an observation.
-  const legacy = fixture();
-  legacy.header!.work = {
-    lifecycle: 'working',
-    titles: ['Repair runtime state'],
-    color: 'accent',
-    activity: { kind: 'recovery' },
-  };
-  const idle = renderHeaderDeck(legacy, 160, plainTheme as never).map(plain);
-  assert.equal(
-    idle.some((line) => line.includes('recovering')),
-    false,
-  );
-  assert.equal(
-    idle.some((line) => line.includes('awaiting Human')),
-    false,
-  );
-});
-
-test('reports the observed activity on line 3 while active without a cue', () => {
-  const state = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      activity: { class: 'bash', target: 'npm run build', span: 'b1', parent: null },
-    },
-  });
-  state.header!.suggestion = null;
-
-  const lines = renderHeaderDeck(state, 160, plainTheme as never);
-  const activityRow = plain(lines[4] ?? '');
-
-  assert.ok(activityRow.includes('bash npm run build'));
-  assert.equal(activityRow.includes('step 7/16'), false);
-  assert.equal(activityRow.includes('requesting'), false);
-  // The subject leads line 2; the activity never echoes onto it.
-  assert.ok(plain(lines[2] ?? '').startsWith('Pivot cockpit'));
-  assert.doesNotMatch(plain(lines[2] ?? ''), /npm run build/u);
-});
-
 test('renders the selected work title exactly once across the deck', () => {
   const state = fixture();
   const echoTitle = 'Git joins the project crown; model telemetry rides the row';
@@ -670,25 +567,35 @@ test('uses prompt-line color for rules and major separators with violet ladybugs
   );
 });
 
-// --- Line 4 split (second 2.4 amendment) -----------------------------------
+// --- The engine group lives on the extra band only (simplify-deck-band) -----
 
-test('the engine group rides line 1 right; the machine tail anchors the bottom row', () => {
-  const lines = renderHeaderDeck(fixture(), 160, plainTheme as never).map(plain);
-  // deck-reshape (swap amendment): short engine group upstairs so a
-  // growing PWD/branch never fights the long machine tail; the tail
-  // yields right-to-left on the bottom row.
-  const line1 = lines[0] ?? '';
-  assert.match(
-    line1,
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
-    'engine group anchors line 1 right',
+test('the engine cluster leaves line 1 and closes the extra band right', () => {
+  const off = renderHeaderDeck(fixture(), 160, plainTheme as never).map(plain);
+  assert.doesNotMatch(
+    off[0] ?? '',
+    /GPT-5\.6 Sol/u,
+    'line 1 carries no engine while OFF',
   );
-  assert.match(
-    lines.at(-1) ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\(unfocus openspec\)$/u,
-    'the full machine tail rides the bottom row — the gray aim placeholder closes it',
+  assert.equal(
+    off.some((line) => line.includes('48.2%')),
+    false,
+    'no machine tail while OFF',
   );
-  assert.equal(lines.length, 5, 'five-row clean deck');
+
+  const state = fixture();
+  state.extraInfo = true;
+  const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
+  const extra = lines.at(-1) ?? '';
+  assert.match(
+    extra,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0726} \$5\.16\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F241} 63%$/u,
+    'the machine tail rides left and the engine cluster closes right',
+  );
+  assert.equal(
+    lines.length,
+    5,
+    'single-line subject at 160: five-row deck with the band on',
+  );
 });
 
 test('renders no task, stps, or run-counter tiles in any state', () => {
@@ -749,8 +656,10 @@ test('preserves ANSI-safe width with a coloring theme', () => {
 });
 
 test('preserves width and essential deck structure through responsive collapse', () => {
+  const wide = fixture();
+  wide.extraInfo = true;
   for (const width of [160, 100, 79, 59, 39, 20]) {
-    const lines = renderHeaderDeck(fixture(), width, plainTheme as never);
+    const lines = renderHeaderDeck(wide, width, plainTheme as never);
     assert.ok(lines.length >= 4, String(width));
     assert.ok(
       lines.every((line) => visibleWidth(line) <= width),
@@ -798,7 +707,7 @@ test('a live session without a subject renders the dim no-subject placeholder', 
 test('renders unavailable optional telemetry honestly', () => {
   const state = fixture();
   state.header = null;
-  state.elapsedMs = null;
+  state.extraInfo = true;
   state.footerTelemetry = undefined;
   state.contextPercent = undefined;
   state.contextTokens = undefined;
@@ -832,13 +741,17 @@ test('renders unavailable optional telemetry honestly', () => {
   // engine row closes the deck.
   assert.equal(all.includes('awaiting Human'), false);
   assert.equal(all.includes('tok'), false);
-  // reorder-deck-frame: absent facts remove their slots — the bare tail
-  // keeps its one surviving reading and the gray placeholder closes it.
+  // simplify-deck-band: absent facts remove their slots — the bare extra
+  // band keeps only the compaction counter on the engine cluster, and the
+  // gray placeholder rides line 1's right end.
   const bareTail = plain(lines.at(-1) ?? '');
   assert.ok(bareTail.includes('󰎞 2'), 'the counter survives');
+  assert.ok(bareTail.includes('GPT-5.6 Sol'), 'the engine cluster still speaks');
   assert.ok(
-    bareTail.trimEnd().endsWith('(unfocus openspec)'),
-    'the placeholder closes it',
+    plain(lines[0] ?? '')
+      .trimEnd()
+      .endsWith('(unfocus openspec)'),
+    'the placeholder rides line 1 right',
   );
   // Frozen contract: absent Git removes the segment entirely.
   assert.ok(all.includes('(no Git)'));
@@ -850,6 +763,7 @@ const CLOCK_ICON = '󰅐';
 
 test('paints icon-native quota tiles in cost, calendar, flame order', () => {
   const state = fixture();
+  state.extraInfo = true;
   state.footerTelemetry = {
     totalCost: 5.16,
     quotaWindows: [
@@ -889,6 +803,7 @@ test('paints icon-native quota tiles in cost, calendar, flame order', () => {
 
 test('classifies minute and day labels and always counts down the coding window', () => {
   const state = fixture();
+  state.extraInfo = true;
   state.footerTelemetry = {
     totalCost: 5.16,
     quotaWindows: [
@@ -917,6 +832,7 @@ test('classifies minute and day labels and always counts down the coding window'
 
 test('coding window without reset time paints flame without clock', () => {
   const state = fixture();
+  state.extraInfo = true;
   state.footerTelemetry = {
     totalCost: 5.16,
     quotaWindows: [{ label: '5h', percent: 62 }],
@@ -932,6 +848,7 @@ test('coding window without reset time paints flame without clock', () => {
 
 test('weekly-only telemetry paints the calendar tile alone', () => {
   const state = fixture();
+  state.extraInfo = true;
   state.footerTelemetry = {
     totalCost: 5.16,
     quotaWindows: [
@@ -953,39 +870,44 @@ test('weekly-only telemetry paints the calendar tile alone', () => {
   assert.ok(!tail.includes(CLOCK_ICON), 'calendar never carries a countdown');
 });
 
-test('renders elastic span rows naming each live child run', () => {
+test('stardeck-extra reveals the extra band: dotted seam, machine tail left, engine right', () => {
   const state = fixture();
-  state.header!.activeRunSpans = [
-    {
-      id: 'sub-1:reviewer',
-      kind: 'subagent',
-      parent: 'sub-1',
-      agent: 'reviewer',
-      stage: 'assuring',
-      elapsedMs: 41_000,
-    },
-    {
-      id: 'bash-2',
-      kind: 'bash',
-      parent: 'turn-1',
-      label: 'pytest',
-      stage: 'working',
-      elapsedMs: 10_000,
-    },
-  ];
-  const lines = renderHeaderDeck(state, 120, plainTheme as never);
-  const reviewer = lines.find((line) => line.includes('reviewer')) ?? '';
-  assert.match(reviewer, /├ \(00'41\) reviewer assuring/u);
-  const bashRow = lines.find((line) => line.includes('pytest')) ?? '';
-  assert.match(bashRow, /└ \(00'10\) pytest working/u);
+  state.extraInfo = true;
+  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
+  assert.equal(lines.length, 6, 'L1, rule, subject ×2 wrap, dotted seam, extra row');
+  assert.match(lines[4] ?? '', /^┈+$/u, 'the dotted seam tops the toggle area');
+  const extra = lines[5] ?? '';
+  assert.ok(extra.includes('48.2%'), 'the machine tail rides left');
+  assert.ok(extra.includes('$5.16'), 'cost stays in the machine tail');
+  assert.match(
+    extra,
+    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F241} 63%$/u,
+    'engine cluster right: model › thinking ⟩ context › summaries ⟩ quota',
+  );
+  // The context tiles left the machine tail for the engine cluster.
+  const tail = extra.split('\u{27E9} \u{F0F86}')[0] ?? '';
+  assert.equal(tail.includes('\u{F0F86}'), false);
 });
 
-test('span rows collapse when no child runs are live', () => {
-  const lines = renderHeaderDeck(fixture(), 120, plainTheme as never);
-  assert.equal(
-    lines.some((line) => line.includes('├') || line.includes('└')),
-    false,
-  );
+test('the focused-change chip relocates to line 1 right in both states', () => {
+  const off = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
+  assert.match(off[0] ?? '', /\(unfocus openspec\)$/u);
+  assert.doesNotMatch(off[0] ?? '', /GPT-5\.6 Sol/u);
+
+  const on = fixture();
+  on.extraInfo = true;
+  on.header = {
+    ...(on.header as NonNullable<typeof on.header>),
+    title: parseDeckTitleState({
+      v: 2 as const,
+      subject: 'Subject',
+      work: { change: 'eight-section-deck' },
+      waiver: null,
+    }),
+  };
+  const lines = renderHeaderDeck(on, 120, plainTheme as never).map(plain);
+  assert.match(lines[0] ?? '', /󰈙 eight-section-deck$/u);
+  assert.equal(lines[2] ?? '', 'Subject', 'no echo of the chip on line 2');
 });
 
 // --- Step 2.1: line 2 on the title-state contract ---------------------------
@@ -994,7 +916,6 @@ const IDLE_TITLE = {
   v: 2 as const,
   subject: 'Pivot cockpit to pure pi-starship-header chrome',
   work: null,
-  activity: null,
   waiver: null,
 };
 
@@ -1006,12 +927,8 @@ const WORK_TITLE = {
   task: '1/4',
 };
 
-function titleFixture(overrides: {
-  title?: unknown;
-  elapsedMs?: number | null;
-}): HeaderDeckState {
+function titleFixture(overrides: { title?: unknown }): HeaderDeckState {
   const state = fixture();
-  state.elapsedMs = overrides.elapsedMs ?? null;
   if ('title' in overrides) {
     state.header = {
       ...(state.header as NonNullable<typeof state.header>),
@@ -1028,7 +945,6 @@ function titleFixture(overrides: {
 test('renders line 2 as Subject with the Work label on the right', () => {
   const state = titleFixture({
     title: { ...IDLE_TITLE, work: WORK_TITLE },
-    elapsedMs: 4_120,
   });
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
@@ -1037,10 +953,14 @@ test('renders line 2 as Subject with the Work label on the right', () => {
   // Layout law 2026-11-10 amended (reorder-deck-frame): line 2 carries
   // the progress fields; the slug lives on the engine row's right end.
   assert.ok(titleRow.includes('plan 0/1 › 1/4'));
-  const engineLine = lines.at(-1) ?? '';
-  assert.ok(
-    engineLine.trimEnd().endsWith('eight-section-deck'),
-    'the focus spec closes the engine row',
+  const state2 = { ...state, extraInfo: true };
+  const engineLine = plain(
+    renderHeaderDeck(state2, 120, plainTheme as never).at(-1) ?? '',
+  );
+  assert.doesNotMatch(
+    engineLine,
+    /eight-section-deck/u,
+    'the slug left the engine cluster',
   );
 });
 
@@ -1176,232 +1096,31 @@ test('wraps a long subject onto a continuation line', () => {
   assert.ok((lines[first + 1] ?? '').includes('machinery'));
 });
 
-// --- Step 2.2: line 3 on the title-state contract ---------------------------
+// --- Step 2.2: the extra-info band (simplify-deck-band) ---------------------
 
-const TURN_MIDWORK = { tokens: 4_200, elapsedMs: 38_000 };
-
-test('hides the idle line-3 band; cost alone no longer restores it', () => {
-  // pure-activity-band: `awaiting Human` + `— · 0 tok` is zero activity,
-  // and cost alone never narrates — only a live observed activity speaks.
-  const state = titleFixture({ title: IDLE_TITLE });
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    turn: { tokens: 0, elapsedMs: 0 },
-  };
-
-  const idle = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
+test('hides the extra band by default; live or idle, the band stays quiet', () => {
+  const idle = renderHeaderDeck(fixture(), 120, plainTheme as never).map(plain);
+  // OFF (default): line 1, strong rule, the wrapped subject — nothing else.
+  assert.equal(idle.length, 4);
   assert.equal(
-    idle.some((line) => line.includes('awaiting Human')),
+    idle.some((line) => /^┈+$/u.test(line)),
     false,
   );
   assert.equal(
-    idle.some((line) => line.includes('0 tok')),
+    idle.some((line) => line.includes('48.2%')),
     false,
   );
-  const seams = idle.filter((line) => /^┈+$/u.test(line));
-  assert.equal(seams.length, 1, 'one seam remains — the status seam');
-
-  const costly = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      activity: { class: 'bash', target: 'npm test', span: 't1', parent: null },
-    },
-  });
-  costly.header = {
-    ...(costly.header as NonNullable<typeof state.header>),
-    turn: TURN_MIDWORK,
-  };
-  const lines = renderHeaderDeck(costly, 100, plainTheme as never).map(plain);
-  const activityRow = lines.find((line) => line.includes('bash npm test')) ?? '';
-  assert.ok(
-    activityRow.trimEnd().endsWith("000:38'00 · 4.2k"),
-    'the meter rides the live activity',
+  assert.equal(
+    idle.some((line) => line.includes('GPT-5.6 Sol')),
+    false,
   );
+
+  const live = titleFixture({ title: IDLE_TITLE });
+  const liveLines = renderHeaderDeck(live, 120, plainTheme as never).map(plain);
+  assert.equal(liveLines.length, 3, 'no band returns while OFF, whatever the state');
 });
 
-test('retires the band between tools; no phase words, never awaiting Human', () => {
-  // pure-activity-band: kind-based phase words are gone. A title without
-  // a live observed activity (thinking gaps, prose streaming) retires
-  // the band — Pi's native working indicator owns those moments.
-  const state = titleFixture({ title: IDLE_TITLE });
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    activity: { kind: 'understanding' },
-    turn: { tokens: 0, elapsedMs: 0 },
-  };
-  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(
-    lines.some((line) => line.includes('interpreting')),
-    false,
-  );
-  assert.equal(
-    lines.some((line) => line.includes('awaiting Human')),
-    false,
-  );
-
-  // A live observed activity wins over everything else.
-  const toolState = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      activity: { class: 'bash', target: 'npm test', span: 't1', parent: null },
-    },
-  });
-  toolState.header = {
-    ...(toolState.header as NonNullable<typeof state.header>),
-    activity: { kind: 'implementation' },
-    turn: TURN_MIDWORK,
-  };
-  const toolLines = renderHeaderDeck(toolState, 100, plainTheme as never).map(plain);
-  const toolRow = toolLines.find((line) => line.includes('bash npm test')) ?? '';
-  assert.ok(toolRow.length > 0, 'the precise tool label wins');
-  assert.equal(
-    toolLines.some((line) => line.includes('implementing')),
-    false,
-  );
-
-  // Cost alone does not resurrect the band mid-turn (the answering gap):
-  // no label, no meter, no narration.
-  const answering = titleFixture({ title: IDLE_TITLE });
-  answering.header = {
-    ...(answering.header as NonNullable<typeof answering.header>),
-    activity: { kind: 'answering' },
-    turn: TURN_MIDWORK,
-  };
-  const answeringLines = renderHeaderDeck(answering, 100, plainTheme as never).map(
-    plain,
-  );
-  assert.equal(
-    answeringLines.some((line) => /\banswering\b/u.test(line)),
-    false,
-  );
-  assert.equal(
-    answeringLines.some((line) => line.includes('awaiting Human')),
-    false,
-  );
-});
-
-test('awaiting kinds are rest: a focused session still retires the band', () => {
-  // The `awaiting-*` kinds are the post-settle rest face — they must not
-  // keep the band alive at zero cost, or a focused session would never
-  // rest (review-caught regression, quiet-activity-row amendment).
-  const state = titleFixture({ title: IDLE_TITLE });
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    activity: { kind: 'awaiting-input' },
-    turn: { tokens: 0, elapsedMs: 0 },
-  };
-  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.equal(lines.length, 5, 'the band retires at rest');
-  assert.equal(
-    lines.some((line) => line.includes('awaiting Human')),
-    false,
-  );
-  assert.equal(
-    lines.some((line) => /\binput\b/u.test(line)),
-    false,
-  );
-
-  const legacy = fixture();
-  legacy.header!.work = {
-    lifecycle: 'waiting',
-    titles: ['Repair runtime state'],
-    color: 'accent',
-    activity: { kind: 'awaiting-validation' },
-  };
-  const legacyLines = renderHeaderDeck(legacy, 100, plainTheme as never).map(plain);
-  assert.equal(legacyLines.length, 6, 'the legacy path rests too');
-  assert.equal(
-    legacyLines.some((line) => line.includes('awaiting Human')),
-    false,
-  );
-});
-
-test('renders line 3 mid-work as editing target with this-turn cost', () => {
-  const state = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      activity: {
-        class: 'editing',
-        target: 'packages/pi-stardeck/src/deck.ts',
-        span: 't87',
-        parent: null,
-      },
-    },
-    elapsedMs: 4_120,
-  });
-  state.header = {
-    ...(state.header as NonNullable<typeof state.header>),
-    turn: TURN_MIDWORK,
-  };
-
-  const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  const activityRow = lines.find((line) => line.includes('editing')) ?? '';
-  assert.ok(activityRow.includes('editing packages/pi-stardeck/src/deck.ts'));
-  assert.ok(activityRow.trimEnd().endsWith("000:38'00 · 4.2k"));
-});
-
-test('renders every observed activity class with its target', () => {
-  for (const [class_, expected] of [
-    ['reading', 'reading schema.yaml'],
-    ['grepping', 'grepping title-state'],
-    ['bash', 'bash npm run test:stardeck'],
-    ['subagent', 'subagent: scout'],
-  ] as const) {
-    const state = titleFixture({
-      title: {
-        ...IDLE_TITLE,
-        activity: { class: class_, target: 'x', span: 't1', parent: null },
-      },
-    });
-    state.header = {
-      ...(state.header as NonNullable<typeof state.header>),
-      title: {
-        ...IDLE_TITLE,
-        activity: {
-          class: class_,
-          target: class_ === 'subagent' ? 'scout' : expected.slice(class_.length + 1),
-          span: 't1',
-          parent: null,
-        },
-      },
-    };
-    const lines = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-    const activityRow =
-      lines.find((line) => line.includes('awaiting Human') || line.includes(class_)) ??
-      '';
-    assert.ok(activityRow.includes(expected), expected);
-  }
-});
-
-test('keeps the line-3 slot silent for pre-title publishers', () => {
-  // pure-activity-band: pre-title publishers have no observed activity —
-  // the band retires wholesale; no `awaiting Human`, no cost narration,
-  // and legacy kind words never speak.
-  const idle = renderHeaderDeck(fixture(), 100, plainTheme as never).map(plain);
-  assert.equal(
-    idle.some((line) => line.includes('awaiting Human')),
-    false,
-  );
-  assert.equal(
-    idle.some((line) => line.includes('tok')),
-    false,
-  );
-
-  const active = fixture();
-  active.header!.work = {
-    lifecycle: 'working',
-    titles: ['Repair runtime state'],
-    color: 'accent',
-    activity: { kind: 'verification' },
-  };
-  const lines = renderHeaderDeck(active, 100, plainTheme as never).map(plain);
-  assert.equal(
-    lines.some((line) => line.includes('checking')),
-    false,
-  );
-});
-
-test('colors the activity and turn meter by liveness', () => {
+test('colors the model cluster by its engine semantics on the extra band', () => {
   const colors: string[] = [];
   const theme = {
     fg: (name: string, text: string) => {
@@ -1410,61 +1129,15 @@ test('colors the activity and turn meter by liveness', () => {
     },
     bold: (text: string) => text,
   };
-  const idle = titleFixture({ title: IDLE_TITLE });
-  idle.header = {
-    ...(idle.header as NonNullable<typeof idle.header>),
-    turn: { tokens: 0, elapsedMs: 0 },
-  };
-  renderHeaderDeck(idle, 100, theme as never);
-  // quiet-activity-row: the idle band retires — no dim placeholders.
-  assert.equal(colors.includes('dim:awaiting Human'), false);
-  assert.equal(colors.includes('dim:— · 0 tok'), false);
-
-  colors.length = 0;
-  const midwork = titleFixture({
-    title: {
-      ...IDLE_TITLE,
-      activity: { class: 'bash', target: 'npm test', span: 'b2', parent: 't9' },
-    },
-  });
-  midwork.header = {
-    ...(midwork.header as NonNullable<typeof midwork.header>),
-    turn: { tokens: 980, elapsedMs: 65_000 },
-  };
-  renderHeaderDeck(midwork, 100, theme as never);
-  assert.ok(colors.includes('text:bash npm test'));
-  assert.ok(colors.includes("warning:001:05'00"));
-  assert.ok(colors.includes('warning:980'));
-});
-
-test('spans rows keep their home directly beneath line 3', () => {
   const state = fixture();
-  state.header!.activeRunSpans = [
-    {
-      id: 'sub-1:reviewer',
-      kind: 'subagent',
-      parent: 'sub-1',
-      agent: 'reviewer',
-      stage: 'assuring',
-      elapsedMs: 41_000,
-    },
-  ];
-  const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // quiet-activity-row: the idle band retires, but its seam survives for
-  // the spans rows, which keep their home directly beneath line 2.
-  assert.equal(
-    lines.some((line) => line.includes('awaiting Human')),
-    false,
+  state.extraInfo = true;
+  renderHeaderDeck(state, 120, theme as never);
+  assert.ok(
+    colors.some(
+      (entry) => entry.startsWith('accent:') && entry.includes('GPT-5.6 Sol'),
+    ),
   );
-  const spanIndex = lines.findIndex((line) =>
-    /└ \(00'41\) reviewer assuring/u.test(line),
-  );
-  assert.ok(spanIndex >= 0);
-  assert.match(lines[spanIndex - 1] ?? '', /^┈+$/u, 'the seam survives for spans');
-  // A ┈ seam follows the spans rows, then the engine row closes the deck.
-  assert.match(lines[spanIndex + 1] ?? '', /^┈+$/u);
-  assert.ok(lines[spanIndex + 2]?.includes('48.2%'));
-  assert.equal(lines.length, spanIndex + 3, 'the machine row closes the deck');
+  assert.ok(colors.includes('accent:\u{F0F86} 38%'));
 });
 
 // --- Step 2.3: line 1 right relocation and line 4 ---------------------------
@@ -1489,7 +1162,8 @@ test('relocates companion chips to line 1 right and bolds them', () => {
   const lines = renderHeaderDeck(state, 120, theme as never).map(plain);
   const line1 = lines[0] ?? '';
   assert.ok(line1.includes('~/galactica'));
-  assert.match(line1, /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u);
+  assert.match(line1, /\(unfocus openspec\)$/u);
+  assert.doesNotMatch(line1, /GPT-5\.6 Sol/u, 'the engine left line 1');
   assert.ok(bolded.includes('\u{F04E6}'), 'chips stay bold');
 });
 
@@ -1501,18 +1175,17 @@ test('keeps companion chips on line 1 right while the path yields first', () => 
     assert.match(line1, /\u{F01A7} \u{F04E6} \u{F1049} \u{F0498}/u, String(width));
     if (width >= 39) assert.ok(line1.includes('~/'), String(width));
   }
-  // deck-reshape (swap amendment): the short engine group rides line 1
-  // right beside a growing path; the machine tail lives on the bottom
-  // row where it has the whole width to breathe.
+  // simplify-deck-band: the focus chip rides line 1 right at every width;
+  // the engine cluster only lives on the extra band.
   assert.match(
     plain(renderHeaderDeck(state, 79, plainTheme as never)[0] ?? ''),
-    /\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
-    'the engine still rides line 1 at 79',
+    /\(unfocus openspec\)$/u,
+    'the chip still rides line 1 at 79',
   );
-  assert.match(
-    plain(renderHeaderDeck(state, 60, plainTheme as never).at(-1) ?? ''),
-    /\u{F039E} 2\s+\(unfocus openspec\)$/u,
-    'the machine tail rides the bottom row at 60 — cost yields, the gray placeholder closes',
+  assert.doesNotMatch(
+    plain(renderHeaderDeck(state, 79, plainTheme as never)[0] ?? ''),
+    /GPT-5\.6 Sol/u,
+    'the engine never rides line 1',
   );
 });
 
@@ -1557,8 +1230,9 @@ test('keeps the devbox chip leading the corner off the path', () => {
   );
 });
 
-test('flame leads the machine group in the corner; line 4 keeps the engine side', () => {
+test('flame leads the machine group on the extra band; the engine closes right', () => {
   const state = fixture();
+  state.extraInfo = true;
   state.footerTelemetry = {
     totalCost: 5.16,
     quotaWindows: [
@@ -1571,38 +1245,32 @@ test('flame leads the machine group in the corner; line 4 keeps the engine side'
     ],
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  const line1 = lines[0] ?? '';
-  const flameAt = (lines.at(-1) ?? '').indexOf('82%');
-  // deck-reshape (swap): the machine tail + flame anchor the bottom
-  // row; the engine (with its calendar) rides line 1 right.
-  const line4 = lines.at(-1) ?? '';
-  const machineAt = line4.indexOf('48.2%');
-  const mcpAt = line4.indexOf('3/3');
-  const costAt = line4.indexOf('$5.16');
+  const extra = lines.at(-1) ?? '';
+  const flameAt = extra.indexOf('82%');
+  // simplify-deck-band: the machine tail rides the extra band left; the
+  // engine cluster (with its calendar) closes the row right.
+  const machineAt = extra.indexOf('48.2%');
+  const mcpAt = extra.indexOf('3/3');
+  const costAt = extra.indexOf('$5.16');
   assert.ok(flameAt >= 0 && machineAt > flameAt, 'quota flame leads the machine tail');
   assert.ok(mcpAt > machineAt, 'mcp rides the machine tail');
   assert.ok(costAt > mcpAt, 'global cost anchors the row');
+  const engineAt = extra.indexOf('GPT-5.6 Sol');
+  const calendarAt = extra.indexOf('12%');
   assert.ok(
-    costAt > mcpAt && line4.includes('$5.16'),
-    'the cost rides the machine tail',
+    engineAt > costAt && calendarAt > engineAt,
+    'the engine with its calendar closes the extra band right',
   );
   assert.ok(
-    line4.includes('(unfocus openspec)'),
-    'the gray aim placeholder anchors the clean row',
+    extra.includes('(unfocus openspec)') === false,
+    'the chip left the extra band',
   );
-  const engineAt = line1.indexOf('GPT-5.6 Sol');
-  const calendarAt = line1.indexOf('12%');
-  assert.ok(
-    engineAt >= 0 && calendarAt > engineAt,
-    'calendar rides the engine on line 1',
-  );
-  assert.equal(lines.length, 5, 'clean five-row deck');
-  // Narrow: the bottom row has the full width — the whole tail rides
-  // even when line 1 collapses to identity + path.
+  assert.equal(lines.length, 5, 'clean five-row deck with the band on');
+  // Narrow: the extra row has the full width — the whole tail rides.
   const narrowBottom = plain(
     renderHeaderDeck(state, 62, plainTheme as never).at(-1) ?? '',
   );
-  assert.ok(narrowBottom.includes('82%'), 'the flame rides the bottom row at 62');
+  assert.ok(narrowBottom.includes('82%'), 'the flame rides the extra band at 62');
   assert.equal(
     narrowBottom.includes('🔔'),
     false,
@@ -1620,21 +1288,17 @@ test('the warning left the deck; renderWarningLine speaks below the prompt', () 
   };
   const lines = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
   // move-warning-below-prompt (2026-11-11): the deck closes on the
-  // machine tail with its dotted seam — no notice row, no trailing seam.
+  // subject lines — no notice row, no seam while OFF; the chip and the
+  // alert ride line 1.
   assert.equal(
     lines.join('\n').includes('🔔'),
     false,
     'no warning rides the deck anymore',
   );
-  assert.equal(
-    (lines.at(-2) ?? '').trim(),
-    '┈'.repeat(160),
-    'the dotted seam closes the engine row',
-  );
   assert.match(
     lines[0] ?? '',
-    /\/pi-status \u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
-    'the engine rides line 1 beside the alert',
+    /\/pi-status \(unfocus openspec\)$/u,
+    'the chip rides line 1 beside the alert',
   );
   assert.deepEqual(
     renderWarningLine(state, 160, plainTheme as never).map(plain),
@@ -1644,11 +1308,12 @@ test('the warning left the deck; renderWarningLine speaks below the prompt', () 
 
   state.piStatus = { errors: 2, warnings: 1, nativeStatusCount: 0 };
   const clean = renderHeaderDeck(state, 160, plainTheme as never).map(plain);
-  // deck-reshape (amended): the engine row stays when clean — status is
-  // silent, no 🔔 glyph, calendar on the bottom row.
-  assert.equal(clean.length, 5, 'engine row stays when clean');
+  // simplify-deck-band: OFF stays silent and clock-free whatever the
+  // status — the alert keeps its line-1 rider slot. The subject fits one
+  // line at 160, so the OFF frame is three rows.
+  assert.equal(clean.length, 3, 'the OFF frame ends at the subject');
   assert.equal(clean.join('\n').includes('🔔'), false);
-  assert.ok((clean[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
+  assert.doesNotMatch(clean.join('\n'), /63%/u, 'no quota speaks while OFF');
   // Severity counts (line 1) and notices stay distinct surfaces.
   assert.match(plain(clean[0] ?? ''), /⟩ \/pi-status/u);
   assert.deepEqual(
@@ -1689,19 +1354,26 @@ test('machine corner yields right-to-left in frozen order; identity never drops'
   }
 });
 
-test('opens the deck with a strong rule and dotted internal seams', () => {
-  // Single-line subject at this width so the band count is fixed at five
-  // (quiet-activity-row: the idle band and its seam retire).
-  const lines = renderHeaderDeck(
+test('opens the deck with a strong rule; the dotted seam only tops the extra band', () => {
+  // Single-line subject at this width so the OFF band count is fixed at
+  // three (simplify-deck-band: no activity, no spans, no machine row).
+  const off = renderHeaderDeck(
     titleFixture({ title: IDLE_TITLE }),
     100,
     plainTheme as never,
   ).map(plain);
-  // deck-reshape (swap): engine rides line 1; the machine row closes.
-  assert.equal(lines.length, 5);
-  assert.match(lines[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
-  assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam beneath line 2');
-  assert.ok((lines[0] ?? '').includes('GPT-5.6 Sol'));
+  assert.equal(off.length, 3);
+  assert.match(off[1] ?? '', /^─+$/u, 'strong rule beneath line 1');
+  assert.equal(
+    off.some((line) => /^┈+$/u.test(line)),
+    false,
+    'no dotted seam while OFF',
+  );
+
+  const on = titleFixture({ title: IDLE_TITLE });
+  on.extraInfo = true;
+  const lines = renderHeaderDeck(on, 100, plainTheme as never).map(plain);
+  assert.match(lines[3] ?? '', /^┈+$/u, 'dotted seam tops the extra band');
   assert.ok((lines[4] ?? '').includes('48.2%'));
   assert.equal(lines[4], lines.at(-1));
 });
@@ -1729,41 +1401,30 @@ test('renders the accepted idle mockup at wide widths', () => {
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
     title: parseDeckTitleState(IDLE_TITLE),
-    turn: { tokens: 0, elapsedMs: 0 },
   };
 
-  console.error(
-    'IDLE:',
-    JSON.stringify(renderHeaderDeck(state, 120, plainTheme as never).map(plain)),
-  );
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // deck-reshape + quiet-activity-row: clean mockup is five rows — the
-  // idle band retires; no status row.
-  assert.equal(lines.length, 5);
-  // Line 1: identity leads the path; the engine anchors the corner right.
+  // simplify-deck-band: the OFF daily view is three rows — line 1 with the
+  // focus chip right, the strong rule, the subject.
+  assert.equal(lines.length, 3);
+  // Line 1: identity leads the path; the focus chip anchors the right.
   assert.match(
     lines[0] ?? '',
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
+    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F00C} clean\s+\(unfocus openspec\)$/u,
   );
-  // Second 2.4 amendment: the strong rule returns beneath line 1.
+  // The strong rule beneath line 1 stands alone — no dotted seam while OFF.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
+  assert.equal(lines.join('\n').includes('\u2508'), false);
   // Line 2: Subject left (no clock — 2026-10-23 amendment); the work slot
   // stays silent without facts (truthful band, 2026-11-06).
   assert.equal(lines[2] ?? '', 'Pivot cockpit to pure pi-starship-header chrome');
-  assert.match(lines[3] ?? '', /^\u2508+$/u);
-  // quiet-activity-row: the idle band retires — the machine tail anchors
-  // the bottom row directly beneath the seam; the sentinel closes it.
-  assert.match(
-    lines[4] ?? '',
-    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F0726} \$5\.16\s+\(unfocus openspec\)$/u,
-  );
   assert.equal(lines.join('\n').includes('healthy'), false);
 });
 
 test('renders the accepted mid-work mockup at wide widths', () => {
   const state = mockupDeckState();
   state.git = { staged: 0, modified: 2, untracked: 0, conflicts: 0 };
-  state.elapsedMs = 4_120;
+  state.extraInfo = true;
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
     title: parseDeckTitleState({
@@ -1774,46 +1435,33 @@ test('renders the accepted mid-work mockup at wide widths', () => {
         artifactIdx: '0/1',
         task: '1/4',
       },
-      activity: {
-        class: 'editing',
-        target: 'packages/pi-stardeck/src/deck.ts',
-        span: 't87',
-        parent: null,
-      },
     }),
-    turn: { tokens: 4_200, elapsedMs: 38_000 },
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // deck-reshape: five rows clean; the engine leads the corner and the
-  // git segment yields its width (`ma…`).
+  // simplify-deck-band ON: five rows — the chip rides line 1 right, the
+  // git segment yields its width (`ma…`), the extra band closes the deck.
   assert.match(
     lines[0] ?? '',
-    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
+    /^\u{F01A7} \u{F04E6} \u{F1049} \u{F0498} \u{27E9} \u{F07B} ~\/projects\/pi-stardeck \u{27E9} \u{E725} main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u,
   );
-  // At 100 the path truncates (`~/project…`) while the corner rides.
+  // At 100 the path truncates (`~/project…`) while the chip rides.
   const hundred = renderHeaderDeck(state, 100, plainTheme as never).map(plain);
-  assert.match(
-    hundred[0] ?? '',
-    /main \u{203A} \u{F040} 2\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F241} 63%$/u,
-  );
-  // Strong rule beneath line 1 (second 2.4 amendment).
+  assert.match(hundred[0] ?? '', /main \u{203A} \u{F040} 2\s+󰈙 eight-section-deck$/u);
+  // Strong rule beneath line 1.
   assert.match(lines[1] ?? '', /^\u2500+$/u);
-  // Line 2: the slug leads the right tile (layout law), then the
-  // verbatim render law.
+  // Line 2: the verbatim render law on the right tile.
   assert.match(
     lines[2] ?? '',
     /^Pivot cockpit to pure pi-starship-header chrome\s+󰈙 plan 0\/1 › 1\/4$/u,
   );
-  // Line 3: observed activity left, this-turn cost right.
+  // The dotted seam tops the extra band; machine tail left, engine right.
+  assert.match(lines[3] ?? '', /^\u2508+$/u);
   assert.match(
     lines[4] ?? '',
-    /^editing packages\/pi-stardeck\/src\/deck\.ts\s+000:38'00 · 4\.2k$/u,
+    /^\u{F035B} 48\.2% \u{203A} \u{F061A} 268M \u{203A} 3\/3 \u{27E9} \u{F0726} \$5\.16\s+\u{F06A9} GPT-5\.6 Sol \u{203A} high \u{27E9} \u{F0F86} 38% \u{203A} \u{F039E} 2 \u{27E9} \u{F241} 63%$/u,
   );
-  // Dotted seams inside; the engine row closes the deck with the sentinel.
-  assert.match(lines[3] ?? '', /^\u2508+$/u);
-  assert.match(lines[5] ?? '', /^\u2508+$/u);
-  assert.match(lines[6] ?? '', /\u{F0726} \$5\.16\s+󰈙 eight-section-deck$/u);
+  assert.equal(lines.length, 5);
 });
 
 test('renders both mockups identically at 100 and 120 columns', () => {
@@ -1821,15 +1469,18 @@ test('renders both mockups identically at 100 and 120 columns', () => {
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
     title: parseDeckTitleState(IDLE_TITLE),
-    turn: { tokens: 0, elapsedMs: 0 },
   };
   for (const width of [100, 120]) {
     const lines = renderHeaderDeck(state, width, plainTheme as never).map(plain);
     assert.ok((lines[0] ?? '').includes('~/project'), String(width));
     assert.ok((lines[2] ?? '').includes('Pivot cockpit'), String(width));
-    // quiet-activity-row: the idle band is gone; the engine row rides
-    // directly beneath the title seam.
-    assert.ok((lines[4] ?? '').includes('48.2%'), String(width));
+    // OFF stays three rows at every width — the extra band never leaks.
+    assert.equal(lines.length, 3, String(width));
+    assert.equal(
+      lines.some((line) => line.includes('48.2%')),
+      false,
+      String(width),
+    );
     assert.equal(
       lines.some((line) => line.includes('awaiting Human')),
       false,
@@ -1859,7 +1510,7 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
   };
   const warnedLines = renderHeaderDeck(warned, 120, plainTheme as never).map(plain);
   // move-warning-below-prompt (2026-11-11): the warning left the deck —
-  // the frame closes on the machine tail alone; the notice speaks below
+  // the OFF frame closes on the subject line; the notice speaks below
   // the prompt via renderWarningLine.
   assert.equal(
     warnedLines.join('\n').includes('🔔'),
@@ -1867,8 +1518,8 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
     'no warning rides the deck',
   );
   assert.ok(
-    (warnedLines.at(-1) ?? '').includes('(unfocus openspec)'),
-    'the frame still closes on the engine row',
+    (warnedLines[0] ?? '').includes('(unfocus openspec)'),
+    'the chip still rides line 1 right',
   );
   assert.deepEqual(
     renderWarningLine(warned, 120, plainTheme as never).map(plain),
@@ -1883,6 +1534,8 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
 
   const bare: HeaderDeckState = {
     ...titleFixture({ title: IDLE_TITLE }),
+    extraInfo: true,
+    compactionCount: 0,
     resources: undefined,
     footerTelemetry: undefined,
     contextPercent: undefined,
@@ -1893,8 +1546,8 @@ test('a bare deck closes with the machine tail alone — no sentinel narration',
   };
   const bareLines = renderHeaderDeck(bare, 120, plainTheme as never).map(plain);
   assert.ok(
-    (bareLines.at(-1) ?? '').trimEnd().endsWith('(unfocus openspec)'),
-    'a bare deck closes with the machine tail — the right end stays empty',
+    (bareLines.at(-1) ?? '').trimEnd().endsWith('GPT-5.6 Sol › high'),
+    'a bare ON deck closes with the engine cluster alone — the model always speaks',
   );
 });
 
@@ -2002,6 +1655,7 @@ test('the warning line rides every width below the prompt', () => {
 
 test('keeps the notice slot sentinel-only when clean', () => {
   const state = titleFixture({ title: IDLE_TITLE });
+  state.extraInfo = true;
   state.header = {
     ...(state.header as NonNullable<typeof state.header>),
     diagnostics: {
@@ -2019,11 +1673,15 @@ test('keeps the notice slot sentinel-only when clean', () => {
   };
 
   const lines = renderHeaderDeck(state, 120, plainTheme as never).map(plain);
-  // Clean: no 🔔 glyph and no ladybug — the frame speaks only its machine
-  // readings; no reserved row exists when there is nothing to say.
+  // Clean: no 🔔 glyph and no ladybug — with the band on, the frame
+  // speaks only its machine readings; no reserved row exists when there
+  // is nothing to say.
   assert.equal(lines.join('\n').includes('🔔'), false);
   assert.equal(lines.join('\n').includes('󰠭'), false, 'no sentinel on the clean frame');
-  assert.ok((lines[0] ?? '').includes('63%'), 'calendar rides the engine on line 1');
+  assert.ok(
+    lines.some((line) => line.includes('63%')),
+    'the calendar rides the engine cluster on the extra band',
+  );
   // Healthy companion texts never surface as notices.
   assert.equal(lines.join('\n').includes('report available'), false);
 });

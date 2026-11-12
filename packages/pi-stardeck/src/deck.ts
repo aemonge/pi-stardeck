@@ -19,11 +19,12 @@ export interface HeaderDeckModeRail {
 }
 
 export interface HeaderDeckState {
-  elapsedMs: number | null;
-  idleMs?: number;
   header: HeaderSnapshot | null;
   cwd: string;
   devbox: boolean;
+  /** Extra-info band visibility (simplify-deck-band): settings default,
+   * `/stardeck-extra` session toggle. */
+  extraInfo: boolean;
   branch: string;
   gitAvailable: boolean;
   git: GitStatusSummary;
@@ -87,21 +88,6 @@ function fitWithoutDanglingSeparator(line: string, width: number): string {
     if (separator !== '›' && separator !== '⟩') return fitted;
     fitted = trimTrailingFormatting(fitted.slice(0, fitted.lastIndexOf(separator)));
   }
-}
-
-export function formatDeckElapsed(elapsedMs: number | null): string {
-  const maximum = (999 * 60 + 59) * 1_000 + 999;
-  const observed = elapsedMs ?? 0;
-  const finite = Number.isFinite(observed)
-    ? observed
-    : observed === Number.POSITIVE_INFINITY
-      ? maximum
-      : 0;
-  const normalized = Math.min(maximum, Math.max(0, Math.floor(finite)));
-  const minutes = Math.floor(normalized / 60_000);
-  const seconds = Math.floor((normalized % 60_000) / 1_000);
-  const centiseconds = Math.floor((normalized % 1_000) / 10);
-  return `${String(minutes).padStart(3, '0')}:${String(seconds).padStart(2, '0')}'${String(centiseconds).padStart(2, '0')}`;
 }
 
 export function formatDeckPercent(value: number): string {
@@ -245,81 +231,9 @@ function workTile(state: HeaderDeckState, theme: Theme, width: number): string {
     .join('');
 }
 
-function spanElapsed(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1_000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}'${String(seconds).padStart(2, '0')}`;
-}
-
-function spanTreeRows(state: HeaderDeckState, width: number, theme: Theme): string[] {
-  // Frozen contract runs fact: one elastic row per live child run, naming its
-  // agent and stage; the rows collapse the moment the spans settle.
-  if (width < 60) return [];
-  const spans = (state.header?.activeRunSpans ?? []).filter(
-    (span) => span.agent !== undefined || span.kind === 'bash',
-  );
-  return spans.map((span, index) => {
-    const branch = index === spans.length - 1 ? '└' : '├';
-    const who = span.agent ?? span.label ?? span.kind;
-    // Gruvbox brown (dim in this theme), never bare black nor violet.
-    // Relocation: the age rides inline beside its branch glyph.
-    const row = color(
-      theme,
-      'dim',
-      `  ${branch} (${spanElapsed(span.elapsedMs)}) ${who} ${span.stage}`,
-    );
-    return truncateToWidth(row, Math.max(1, width), '…');
-  });
-}
-
-/** The band speaks only when an observed activity is live — one of the
- * five title-state classes (editing/reading/grepping/bash/subagent).
- * Fabricated phase words (`interpreting`, `planning`, …), the legacy
- * activity projection, and the `awaiting Human` placeholder are gone
- * (Human-directed simplify-deck-defaults): Pi's restored native working
- * indicator owns mid-turn liveness, and the deck narrates only observed
- * reality. */
-function titleActivityLabel(activity: { class: string; target: string }): string {
-  return activity.class === 'subagent'
-    ? `subagent: ${activity.target}`
-    : `${activity.class} ${activity.target}`;
-}
-
-/** The band's current label: the live observed activity; empty when
- * nothing is observed — the band then retires wholesale. */
-function observedActivityLabel(state: HeaderDeckState): string {
-  const activity = state.header?.title?.activity ?? null;
-  return activity ? titleActivityLabel(activity) : '';
-}
-
-function activityBandSpeaks(state: HeaderDeckState): boolean {
-  return observedActivityLabel(state) !== '';
-}
-
-function activityTile(state: HeaderDeckState, theme: Theme): string {
-  // Line 3 left: the observed activity owns the slot; the turn cluster
-  // rides its right side and retires with it.
-  return color(theme, 'text', observedActivityLabel(state));
-}
-
-function turnCostTile(state: HeaderDeckState, theme: Theme): string {
-  // Activity lane right: the turn cluster — turn time and tokens in one
-  // aligned group (Human amendment 2026-10-23: the deck's only timer;
-  // Human amendment 2026-10-24: the liveness icon is gone — the ticking
-  // chronometer `mmm:ss'cc` is the liveness). Idle keeps the accepted
-  // dim `— · 0 tok`; the quiet-activity-row contract depends on it.
-  const turn = state.header?.turn ?? null;
-  if (!turn) return '';
-  if (turn.tokens <= 0 && turn.elapsedMs <= 0) {
-    return color(theme, 'dim', '— · 0 tok');
-  }
-  return `${color(theme, 'warning', formatDeckElapsed(turn.elapsedMs), true)} ${color(
-    theme,
-    'dim',
-    '·',
-  )} ${color(theme, 'warning', formatTokens(turn.tokens))}`;
-}
+/** The band's current label slot is retired (simplify-deck-band): the
+ * observed-activity line, turn chronometer, and span rows are gone — the
+ * workspace loader (pi-run-timestamps) owns the live time story. */
 
 function gitRight(state: HeaderDeckState, theme: Theme): string {
   // Gray-out amendment (Human-directed): absent Git shows a dim marker.
@@ -576,42 +490,33 @@ export function machineCornerSegments(
       color(theme, 'accent', `${state.mcp.healthy}/${state.mcp.total}`),
     );
   }
-  const contextGroup: string[] = [];
-  // deck-corner-context: context and summary counts ride together.
-  // Context wears warning at ≥ 85% (the threshold it carried engine-left);
-  // the summary count follows the context color as before.
+  const costGroup: string[] = [];
+  const cost = costTile(state, theme);
+  if (cost !== '') costGroup.push(cost);
+  return [quotaGroup, processGroup, costGroup].filter((group) => group.length > 0);
+}
+
+/** Context (+ compaction summary count) tiles — simplify-deck-band moved
+ * them out of the machine tail into the engine cluster, where the model
+ * cluster reads as one global group. Warning at ≥ 85% (the threshold the
+ * context tile carried engine-left). */
+function contextTiles(state: HeaderDeckState, theme: Theme): string[] {
   const ctxColor =
     state.contextPercent !== undefined && state.contextPercent >= 85
       ? 'warning'
       : state.contextPercent === undefined
         ? 'dim'
         : 'accent';
+  const tiles: string[] = [];
   if (state.contextPercent !== undefined) {
-    contextGroup.push(
+    tiles.push(
       color(theme, ctxColor, `\u{F0F86} ${formatDeckPercent(state.contextPercent)}`),
     );
   }
   if (state.compactionCount > 0) {
-    contextGroup.push(color(theme, ctxColor, `\u{F039E} ${state.compactionCount}`));
+    tiles.push(color(theme, ctxColor, `\u{F039E} ${state.compactionCount}`));
   }
-  const costGroup: string[] = [];
-  const cost = costTile(state, theme);
-  if (cost !== '') costGroup.push(cost);
-  return [quotaGroup, processGroup, contextGroup, costGroup].filter(
-    (group) => group.length > 0,
-  );
-}
-
-function deckCornerRight(state: HeaderDeckState, theme: Theme, width: number): string {
-  // Line 1 right corner (deck-reshape, swap amendment): the ENGINE
-  // group — short and predictable (`󰚩 model › thinking › 󰃰 weekly?`) —
-  // so a growing PWD/branch never fights the long machine tail for
-  // width. It fits beside the path floor or yields wholesale. The
-  // machine tail lives on the bottom row now; the identity cluster
-  // leads line 1 LEFT and never yields.
-  const engine = modelGroupLeft(state, theme);
-  if (engine === '') return '';
-  return width - visibleWidth(engine) - 1 >= 20 ? engine : '';
+  return tiles;
 }
 
 function machineCornerNotices(
@@ -620,9 +525,9 @@ function machineCornerNotices(
   width: number,
   nowMs = Date.now(),
 ): string {
-  // Bottom row left (deck-reshape, swap amendment): the machine tail
-  // yields right-to-left (cost first) into whatever width remains
-  // beside the status right end.
+  // Extra-info row left (simplify-deck-band): the machine tail yields
+  // right-to-left (cost first) into whatever width remains beside the
+  // engine cluster's right end.
   const groups = machineCornerSegments(state, theme, nowMs);
   for (let keep = groups.length; keep >= 1; keep -= 1) {
     const tail = groups
@@ -635,14 +540,17 @@ function machineCornerNotices(
 }
 
 function modelGroupLeft(state: HeaderDeckState, theme: Theme): string {
-  // Line 4 left (deck-corner-context): fully global — model › thinking,
-  // then the long-horizon quota (weekly calendar, or whole-session
-  // percent when no windows exist). Context and compaction moved to the
-  // line-1 corner.
+  // Extra-info row right (simplify-deck-band): fully global — model ›
+  // thinking, then context (+ compaction summary), then the long-horizon
+  // quota (weekly calendar, or whole-session percent when no windows).
+  const groups = [globalLeft(state, theme)];
+  const context = contextTiles(state, theme);
+  if (context.length > 0) {
+    groups.push(context.join(` ${minorSeparator(theme)} `));
+  }
   const quota = simpleQuotaTile(state, theme);
-  return quota
-    ? [globalLeft(state, theme), semanticSeparator(theme), quota].join(' ')
-    : globalLeft(state, theme);
+  if (quota) groups.push(quota);
+  return groups.join(` ${semanticSeparator(theme)} `);
 }
 
 function simpleQuotaTile(state: HeaderDeckState, theme: Theme): string {
@@ -730,12 +638,6 @@ function statusAlertTile(
   return visibleWidth(count) < width ? count : '';
 }
 
-function formatTokens(tokens: number): string {
-  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
-  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}k`;
-  return `${Math.floor(tokens)}`;
-}
-
 export function renderHeaderDeck(
   state: HeaderDeckState,
   width: number,
@@ -757,62 +659,48 @@ export function renderHeaderDeck(
     ...focusLines.slice(1),
   ];
 
-  // Line 3 (four-line deck): Activity left with the per-turn cost right —
-  // the superseded lifecycle/suggestion/runs tiles are gone; Work,
-  // Activity, and the spans rows are their replacements. The spans rows
-  // keep their home directly beneath this line.
-  const spanRows = spanTreeRows(state, boundedWidth, theme);
-  const bandSpeaks = activityBandSpeaks(state);
-  const activityRow = bandSpeaks
-    ? alignedSingleRow(
-        activityTile(state, theme),
-        turnCostTile(state, theme),
-        boundedWidth,
-      )
-    : '';
-  // deck-reshape, swap amendment (reorder-deck-frame 2026-11-11): the
-  // bottom row carries the MACHINE tail on the left and THE FOCUS SPEC
-  // on the right — the room aim's change slug, read as-is from
-  // `openspec/.focus`. An aimless room wears the gray placeholder;
-  // nothing else ever sits in this seat.
+  // Line 1 right (simplify-deck-band): the focused-change chip moved here
+  // from the machine row and rides both toggle states — but yields below
+  // 20 remaining cells, exactly as the engine it replaced did, so the
+  // identity cluster never truncates for chrome. The severity alert keeps
+  // its rider slot just before the chip.
   const focusSpec = safeText(state.header?.title?.work?.change ?? '');
   const aimRight =
     focusSpec === ''
       ? color(theme, 'dim', '(unfocus openspec)')
       : color(theme, 'success', `${OPEN_SPEC_ICON} ${focusSpec}`);
-  const machineRow = machineCornerNotices(
-    state,
-    theme,
-    boundedWidth - visibleWidth(aimRight) - 1,
-  );
-  const engineRow = alignedSingleRow(machineRow, aimRight, boundedWidth);
-
-  // Band adjacency (Human-directed, accepted mockups; third 2.4
-  // amendment): the deck opens with a full ─ rule directly beneath the
-  // line-1 strip; the internal seams stay dotted ┈ between lines 2 and
-  // 3 and between line 3 (spans rows included) and the status row —
-  // except the 2/3 seam retires with a silent, spanless line-3 band
-  // (quiet-activity-row): idle + zero cost never narrates itself.
-  const identity = identityCluster(state, theme);
-  const corner = deckCornerRight(state, theme, boundedWidth);
+  const chipRight = boundedWidth - visibleWidth(aimRight) - 1 >= 20 ? aimRight : '';
   const alert = statusAlertTile(
     state,
-    Math.max(0, boundedWidth - visibleWidth(corner) - 2),
+    Math.max(0, boundedWidth - visibleWidth(chipRight) - 2),
     theme,
     lineColor,
   );
+  const identity = identityCluster(state, theme);
   const rows = [
     alignedSingleRow(
       projectDeckLeft(state, theme, boundedWidth, identity),
-      alert ? `${alert} ${corner}` : corner,
+      alert ? `${alert} ${chipRight}`.trimEnd() : chipRight,
       boundedWidth,
     ),
     solidRule,
     ...titleRows,
-    ...(bandSpeaks || spanRows.length > 0 ? [dottedRule] : []),
-    ...(bandSpeaks ? [activityRow] : []),
-    ...spanRows,
-    ...(engineRow.trim() !== '' ? [dottedRule, engineRow] : []),
   ];
+
+  // Extra-info row (simplify-deck-band): machine tail left, engine cluster
+  // right, revealed by `/stardeck-extra` and hidden by default. The dotted
+  // rule above it is the toggle area's top border — its only surviving
+  // use. A healthy ON with nothing to say still renders nothing here.
+  if (state.extraInfo) {
+    const engineRight = modelGroupLeft(state, theme);
+    const machineTail = machineCornerNotices(
+      state,
+      theme,
+      Math.max(0, boundedWidth - visibleWidth(engineRight) - 1),
+    );
+    if (machineTail !== '' || engineRight !== '') {
+      rows.push(dottedRule, alignedSingleRow(machineTail, engineRight, boundedWidth));
+    }
+  }
   return rows.map((line) => fitWithoutDanglingSeparator(line, boundedWidth));
 }
